@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -63,7 +63,7 @@
         .bg-yellow-btn { background: #eab308; color: black; }
         .bg-blue-btn { background: #2563eb; }
 
-        /* Estilo CHAT (Purple Neon Latido) */
+        /* Estilo CHAT con Latido */
         .chat-card {
             background: linear-gradient(135deg, #3b0764 0%, #000000 100%);
             border: 2px solid #a855f7;
@@ -96,7 +96,7 @@
         </div>
     </div>
 
-    <div id="activation-banner" onclick="location.href='activation.html'" class="mb-6 p-4 bg-blue-600 rounded-[22px] flex justify-between items-center shadow-lg active:scale-95 transition cursor-pointer">
+    <div id="activation-banner" onclick="navTo('activation.html')" class="mb-6 p-4 bg-blue-600 rounded-[22px] flex justify-between items-center shadow-lg active:scale-95 transition cursor-pointer">
         <div class="flex items-center gap-3">
             <span id="reg-icon">🔑</span>
             <span id="reg-txt" class="text-[10px] font-black uppercase text-white italic">Device Activation Required</span>
@@ -112,25 +112,25 @@
     </div>
 
     <div id="main-grid" class="grid grid-cols-2 gap-4">
-        <div onclick="location.href='bp.html'" class="dash-card neon-red">
+        <div onclick="navTo('bp.html')" class="dash-card neon-red">
             <div class="icon-box bg-red-btn">❤️</div>
             <h2 id="m3-t" class="btn-text">BP Log</h2>
         </div>
-        <div onclick="location.href='glucose.html'" class="dash-card neon-green">
+        <div onclick="navTo('glucose.html')" class="dash-card neon-green">
             <div class="icon-box bg-green-btn">🩸</div>
             <h2 id="m4-t" class="btn-text">Glucose</h2>
         </div>
-        <div onclick="location.href='food.html'" class="dash-card neon-yellow">
+        <div onclick="navTo('food.html')" class="dash-card neon-yellow">
             <div class="icon-box bg-yellow-btn">🥗</div>
             <h2 id="m5-t" class="btn-text">Food Scan</h2>
         </div>
-        <div onclick="location.href='sync.html'" class="dash-card neon-blue">
+        <div onclick="navTo('sync.html')" class="dash-card neon-blue">
             <div class="icon-box bg-blue-btn">🔄</div>
             <h2 id="m-sync" class="btn-text">Sync Data</h2>
         </div>
     </div>
 
-    <div onclick="location.href='feedback.html'" class="chat-card mt-8 p-5 rounded-[28px] flex justify-between items-center cursor-pointer active:scale-95 transition">
+    <div onclick="navTo('feedback.html')" class="chat-card mt-8 p-5 rounded-[28px] flex justify-between items-center cursor-pointer active:scale-95 transition">
         <div class="flex items-center gap-4 text-white">
             <div class="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center border border-purple-500/40">
                 <span class="text-2xl">💬</span>
@@ -154,6 +154,11 @@
         let adminTaps = 0;
         let adminTimer;
         let lastMsgCount = parseInt(localStorage.getItem('montcode_msg_count')) || 0;
+
+        // Navegación segura para evitar 404
+        function navTo(url) {
+            window.location.href = url;
+        }
 
         function playNotificationSound() {
             const context = new (window.AudioContext || window.webkitAudioContext)();
@@ -240,12 +245,18 @@
             adminTaps++;
             if (adminTaps === 5) {
                 adminTaps = 0;
-                window.location.href = 'admin-kit.html';
+                navTo('admin-kit.html');
             }
             adminTimer = setTimeout(() => { adminTaps = 0; }, 2000);
         }
 
         window.onload = () => {
+            // Limpiar mensaje por defecto si existe para evitar confusión
+            let logs = JSON.parse(localStorage.getItem('montcode_feedback_logs')) || [];
+            if(logs.length > 0 && logs[0].text.includes("Everything was normal")) {
+                localStorage.setItem('montcode_feedback_logs', JSON.stringify([]));
+                localStorage.setItem('montcode_msg_count', 0);
+            }
             updateUI();
             setInterval(checkNewMessages, 5000);
         };
