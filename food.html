@@ -1,0 +1,168 @@
+ <!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MontCode™ Clinical Food Scan & Profile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
+    <style>
+        body { background: #000; color: white; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
+        .scanner-container { width: 100%; height: 250px; background: #111; border-radius: 30px; overflow: hidden; position: relative; border: 2px solid #333; }
+        #interactive.viewport canvas, video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        .result-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 100; display: none; padding: 24px; overflow-y: auto; }
+        .config-box { background: #111; border: 1px solid #222; border-radius: 20px; padding: 14px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+        input[type="checkbox"] { width: 22px; height: 22px; accent-color: #32CD32; }
+    </style>
+</head>
+<body class="p-6 pb-32">
+
+    <header class="flex justify-between items-center mb-6">
+        <button onclick="location.href='index.html'" class="text-zinc-500 font-black uppercase text-[10px]">← Dashboard</button>
+        <span class="text-[9px] font-black text-lime-500 border border-lime-500/30 px-3 py-1 rounded-full uppercase italic tracking-widest">Lectin-Free Intelligence</span>
+    </header>
+
+    <h1 class="text-3xl font-black italic uppercase tracking-tighter mb-6 leading-none">Food Analysis</h1>
+
+    <div class="scanner-container mb-8" id="barcode-scanner">
+        <div id="interactive" class="viewport"></div>
+        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <div class="w-64 h-1 bg-lime-500 shadow-[0_0_15px_#32CD32] animate-pulse"></div>
+            <p class="text-[8px] font-black uppercase mt-4 text-white/40 tracking-[0.3em]">Ready for Barcode</p>
+        </div>
+    </div>
+
+    <div class="mt-4 pt-6 border-t border-zinc-900">
+        <h2 class="text-xl font-black italic uppercase tracking-tight mb-4 text-zinc-300">Patient Setup</h2>
+        
+        <div class="space-y-6">
+            <div>
+                <p class="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-3">Chronic Conditions</p>
+                <div class="config-box"><span>Hypertension (HTN)</span><input type="checkbox" id="htn" onchange="autoSave()"></div>
+                <div class="config-box"><span>Diabetes (DM)</span><input type="checkbox" id="dm" onchange="autoSave()"></div>
+                <div class="config-box"><span>Chronic Kidney Disease (CKD)</span><input type="checkbox" id="ckd" onchange="autoSave()"></div>
+            </div>
+
+            <div>
+                <p class="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-3">Dietary Filters</p>
+                <div class="config-box text-orange-400 font-bold"><span>Keto Diet</span><input type="checkbox" id="keto" onchange="autoSave()"></div>
+                <div class="config-box text-lime-500 font-bold"><span>Lectin-Free</span><input type="checkbox" id="lectin" onchange="autoSave()"></div>
+                <div class="config-box text-yellow-500 font-bold"><span>Low Sodium</span><input type="checkbox" id="low_sodium" onchange="autoSave()"></div>
+            </div>
+
+            <div>
+                <p class="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-3">GI History</p>
+                <div class="config-box"><span>Lactose Intolerance</span><input type="checkbox" id="lactose" onchange="autoSave()"></div>
+                <div class="config-box"><span>Diverticulosis</span><input type="checkbox" id="diverticulosis" onchange="autoSave()"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="result-modal" class="result-overlay">
+        <div id="res-content" class="pt-10"></div>
+        <button onclick="location.reload()" class="mt-10 w-full py-5 bg-zinc-900 text-white font-black uppercase rounded-3xl border border-zinc-800 tracking-widest active:scale-95 transition">Scan Next Item</button>
+    </div>
+
+    <footer class="mt-16 opacity-30 text-center italic text-[7px] uppercase font-bold text-zinc-500 pb-10">
+        *Disclaimer: All information provided by the patient using the app is not based on official medical records. 2026 Standards.*
+    </footer>
+
+    <script>
+        const LECTIN_DANGER_WORDS = ["WHEAT", "CORN", "MAIZ", "SOY", "SOYA", "BEAN", "FRIJOL", "LENTIL", "LENTEJA", "CHICKPEA", "GARBANZO", "PEANUT", "MANI", "CACAHUATE", "TOMATO", "POTATO", "PAPA", "EGGPLANT", "PEPPERS", "QUINOA", "CHIA", "RICE", "ARROZ", "OATS", "AVENA", "SUNFLOWER", "CASEIN", "MALTODEXTRIN", "CANOLA"];
+
+        window.onload = () => {
+            loadProfile();
+            Quagga.init({
+                inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#interactive'), constraints: { facingMode: "environment" } },
+                decoder: { readers: ["ean_reader", "upc_reader", "code_128_reader"] },
+                locate: true
+            }, (err) => { if (!err) Quagga.start(); });
+            
+            Quagga.onDetected((data) => { 
+                Quagga.stop(); 
+                fetchProductData(data.codeResult.code); 
+            });
+        };
+
+        function autoSave() {
+            const data = {
+                htn: document.getElementById('htn').checked,
+                dm: document.getElementById('dm').checked,
+                ckd: document.getElementById('ckd').checked,
+                keto: document.getElementById('keto').checked,
+                lectin: document.getElementById('lectin').checked,
+                low_sodium: document.getElementById('low_sodium').checked,
+                lactose: document.getElementById('lactose').checked,
+                diverticulosis: document.getElementById('diverticulosis').checked
+            };
+            localStorage.setItem('montcode_profile', JSON.stringify(data));
+        }
+
+        function loadProfile() {
+            const saved = JSON.parse(localStorage.getItem('montcode_profile') || '{}');
+            Object.keys(saved).forEach(key => {
+                const el = document.getElementById(key);
+                if(el) el.checked = saved[key];
+            });
+        }
+
+        async function fetchProductData(code) {
+            const scannerDiv = document.getElementById('barcode-scanner');
+            scannerDiv.innerHTML = `<div class="p-10 h-full flex items-center justify-center text-center font-black animate-pulse uppercase text-xs text-lime-500">Clinical Triangulation...</div>`;
+            try {
+                const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+                const data = await res.json();
+                if(data.status === 1) processClinicalLogic(data.product);
+                else { alert("Barcode not in database."); location.reload(); }
+            } catch (e) { alert("Error connecting to Database."); location.reload(); }
+        }
+
+        function processClinicalLogic(p) {
+            const profile = JSON.parse(localStorage.getItem('montcode_profile') || '{}');
+            const ingredients = (p.ingredients_text || "").toUpperCase();
+            const n = p.nutriments;
+            let alerts = [];
+            
+            // Filtros Dinámicos
+            if (profile.lectin) { 
+                LECTIN_DANGER_WORDS.forEach(word => { if (ingredients.includes(word)) alerts.push(`🚫 LECTIN: ${word}`); }); 
+            }
+            if (profile.dm && (n.sugars_100g > 5)) alerts.push(`🍭 HIGH SUGAR: ${n.sugars_100g.toFixed(1)}g`);
+            if ((profile.htn || profile.low_sodium) && (n.sodium_100g * 1000 > 140)) alerts.push(`🧂 HIGH SODIUM: ${(n.sodium_100g * 1000).toFixed(0)}mg`);
+            if (profile.keto && ((n.carbohydrates_100g - n.fiber_100g) > 5)) alerts.push(`🥩 NON-KETO: Net Carbs High`);
+            if (profile.lactose) {
+                ["MILK", "LACTOSE", "WHEY", "LECHE", "CREAM", "BUTTER"].forEach(word => { if (ingredients.includes(word)) alerts.push(`🥛 LACTOSE: ${word}`); });
+            }
+            if (profile.ckd && (ingredients.includes("PHOSPHATE") || ingredients.includes("FOSFATO"))) alerts.push(`🧪 CKD: Phosphorus Additives`);
+            if (profile.diverticulosis && (n.fiber_100g < 3)) alerts.push(`🥬 LOW FIBER: ${n.fiber_100g || 0}g`);
+
+            showFinalReport(p.product_name || "Unknown Product", alerts);
+        }
+
+        function showFinalReport(name, alerts) {
+            const modal = document.getElementById('result-modal');
+            const cont = document.getElementById('res-content');
+            modal.style.display = "block";
+            let html = `<h2 class="text-3xl font-black italic uppercase mb-2">${name}</h2>`;
+            html += `<p class="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-6 border-b border-zinc-900 pb-4">Clinical Verdict</p>`;
+
+            if (alerts.length > 0) {
+                const uniqueAlerts = [...new Set(alerts)];
+                html += `<div class="space-y-3">${uniqueAlerts.map(a => `
+                    <div class="bg-red-500/10 border border-red-500/40 p-4 rounded-2xl">
+                        <p class="text-[8px] font-black text-red-500 uppercase mb-1 italic">Contraindication</p>
+                        <p class="text-xs font-bold text-white uppercase leading-tight">${a}</p>
+                    </div>`).join('')}</div>`;
+            } else {
+                html += `<div class="bg-lime-500/10 border border-lime-500/40 p-10 rounded-[40px] text-center">
+                    <div class="text-5xl mb-4">✅</div>
+                    <p class="text-xl font-black italic uppercase text-lime-400">Safe for your Profile</p>
+                </div>`;
+            }
+
+            html += `<div class="mt-6 p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800 text-[10px] text-zinc-400 leading-tight italic">*Data from FDA/USDA. 20% variation allowed. Always check label.*</div>`;
+            cont.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
