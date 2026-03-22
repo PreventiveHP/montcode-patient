@@ -1,101 +1,142 @@
-  <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MontCode™ Rescue | HUB</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>MontCode™ Audit Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@300;400;700&display=swap');
-        body { background: #000; color: white; font-family: 'Inter', sans-serif; padding: 20px; overflow-x: hidden; }
-        .hub-card { 
-            background: #0a0a0a; 
-            border: 1px solid #1a1a1a; 
-            border-radius: 28px; 
-            padding: 20px; 
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap');
+        body { background: #000; color: white; font-family: sans-serif; overflow: hidden; }
+        
+        /* Logo Interactivo (El Escudo) */
+        .logo-shield {
+            font-family: 'Orbitron', sans-serif;
             transition: 0.3s;
-            position: relative;
-            overflow: hidden;
+            cursor: pointer;
+            user-select: none;
         }
-        .hub-card:active { transform: scale(0.96); background: #111; }
-        .icon-box {
-            width: 50px;
-            height: 50px;
-            border-radius: 16px;
+        .logo-shield:active { transform: scale(0.9); opacity: 0.7; }
+
+        /* Grid de Auditoría */
+        .audit-grid {
+            display: grid;
+            grid-template-cols: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .audit-card {
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 24px;
+            padding: 20px;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            margin-bottom: 15px;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 140px;
+            transition: 0.2s;
         }
-        .badge-live {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(204, 255, 0, 0.1);
-            color: #ccff00;
-            font-size: 8px;
-            font-weight: 900;
-            padding: 4px 8px;
-            border-radius: 8px;
-            text-transform: uppercase;
+        .audit-card:active { background: #111; transform: translateY(2px); }
+        
+        .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        
+        /* Modal de Administrador Escondido */
+        #admin-panel {
+            backdrop-filter: blur(20px);
+            background: rgba(0,0,0,0.95);
+            transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(100%);
         }
+        #admin-panel.open { transform: translateY(0); }
     </style>
 </head>
-<body class="pb-10">
-    <div class="flex justify-between items-center mb-10">
-        <div>
-            <h1 class="font-black italic text-2xl tracking-tighter uppercase">MontCode™</h1>
-            <p class="text-[8px] text-zinc-500 font-bold tracking-[0.4em] uppercase">Tactical Health System</p>
-        </div>
-        <div class="w-10 h-10 rounded-full border border-[#ccff00]/30 flex items-center justify-center text-[#ccff00] font-black text-xs">
-            2026
-        </div>
-    </div>
+<body class="p-5">
 
-    <div class="grid grid-cols-1 gap-4">
+    <header class="flex flex-col items-center mb-10 mt-6">
+        <div class="logo-shield text-center" onclick="toggleAdmin()">
+            <h1 class="text-4xl font-black italic tracking-tighter leading-none text-[#ccff00]">M</h1>
+            <p class="text-[7px] font-black uppercase tracking-[0.5em] text-zinc-500 mt-1">MontCode™</p>
+        </div>
+    </header>
+
+    <div class="audit-grid">
         
-        <div onclick="window.location.replace('glucose.html')" class="hub-card">
-            <span class="badge-live animate-pulse">System Active</span>
-            <div class="icon-box bg-lime-500/10 text-[#ccff00]">🩸</div>
-            <h2 class="text-xl font-black uppercase italic tracking-tight">Glucose Master</h2>
-            <p class="text-[10px] text-zinc-500 font-medium uppercase mt-1">A1C Tracking • Tactical Logs • QR Bridge</p>
+        <div onclick="window.location.replace('bp.html')" class="audit-card">
+            <div class="flex justify-between items-start">
+                <span class="text-red-500 text-xl">🫀</span>
+                <span class="dot bg-red-500 shadow-[0_0_8px_red]"></span>
+            </div>
+            <div>
+                <h2 class="text-xs font-black uppercase tracking-widest text-zinc-400">Arterial</h2>
+                <p class="text-lg font-black italic uppercase">BP Master</p>
+            </div>
         </div>
 
-        <div onclick="window.location.replace('feedback.html')" class="hub-card">
-            <div class="icon-box bg-blue-500/10 text-blue-400">📡</div>
-            <h2 class="text-xl font-black uppercase italic tracking-tight">Clinical Feedback</h2>
-            <p class="text-[10px] text-zinc-500 font-medium uppercase mt-1">P2P Secure Messaging • Provider Node</p>
+        <div onclick="window.location.replace('glucose.html')" class="audit-card">
+            <div class="flex justify-between items-start">
+                <span class="text-[#ccff00] text-xl">🩸</span>
+                <span class="dot bg-[#ccff00] shadow-[0_0_8px_#ccff00]"></span>
+            </div>
+            <div>
+                <h2 class="text-xs font-black uppercase tracking-widest text-zinc-400">Metabolic</h2>
+                <p class="text-lg font-black italic uppercase">Glucose</p>
+            </div>
         </div>
 
-        <div class="hub-card opacity-40 border-dashed border-zinc-800">
-            <div class="icon-box bg-zinc-800 text-zinc-500">🫀</div>
-            <h2 class="text-xl font-black uppercase italic tracking-tight">BP Monitor</h2>
-            <p class="text-[10px] text-zinc-600 font-medium uppercase mt-1">Coming Soon • Arterial Mapping</p>
+        <div onclick="window.location.replace('feedback.html')" class="audit-card">
+            <div class="flex justify-between items-start">
+                <span class="text-blue-500 text-xl">📡</span>
+                <span class="dot bg-blue-500 shadow-[0_0_8px_#3b82f6]"></span>
+            </div>
+            <div>
+                <h2 class="text-xs font-black uppercase tracking-widest text-zinc-400">P2P Node</h2>
+                <p class="text-lg font-black italic uppercase">Feedback</p>
+            </div>
+        </div>
+
+        <div onclick="alert('Syncing All Clinical Nodes...')" class="audit-card border-[#ccff00]/20">
+            <div class="flex justify-between items-start">
+                <span class="text-zinc-300 text-xl">🔄</span>
+                <span class="dot bg-zinc-500"></span>
+            </div>
+            <div>
+                <h2 class="text-xs font-black uppercase tracking-widest text-zinc-400">Cloudless</h2>
+                <p class="text-lg font-black italic uppercase">Full Sync</p>
+            </div>
         </div>
 
     </div>
 
-    <div class="mt-10 grid grid-cols-2 gap-3">
-        <button onclick="alert('Syncing All Nodes...')" class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-[9px] font-black uppercase tracking-widest text-zinc-400">
-            Manual Sync 🔄
-        </button>
-        <button onclick="window.print()" class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-[9px] font-black uppercase tracking-widest text-zinc-400">
-            Print ID Card 🪪
-        </button>
-    </div>
+    <button class="w-full mt-10 bg-zinc-900 border border-zinc-800 p-5 rounded-[28px] flex items-center justify-center gap-3 active:scale-95 transition">
+        <span class="text-[10px] font-black uppercase tracking-[0.2em]">Generate Global Audit PDF</span>
+        <span>📄</span>
+    </button>
 
-    <footer class="mt-12 text-center">
-        <p class="text-[7px] text-zinc-700 font-black uppercase tracking-[0.2em]">Local Storage Only • No Cloud • HIPAA Compliant</p>
-    </footer>
+    <div id="admin-panel" class="fixed inset-0 z-50 p-8 flex flex-col justify-center">
+        <div class="text-center mb-12">
+            <h3 class="text-[#ccff00] font-black text-2xl uppercase italic">Admin Access</h3>
+            <p class="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Secure Terminal v2.6</p>
+        </div>
+        
+        <div class="space-y-4">
+            <button onclick="clearSystem()" class="w-full bg-red-900/20 border border-red-500/50 text-red-500 p-5 rounded-2xl font-black uppercase text-xs">Purge All Databases 🗑️</button>
+            <button class="w-full bg-zinc-900 border border-zinc-800 text-white p-5 rounded-2xl font-black uppercase text-xs">Developer Logs</button>
+            <button class="w-full bg-zinc-900 border border-zinc-800 text-white p-5 rounded-2xl font-black uppercase text-xs">NFC Chip Re-Write</button>
+            
+            <button onclick="toggleAdmin()" class="w-full mt-12 text-zinc-500 font-black uppercase text-[10px] tracking-[0.3em]">← Exit Terminal</button>
+        </div>
+    </div>
 
     <script>
-        // Lógica para mostrar mini-estadísticas en el HUB
-        window.onload = () => {
-            const gluData = JSON.parse(localStorage.getItem('mc_glu_master_2026')) || [];
-            if(gluData.length > 0) {
-                // Podríamos inyectar el último valor aquí si quisiéramos
-                console.log("MontCode Hub: Glucose data detected.");
+        function toggleAdmin() {
+            const panel = document.getElementById('admin-panel');
+            panel.classList.toggle('open');
+        }
+
+        function clearSystem() {
+            if(confirm("DANGER: This will delete all BP and Glucose logs. Proceed?")) {
+                localStorage.clear();
+                alert("System Purged.");
+                location.reload();
             }
         }
     </script>
