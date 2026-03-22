@@ -1,0 +1,186 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MontCode™ Admin Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #000; color: white; font-family: system-ui, sans-serif; -webkit-tap-highlight-color: transparent; padding-bottom: 50px; }
+        .qr-btn { 
+            width: 100%; padding: 14px; border-radius: 18px; font-weight: 900; 
+            text-transform: uppercase; font-size: 8px; border: 1px solid rgba(255,255,255,0.05); 
+            background: #0a0a0a; transition: 0.2s; text-align: center; cursor: pointer;
+        }
+        .qr-btn:active { transform: scale(0.95); background: #1e3a8a; border-color: #3b82f6; }
+        .group-label { font-size: 8px; color: #444; font-weight: 900; margin-top: 18px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #111; }
+        
+        #scan-overlay { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.95); 
+            z-index: 999; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            pointer-events: none; 
+        }
+        #scan-overlay.active { display: flex; pointer-events: auto; }
+
+        .status-bar { font-size: 10px; font-weight: 800; color: #3b82f6; text-transform: uppercase; letter-spacing: 2px; }
+        .wake-btn { border: 1px solid #3b82f6; background: #001a33; color: #60a5fa; box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+        .activate-btn { border: 1px solid #ca8a04; background: #1a1a05; color: #facc15; }
+        .barcode-btn { border: 1px solid #34d399; background: #064e3b; color: #6ee7b7; }
+        .reset-btn { border: 1px solid #ef4444; background: #450a0a; color: #fca5a5; }
+    </style>
+</head>
+<body class="p-6">
+
+    <header class="mb-6 text-center">
+        <h1 class="text-3xl font-black italic tracking-tighter uppercase text-blue-500">MontCode™</h1>
+        <p class="status-bar animate-pulse" id="engine-status">📡 Admin Engine Ready</p>
+    </header>
+
+    <div class="group-label">Hardware Wake Triggers (Direct ID)</div>
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <button onclick="linkWake('BP')" class="qr-btn wake-btn">1 Despertar BP Boar</button>
+        <button onclick="linkWake('GLU')" class="qr-btn wake-btn">2 Despertar Glucose Boar</button>
+    </div>
+
+    <div class="group-label">Physical Kit Licensing (Series 102XXX)</div>
+    <div class="grid grid-cols-1 gap-3 mb-4">
+        <button onclick="linkPhysicalKit()" class="qr-btn barcode-btn w-full italic">
+            Write NFC Activation (Kit 102XXX)
+        </button>
+    </div>
+
+    <div class="group-label">Vital Signs & Reports (Deep Links)</div>
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <button onclick="linkQR('BP')" class="qr-btn text-red-500">Link BP Panel</button>
+        <button onclick="linkQR('BPR')" class="qr-btn text-red-800">BP Report</button>
+        <button onclick="linkQR('GLU')" class="qr-btn text-green-500">Link Glucose</button>
+        <button onclick="linkQR('GLR')" class="qr-btn text-green-800">GLU Report</button>
+    </div>
+
+    <div class="group-label">Clinical Intelligence</div>
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <button onclick="linkQR('BOT')" class="qr-btn text-white">Smart Bottle</button>
+        <button onclick="linkQR('MED')" class="qr-btn text-blue-400">Med Input</button>
+        <button onclick="linkQR('OTC')" class="qr-btn text-purple-500">OTC Guard</button>
+        <button onclick="linkQR('FOOD')" class="qr-btn text-yellow-500">Food Scan</button>
+    </div>
+
+    <div class="group-label">Safety & Metabolism</div>
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <button onclick="linkQR('CHF')" class="qr-btn text-orange-500">CHF Assist</button>
+        <button onclick="linkQR('BMI')" class="qr-btn text-teal-400">BMI Logic</button>
+        <button onclick="linkQR('SEN')" class="qr-btn text-cyan-400">Sentinel</button>
+        <button onclick="linkQR('LIB')" class="qr-btn text-zinc-400">My Library</button>
+    </div>
+
+    <div class="group-label">Wellness & Profile</div>
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <button onclick="linkQR('WEL')" class="qr-btn text-blue-800">Wellness</button>
+        <button onclick="linkQR('EBK')" class="qr-btn text-zinc-500">E-Book</button>
+        <button onclick="linkQR('ALM')" class="qr-btn text-pink-500">Alarms</button>
+        <button onclick="linkQR('PRO')" class="qr-btn text-white">Profile</button>
+    </div>
+
+    <div class="group-label">Master Licensing</div>
+    <button onclick="linkActivation()" class="qr-btn activate-btn w-full mb-6">Write 365-Day Random Key</button>
+
+    <div class="group-label text-red-500">Developer & Debugging</div>
+    <button onclick="clearSystem()" class="qr-btn reset-btn w-full italic">
+        ⚠️ Reset Local Activation (For Testing)
+    </button>
+
+    <div id="scan-overlay">
+        <div class="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center text-4xl animate-pulse mb-6">🛰️</div>
+        <h2 class="text-xl font-black uppercase text-center px-6" id="scan-status">Linking Mode</h2>
+        <p class="text-[10px] text-zinc-500 mt-4 uppercase font-bold tracking-widest text-center px-4">Aproxima el Chip al Sensor</p>
+        <button onclick="hideOverlay()" class="mt-8 text-[8px] border border-zinc-700 px-4 py-2 rounded-full text-zinc-500 uppercase">Cancelar</button>
+    </div>
+
+    <script>
+        const BASE_URL = "https://montcode-pwa.vercel.app";
+
+        // --- FUNCIÓN RESET PARA PRUEBAS ---
+        function clearSystem() {
+            if(confirm("Confirmar: ¿Deseas borrar la activación actual para probar tus Barcodes 102XXX?")) {
+                localStorage.removeItem('montcode_activation');
+                localStorage.removeItem('montcode_used_history');
+                alert("Memoria Limpia. Redirigiendo...");
+                location.href = 'index.html';
+            }
+        }
+
+        async function linkPhysicalKit() {
+            if (!('NDEFReader' in window)) return alert("NFC No soportado");
+            const kitNum = prompt("Ingresa el número de Kit (Serie 102XXX):", "102");
+            if (!kitNum || !kitNum.startsWith("102")) return alert("Error: Debe ser serie 102.");
+            showOverlay(`PROGRAMMING KIT: ${kitNum}`);
+            try {
+                const ndef = new NDEFReader();
+                const targetURL = `${BASE_URL}/activation.html?id=${kitNum}`;
+                await ndef.write({ records: [{ recordType: "url", data: targetURL }] });
+                hideOverlay();
+                alert(`KIT ${kitNum} vinculado con éxito.`);
+            } catch (e) { hideOverlay(); alert("Error de escritura."); }
+        }
+
+        async function linkWake(type) {
+            if (!('NDEFReader' in window)) return alert("NFC No soportado");
+            showOverlay(`Programming WAKE: ${type}`);
+            try {
+                const ndef = new NDEFReader();
+                const payload = "A0010Z"; 
+                await ndef.write(payload); 
+                hideOverlay();
+                alert(`¡ÉXITO! Chip configurado como DISPARADOR: ${payload}`);
+            } catch (e) { hideOverlay(); alert("Error: Acerca el chip al sensor."); }
+        }
+
+        async function linkQR(code) {
+            if (!('NDEFReader' in window)) return alert("NFC No soportado");
+            showOverlay(`Linking URL: ${code}...`);
+            try {
+                const ndef = new NDEFReader();
+                let targetURL;
+                switch(code) {
+                    case 'BP': targetURL = `${BASE_URL}/blood-pressure/index.html?go=BP`; break;
+                    case 'BPR': targetURL = `${BASE_URL}/blood-pressure/index.html?go=REPORT`; break;
+                    case 'GLU': targetURL = `${BASE_URL}/glucose/index.html?go=GLU`; break;
+                    case 'GLR': targetURL = `${BASE_URL}/glucose/index.html?go=REPORT`; break;
+                    default: targetURL = `${BASE_URL}/index.html?go=${code}`;
+                }
+                await ndef.write({ records: [{ recordType: "url", data: targetURL }] });
+                hideOverlay();
+                alert(`URL Directa grabada con éxito.`);
+            } catch (e) { hideOverlay(); alert("Error al grabar URL."); }
+        }
+
+        async function linkActivation() {
+            if (!('NDEFReader' in window)) return alert("NFC No soportado");
+            const uniqueKey = "MC-" + Math.floor(Math.random() * 900000 + 100000);
+            showOverlay(`Programming Key: ${uniqueKey}`);
+            try {
+                const ndef = new NDEFReader();
+                const activationLink = `${BASE_URL}/index.html?activate=true&key=${uniqueKey}`;
+                await ndef.write({ records: [{ recordType: "url", data: activationLink }] });
+                hideOverlay();
+                alert(`KEY ${uniqueKey} GRABADA!`);
+            } catch (e) { hideOverlay(); alert("Error."); }
+        }
+
+        function showOverlay(msg) {
+            document.getElementById('scan-status').innerText = msg;
+            document.getElementById('scan-overlay').classList.add('active');
+        }
+
+        function hideOverlay() {
+            document.getElementById('scan-overlay').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
