@@ -17,7 +17,6 @@
             -webkit-text-size-adjust: 100%;
         }
         
-        /* Visor de la Cámara con efecto Neón Azul */
         .scanner-view { 
             width: 100%; 
             height: 300px; 
@@ -38,7 +37,6 @@
             object-fit: cover; 
         }
 
-        /* Línea de escaneo láser */
         .scan-line { 
             position: absolute; 
             top: 50%; 
@@ -57,11 +55,14 @@
         }
 
         .btn-active:active { transform: scale(0.96); }
+        .logo-mini { box-shadow: 0 0 15px rgba(218, 165, 32, 0.3); border: 1px solid #DAA520; }
         
-        /* Logo pequeño con resplandor dorado */
-        .logo-mini {
-            box-shadow: 0 0 15px rgba(218, 165, 32, 0.3);
-            border: 1px solid #DAA520;
+        /* Animación para validación exitosa */
+        .valid-pulse { animation: success-glow 0.5s ease-in-out; }
+        @keyframes success-glow {
+            0% { box-shadow: 0 0 0px #16a34a; }
+            50% { box-shadow: 0 0 30px #16a34a; }
+            100% { box-shadow: 0 0 0px #16a34a; }
         }
     </style>
 </head>
@@ -79,15 +80,15 @@
     <h1 class="text-3xl font-black italic uppercase tracking-tighter leading-none mb-1">Kit Activation</h1>
     <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8 italic">Validated Series: 102XXX +</p>
 
-    <div class="scanner-view mb-8">
+    <div id="scanner-container" class="scanner-view mb-8">
         <div id="interactive" class="viewport"></div>
         <div class="scan-line"></div>
     </div>
 
     <div class="bg-zinc-900/80 p-6 rounded-[28px] border border-zinc-800 mb-8">
-        <p class="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2">System Status: <span id="scan-status" class="text-zinc-400">Waiting for Barcode...</span></p>
-        <input type="text" id="kitID" placeholder="POINT AT KIT BARCODE" readonly
-               class="w-full bg-transparent font-black text-3xl text-white outline-none italic uppercase placeholder:text-zinc-800 tracking-tight">
+        <p class="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2">System Status: <span id="scan-status" class="text-zinc-400 italic">Waiting for Barcode...</span></p>
+        <input type="text" id="kitID" placeholder="POINT AT KIT" readonly
+               class="w-full bg-transparent font-black text-4xl text-white outline-none italic uppercase placeholder:text-zinc-800 tracking-tight">
     </div>
 
     <button onclick="activateSystem()" id="btn-activate" class="btn-active w-full bg-blue-600 py-6 rounded-[26px] font-black uppercase italic shadow-2xl transition-all text-lg tracking-tight">
@@ -95,28 +96,60 @@
     </button>
 
     <script>
-        // ... (Lógica Quagga y activación idéntica a la anterior) ...
+        let isDetected = false;
+
         function startScanner() {
             Quagga.init({
-                inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#interactive'), constraints: { facingMode: "environment" } },
-                decoder: { readers: ["code_128_reader", "ean_reader", "code_39_reader"] },
+                inputStream: { 
+                    name: "Live", 
+                    type: "LiveStream", 
+                    target: document.querySelector('#interactive'), 
+                    constraints: { 
+                        facingMode: "environment",
+                        aspectRatio: { min: 1, max: 2 } 
+                    } 
+                },
+                decoder: { 
+                    readers: ["code_128_reader", "ean_reader", "code_39_reader"] 
+                },
                 locate: true
-            }, (err) => { if (!err) Quagga.start(); else console.error(err); });
+            }, (err) => { 
+                if (!err) {
+                    Quagga.start(); 
+                } else { 
+                    document.getElementById('scan-status').innerText = "CAMERA ERROR";
+                    console.error(err); 
+                } 
+            });
 
             Quagga.onDetected((data) => {
                 const code = data.codeResult.code;
-                if (/^102\d{3,}/.test(code)) {
-                    document.getElementById('kitID').value = code;
-                    document.getElementById('scan-status').innerText = "KIT VALIDATED";
-                    document.getElementById('scan-status').classList.remove('text-zinc-400');
-                    document.getElementById('scan-status').classList.add('text-green-500');
-                    if (navigator.vibrate) navigator.vibrate(200);
+                // Validamos que empiece por 102 para asegurar que es un kit oficial MontCode™
+                if (/^102\d{3,}/.test(code) && !isDetected) {
+                    isDetected = true;
+                    handleDetection(code);
                 }
             });
         }
 
+        function handleDetection(code) {
+            const kitInput = document.getElementById('kitID');
+            const status = document.getElementById('scan-status');
+            const container = document.getElementById('scanner-container');
+
+            kitInput.value = code;
+            status.innerText = "KIT VALIDATED ✓";
+            status.className = "text-green-500 font-black italic";
+            container.classList.add('valid-pulse');
+            container.style.borderColor = "#16a34a";
+            
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        }
+
         function activateSystem() {
             const code = document.getElementById('kitID').value;
+            const btn = document.getElementById('btn-activate');
+
             if (code) {
                 const activation = {
                     kitID: code,
@@ -124,12 +157,31 @@
                     expiryDate: new Date().getTime() + (365 * 24 * 60 * 60 * 1000),
                     isActive: true
                 };
+
+                // Guardar en almacenamiento local para que index.html lo reconozca
                 localStorage.setItem('montcode_activation', JSON.stringify(activation));
-                document.getElementById('btn-activate').innerText = "SUCCESSFUL ACTIVATION";
-                document.getElementById('btn-activate').classList.replace('bg-blue-600', 'bg-green-600');
-                setTimeout(() => { location.href = 'index.html'; }, 1500);
-            } else { alert("Please scan a valid Kit first."); }
+                
+                btn.innerText = "SYSTEM ARMED";
+                btn.style.background = "#16a34a";
+                btn.classList.add('animate-pulse');
+
+                // Detener cámara para ahorrar batería
+                Quagga.stop();
+
+                setTimeout(() => { 
+                    location.href = 'index.html'; 
+                }, 1200);
+            } else { 
+                // Feedback visual si intentan activar sin escanear
+                btn.innerText = "SCAN REQUIRED";
+                btn.style.background = "#dc2626";
+                setTimeout(() => {
+                    btn.innerText = "Confirm 365 Days Activation";
+                    btn.style.background = "#2563eb";
+                }, 2000);
+            }
         }
+
         window.onload = startScanner;
     </script>
 </body>
