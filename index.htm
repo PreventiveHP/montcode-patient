@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -63,7 +63,6 @@
         .bg-yellow-btn { background: #eab308; color: black; }
         .bg-blue-btn { background: #2563eb; }
 
-        /* Estilo RESCUE (Red) */
         .rescue-card {
             background: linear-gradient(135deg, #7f1d1d 0%, #000000 100%);
             border: 2px solid #ef4444;
@@ -176,6 +175,44 @@
         let currentLang = localStorage.getItem('montcode_lang') || 'EN';
         let adminTaps = 0;
         let adminTimer;
+        let lastMsgCount = parseInt(localStorage.getItem('montcode_msg_count')) || 0;
+
+        // Función Generadora de Sonido (Oscilador Sintetizado)
+        function playNotificationSound() {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = context.createOscillator();
+            const gain = context.createGain();
+
+            osc.type = 'sine'; 
+            osc.frequency.setValueAtTime(880, context.currentTime); // La natural
+            osc.frequency.exponentialRampToValueAtTime(440, context.currentTime + 0.2);
+
+            gain.gain.setValueAtTime(0, context.currentTime);
+            gain.gain.linearRampToValueAtTime(0.2, context.currentTime + 0.05);
+            gain.gain.linearRampToValueAtTime(0, context.currentTime + 0.3);
+
+            osc.connect(gain);
+            gain.connect(context.destination);
+
+            osc.start();
+            osc.stop(context.currentTime + 0.3);
+        }
+
+        // Sistema de Escucha de Mensajes
+        function checkNewMessages() {
+            const messages = JSON.parse(localStorage.getItem('montcode_feedback_logs')) || [];
+            const currentCount = messages.length;
+
+            if (currentCount > lastMsgCount) {
+                const lastMsg = messages[currentCount - 1];
+                // Solo suena si el mensaje viene del sistema/doctor (no del paciente)
+                if (lastMsg.type === 'doctor') {
+                    playNotificationSound();
+                }
+                lastMsgCount = currentCount;
+                localStorage.setItem('montcode_msg_count', currentCount);
+            }
+        }
 
         function updateUI() {
             const isEN = currentLang === 'EN';
@@ -242,7 +279,11 @@
             adminTimer = setTimeout(() => { adminTaps = 0; }, 2000);
         }
 
-        window.onload = updateUI;
+        window.onload = () => {
+            updateUI();
+            // Revisar cada 5 segundos si hay mensajes nuevos del Dr.
+            setInterval(checkNewMessages, 5000);
+        };
     </script>
 </body>
 </html>
