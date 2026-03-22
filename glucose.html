@@ -10,31 +10,42 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@300;400;700&display=swap');
-        body { background: #000; color: white; font-family: 'Inter', sans-serif; padding: 15px; touch-action: manipulation; overflow-x: hidden; }
-        .stat-card { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 20px; padding: 12px 6px; text-align: center; }
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; padding: 15px; touch-action: manipulation; overflow-x: hidden; transition: background 0.3s ease; }
+        .glass-panel { background: rgba(10, 10, 10, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 24px; padding: 15px; }
+        .stat-card { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 20px; padding: 12px 6px; text-align: center; position: relative; overflow: hidden; }
+        .stat-card::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 1px; background: linear-gradient(90deg, transparent, #ccff00, transparent); }
         .stat-val { font-size: 1.1rem; font-weight: 900; line-height: 1.2; }
         .num-pad { display: grid; grid-template-cols: repeat(3, 1fr); gap: 10px; margin-top: 15px; opacity: 0.3; pointer-events: none; transition: 0.5s; }
         .num-pad.active { opacity: 1; pointer-events: auto; }
-        .key { background: #111; border-radius: 20px; padding: 20px; font-size: 1.5rem; font-weight: 800; border: 1px solid #222; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; }
-        .key:active { background: #222; transform: scale(0.95); }
-        .key-save { background: #ccff00; color: #000; grid-column: span 2; font-size: 0.9rem; font-weight: 900; text-transform: uppercase; }
-        .display-glu { font-size: 4.2rem; font-weight: 900; color: #ccff00; text-align: center; line-height: 1; padding: 10px 0; min-height: 80px; font-family: 'Orbitron', sans-serif; }
-        .tir-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: #1a1a1a; margin: 8px 0; border: 1px solid #333; }
+        .key { background: #0f0f0f; border-radius: 20px; padding: 18px; font-size: 1.5rem; font-weight: 800; border: 1px solid #1a1a1a; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; transition: 0.2s; }
+        .key:active { background: #ccff00; color: #000; transform: scale(0.92); }
+        .key-save { background: #ccff00; color: #000; grid-column: span 2; font-size: 0.9rem; font-weight: 900; text-transform: uppercase; border: none; box-shadow: 0 0 20px rgba(204, 255, 0, 0.2); }
+        .display-glu { font-size: 4.5rem; font-weight: 900; color: #ccff00; text-align: center; line-height: 1; padding: 15px 0; min-height: 90px; font-family: 'Orbitron', sans-serif; text-shadow: 0 0 20px rgba(204, 255, 0, 0.3); }
+        .tir-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #1a1a1a; margin: 8px 0; border: 1px solid #222; }
         .chart-modern { background: #050505; border-radius: 30px; border: 1px solid #1a1a1a; padding: 12px; margin-top: 15px; height: 180px; }
-        .cond-chip { padding: 4px 10px; border-radius: 10px; font-size: 8px; font-weight: 900; border: 1px solid #222; color: #444; cursor: pointer; }
+        .cond-chip { padding: 6px 12px; border-radius: 12px; font-size: 9px; font-weight: 900; border: 1px solid #222; color: #444; cursor: pointer; transition: 0.3s; }
         .cond-chip.active { border-color: #ccff00; color: #ccff00; background: rgba(204, 255, 0, 0.1); }
-        .status-banner { width: 100%; height: 50px; background: #0a0a0a; border-radius: 24px; border: 1px dashed #333; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
-        .time-btn { padding: 8px 12px; border-radius: 12px; font-size: 9px; font-weight: 900; border: 1px solid #222; color: #444; cursor: pointer; }
+        .status-banner { width: 100%; height: 50px; background: #0a0a0a; border-radius: 24px; border: 1px dashed #333; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; }
+        .time-btn { padding: 10px 15px; border-radius: 15px; font-size: 9px; font-weight: 900; border: 1px solid #1a1a1a; color: #444; cursor: pointer; background: #0a0a0a; }
         .time-btn.active { border-color: #ccff00; color: #ccff00; background: rgba(204, 255, 0, 0.1); }
+        
+        /* Efecto de destello de alerta */
+        @keyframes alert-flash-red { 0% { background: #450a0a; } 100% { background: #000; } }
+        @keyframes alert-flash-orange { 0% { background: #452a0a; } 100% { background: #000; } }
+        .flash-red { animation: alert-flash-red 0.8s ease-out; }
+        .flash-orange { animation: alert-flash-orange 0.8s ease-out; }
     </style>
 </head>
-<body class="pb-10">
-    <div class="flex justify-between items-center mb-4">
+<body class="pb-10" id="body-bg">
+    <div class="flex justify-between items-center mb-6">
         <div class="flex gap-2">
-            <button onclick="setLang('en')" class="w-7 h-7 rounded-full border border-zinc-700" id="btn-en">🇺🇸</button>
-            <button onclick="setLang('es')" class="w-7 h-7 rounded-full border border-zinc-700" id="btn-es">🇪🇸</button>
+            <button onclick="setLang('en')" class="w-8 h-8 rounded-full border border-zinc-800 flex items-center justify-center bg-zinc-900" id="btn-en">🇺🇸</button>
+            <button onclick="setLang('es')" class="w-8 h-8 rounded-full border border-zinc-800 flex items-center justify-center bg-zinc-900" id="btn-es">🇪🇸</button>
         </div>
-        <p class="text-[7px] text-zinc-500 uppercase font-bold tracking-widest">MontCode™ Rescue v2.6</p>
+        <div class="text-right">
+            <p class="text-[7px] text-zinc-500 uppercase font-black tracking-[0.3em]">MontCode™ Rescue</p>
+            <p class="text-[6px] text-[#ccff00] font-bold">TACTICAL GLUCOSE v2.6</p>
+        </div>
     </div>
 
     <div class="status-banner" id="status-box">
@@ -44,39 +55,39 @@
         </div>
     </div>
 
-    <div class="flex flex-wrap gap-2 mb-4 justify-center">
+    <div class="flex flex-wrap gap-2 mb-6 justify-center">
         <div class="cond-chip" id="chip-T1D" onclick="this.classList.toggle('active')">T1D</div>
         <div class="cond-chip" id="chip-T2D" onclick="this.classList.toggle('active')">T2D</div>
         <div class="cond-chip" id="chip-CKD" onclick="this.classList.toggle('active')">CKD</div>
     </div>
 
-    <div class="grid grid-cols-3 gap-2 mb-4">
+    <div class="grid grid-cols-3 gap-3 mb-6">
         <div class="stat-card">
-            <p class="text-[6px] font-bold text-zinc-500 uppercase lang-avg">Avg Glucose</p>
+            <p class="text-[6px] font-bold text-zinc-600 uppercase lang-avg">Avg Glucose</p>
             <p id="avg-val" class="stat-val text-white">--</p>
         </div>
         <div class="stat-card">
-            <p class="text-[6px] font-bold text-zinc-500 uppercase">Est. A1C</p>
+            <p class="text-[6px] font-bold text-zinc-600 uppercase">Est. A1C</p>
             <p id="a1c-val" class="stat-val text-[#ccff00]">--</p>
         </div>
         <div class="stat-card">
-            <p class="text-[6px] font-bold text-zinc-500 uppercase">Trend</p>
+            <p class="text-[6px] font-bold text-zinc-600 uppercase">Trend</p>
             <p id="glu-status" class="text-[8px] font-black text-lime-600 uppercase">READY</p>
         </div>
     </div>
 
-    <div class="px-2">
+    <div class="glass-panel mb-6">
         <div class="tir-bar">
             <div id="bar-low" class="bg-red-600" style="width: 0%"></div>
             <div id="bar-target" class="bg-[#00ff99]" style="width: 0%"></div>
             <div id="bar-high" class="bg-orange-500" style="width: 0%"></div>
         </div>
-        <div class="flex justify-between text-[5px] text-zinc-600 font-bold uppercase mb-4">
+        <div class="flex justify-between text-[6px] text-zinc-500 font-black uppercase px-1">
             <span>Low <70</span><span>Range 70-180</span><span>High >180</span>
         </div>
     </div>
 
-    <div class="flex justify-center gap-2 mb-3">
+    <div class="flex justify-center gap-3 mb-2">
         <div id="time-fast" class="time-btn active uppercase" onclick="selectTime('fasting')">FASTING</div>
         <div id="time-post" class="time-btn uppercase" onclick="selectTime('post-meal')">POST-MEAL</div>
     </div>
@@ -87,34 +98,28 @@
         <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div><div class="key" onclick="press('3')">3</div>
         <div class="key" onclick="press('4')">4</div><div class="key" onclick="press('5')">5</div><div class="key" onclick="press('6')">6</div>
         <div class="key" onclick="press('7')">7</div><div class="key" onclick="press('8')">8</div><div class="key" onclick="press('9')">9</div>
-        <div class="key text-red-600" onclick="press('C')">C</div><div class="key" onclick="press('0')">0</div><div class="key" onclick="press('←')">←</div>
+        <div class="key text-red-500" onclick="press('C')">C</div><div class="key" onclick="press('0')">0</div><div class="key" onclick="press('←')">←</div>
         <div class="key key-save lang-save" onclick="saveGlu()">Save Glucose</div>
         <div class="key" onclick="startMic()">🎤</div>
     </div>
 
     <div class="chart-modern"><canvas id="gluChart"></canvas></div>
 
-    <div class="mt-8 space-y-3">
+    <div class="mt-8 space-y-4">
         <button onclick="generatePDF()" class="w-full bg-[#ccff00] text-black p-4 font-black uppercase rounded-2xl text-[10px]">Generate Clinical Report 📄</button>
-        <button onclick="generateDoctorQR()" class="w-full border-2 border-[#ccff00] text-[#ccff00] p-4 font-black uppercase rounded-2xl text-[10px] tracking-tight">
+        <button onclick="generateDoctorQR()" class="w-full border-2 border-[#ccff00]/30 text-[#ccff00] p-4 font-black uppercase rounded-2xl text-[10px] tracking-tight hover:bg-[#ccff00]/5">
             Generate Doctor QR (Clinical Bridge) 📱
         </button>
-        <button onclick="clearAll()" class="w-full p-2 text-zinc-800 text-[8px] font-black uppercase">Clear History 🗑️</button>
+        <button onclick="clearAll()" class="w-full p-2 text-zinc-800 text-[8px] font-black uppercase tracking-widest">Clear History 🗑️</button>
     </div>
 
-    <footer class="mt-8 text-[6px] text-zinc-700 text-center uppercase font-bold px-8 pb-10">
+    <footer class="mt-10 text-[6px] text-zinc-700 text-center uppercase font-bold px-12 pb-10 leading-relaxed">
         *Disclaimer: All information provided by the patient using the app is not based on official medical records.*
     </footer>
 
-    <div id="qrModal" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-6">
-        <div class="bg-white rounded-[40px] p-8 w-full max-w-sm text-center">
-            <div class="flex justify-center mb-4">
-                <div class="bg-black text-[#ccff00] px-4 py-1 rounded-full text-[8px] font-black uppercase tracking-widest italic">MontCode™ Bridge</div>
-            </div>
-            <div id="qrcode" class="bg-white p-4 inline-block rounded-2xl mb-4 border-4 border-zinc-50"></div>
-            <p class="text-zinc-400 text-[8px] font-black uppercase px-4 leading-tight mb-6">
-                Point-to-Point Transmission. No Cloud Storage. Scan with Clinical Audit Tool.
-            </p>
+    <div id="qrModal" class="hidden fixed inset-0 bg-black/98 flex items-center justify-center z-50 p-6 backdrop-blur-md">
+        <div class="bg-white rounded-[40px] p-8 w-full max-w-sm text-center shadow-2xl">
+            <div id="qrcode" class="bg-white p-2 inline-block rounded-xl mb-6"></div>
             <button onclick="document.getElementById('qrModal').classList.add('hidden')" class="bg-red-600 text-white w-full py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest">Close Bridge</button>
         </div>
     </div>
@@ -132,8 +137,8 @@
         setLang('en');
         setTimeout(() => {
             const sb = document.getElementById('status-box');
-            sb.classList.add('bg-lime-900/10', 'border-lime-500/30');
-            sb.classList.remove('border-dashed');
+            sb.style.background = "rgba(20, 30, 10, 0.4)";
+            sb.style.borderColor = "rgba(163, 230, 53, 0.3)";
             document.getElementById('status-text').innerText = "GLUCOSE DEVICE SYNCED ✅";
             document.getElementById('main-pad').classList.add('active');
         }, 800);
@@ -155,6 +160,18 @@
     function saveGlu() {
         if(!currentInput) return;
         const val = parseInt(currentInput);
+        const body = document.getElementById('body-bg');
+
+        // Lógica de Alerta Visual (Flash)
+        body.classList.remove('flash-red', 'flash-orange');
+        if (val < 70) {
+            void body.offsetWidth; // Trigger reflow
+            body.classList.add('flash-red');
+        } else if (val > 180) {
+            void body.offsetWidth; // Trigger reflow
+            body.classList.add('flash-orange');
+        }
+
         db.push({ v: val, t: selectedTime, d: new Date().toISOString() });
         localStorage.setItem('mc_glu_master_2026', JSON.stringify(db));
         
@@ -166,6 +183,12 @@
         currentInput = ""; 
         document.getElementById('display').innerText = "---";
         updateUI();
+    }
+
+    function getClinicalStatus(val) {
+        if (val < 70) return { hex: '#ef4444' };
+        if (val > 180) return { hex: '#f97316' };
+        return { hex: '#ccff00' };
     }
 
     function updateUI() {
@@ -183,46 +206,18 @@
         updateChart();
     }
 
-    // --- INTEGRACIÓN CLÍNICA CORREGIDA (Hacia glu-audit.html) ---
     function generateDoctorQR() {
-        if (!db || db.length < 3) {
-            alert(currentLang === 'es' ? "Mínimo 3 mediciones requeridas." : "Minimum 3 readings required.");
-            return;
-        }
-
-        const values = db.map(e => e.v);
-        const avg = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
-        const estimatedA1c = ((46.7 + avg) / 28.7).toFixed(1);
-
-        // Objeto compacto: a=avg, h=a1c, l=logs, ts=timestamp
-        const payload = {
-            a: avg,
-            h: estimatedA1c,
-            l: db.slice(-12).map(log => [
-                log.v, 
-                log.t === 'fasting' ? 0 : 1
-            ]),
-            ts: Math.floor(Date.now() / 1000)
-        };
-
+        if (!db || db.length < 1) return;
+        const avg = document.getElementById('avg-val').innerText;
+        const a1c = document.getElementById('a1c-val').innerText.replace('%','');
+        const detailedLogs = db.slice(-15).map(log => [log.v, log.t === 'fasting' ? 0 : 1, Math.floor(new Date(log.d).getTime() / 1000)]);
+        const payload = { a: parseInt(avg), h: parseFloat(a1c), l: detailedLogs, ts: Math.floor(Date.now() / 1000) };
         const jsonStr = JSON.stringify(payload);
-        const base64Safe = btoa(unescape(encodeURIComponent(jsonStr)))
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/, '');
-
-        // RUTA EXACTA según tu GitHub
+        const base64Safe = btoa(unescape(encodeURIComponent(jsonStr))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
         const targetUrl = `${window.location.origin}/glu-audit.html#${base64Safe}`;
-
         const qrContainer = document.getElementById("qrcode");
         qrContainer.innerHTML = "";
-        new QRCode(qrContainer, {
-            text: targetUrl,
-            width: 200,
-            height: 200,
-            colorDark: "#000000",
-            correctLevel: QRCode.CorrectLevel.M
-        });
+        new QRCode(qrContainer, { text: targetUrl, width: 220, height: 220, colorDark: "#000000", correctLevel: QRCode.CorrectLevel.L });
         document.getElementById('qrModal').classList.remove('hidden');
     }
 
@@ -230,12 +225,24 @@
         const ctx = document.getElementById('gluChart').getContext('2d');
         chart = new Chart(ctx, {
             type: 'line',
-            data: { labels: [], datasets: [{ data: [], borderColor: '#ccff00', borderWidth: 3, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#ccff00' }] },
+            data: { 
+                labels: [], 
+                datasets: [{ 
+                    data: [], 
+                    borderWidth: 3, 
+                    tension: 0.4, 
+                    pointRadius: 4, 
+                    segment: { borderColor: ctx => getClinicalStatus(ctx.p1.parsed.y).hex },
+                    pointBackgroundColor: ctx => getClinicalStatus(ctx.raw).hex,
+                    fill: true, 
+                    backgroundColor: 'rgba(204, 255, 0, 0.02)' 
+                }] 
+            },
             options: { 
                 responsive: true, maintainAspectRatio: false, 
                 plugins: { legend: { display: false } },
                 scales: { 
-                    y: { grid: { color: '#111' }, ticks: { color: '#444', font: { size: 9 } } },
+                    y: { min: 40, max: 250, grid: { color: '#111' }, ticks: { color: '#444', font: { size: 9 } } },
                     x: { ticks: { color: '#888', font: { size: 8 } } }
                 } 
             }
@@ -254,27 +261,10 @@
         const doc = new jsPDF();
         const avg = document.getElementById('avg-val').innerText;
         const a1c = document.getElementById('a1c-val').innerText;
-        
         doc.setFillColor(0, 0, 0); doc.rect(0, 0, 210, 45, 'F');
         doc.setTextColor(204, 255, 0); doc.setFontSize(18); doc.text("MontCode™ Glucose Audit Report", 15, 20);
-        doc.setTextColor(255, 255, 255); doc.setFontSize(9); 
-        doc.text(`DATE: ${new Date().toLocaleDateString()} | AVG: ${avg} mg/dL | EST. A1C: ${a1c}`, 15, 32);
-        
-        doc.setTextColor(0); doc.setFontSize(10); doc.text("Glucose Trend (Last 10 Logs)", 15, 60);
-        doc.addImage(document.getElementById('gluChart').toDataURL('image/png'), 'PNG', 15, 65, 180, 70);
-        
-        let y = 160;
-        doc.setFont("helvetica", "bold"); doc.text("Clinical Log History:", 15, 155);
-        doc.setFontSize(7); doc.setFont("helvetica", "normal"); 
-        
-        db.slice(-25).reverse().forEach(log => {
-            if (y > 280) return; 
-            doc.text(`${new Date(log.d).toLocaleString()} | Value: ${log.v} mg/dL | Mode: ${log.t.toUpperCase()}`, 15, y);
-            y += 6; 
-        });
-        
-        doc.setFontSize(6); doc.setTextColor(150);
-        doc.text("*Disclaimer: All information provided by the patient using the app is not based on official medical records.*", 15, 290);
+        doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.text(`AVG: ${avg} | A1C: ${a1c}`, 15, 32);
+        doc.addImage(document.getElementById('gluChart').toDataURL('image/png'), 'PNG', 15, 60, 180, 70);
         doc.save(`MontCode_Glucose_Audit.pdf`);
     }
 
@@ -288,21 +278,9 @@
         document.querySelector('.lang-save').innerText = t.save;
         document.getElementById('time-fast').innerText = t.fast;
         document.getElementById('time-post').innerText = t.post;
-        document.getElementById('btn-en').style.opacity = lang === 'en' ? '1' : '0.4';
-        document.getElementById('btn-es').style.opacity = lang === 'es' ? '1' : '0.4';
     }
 
     function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_glu_master_2026'); location.reload(); } }
-
-    function startMic() {
-        const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
-        rec.onresult = (e) => {
-            const v = e.results[0][0].transcript.replace(/\D/g,'');
-            if(v) { currentInput = v.slice(0,3); document.getElementById('display').innerText = currentInput; }
-        };
-        rec.start();
-    }
 </script>
 </body>
 </html>
