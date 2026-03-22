@@ -1,4 +1,4 @@
-   <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -63,12 +63,6 @@
         .bg-yellow-btn { background: #eab308; color: black; }
         .bg-blue-btn { background: #2563eb; }
 
-        .rescue-card {
-            background: linear-gradient(135deg, #7f1d1d 0%, #000000 100%);
-            border: 2px solid #ef4444;
-            animation: rescue-glow 3s infinite alternate;
-        }
-
         /* Estilo CHAT (Purple Neon Latido) */
         .chat-card {
             background: linear-gradient(135deg, #3b0764 0%, #000000 100%);
@@ -79,11 +73,6 @@
         @keyframes neon-heartbeat {
             0%, 100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); border-color: #a855f7; }
             50% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.6); border-color: #c084fc; }
-        }
-
-        @keyframes rescue-glow {
-            from { box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); }
-            to { box-shadow: 0 0 25px rgba(239, 68, 68, 0.5); }
         }
 
         .active-status { background: #10b981 !important; border-color: #059669 !important; }
@@ -117,7 +106,9 @@
 
     <div class="flex justify-between items-center mb-6">
         <h1 id="welcomeTxt" class="text-4xl font-black italic tracking-tighter uppercase">Welcome</h1>
-        <button onclick="toggleLang()" id="langBtn" class="bg-white text-black text-[10px] font-black px-4 py-2 rounded-full uppercase">English</button>
+        <button onclick="toggleLang()" id="langBtn" class="bg-white text-black text-[10px] font-black px-4 py-2 rounded-full uppercase flex items-center gap-2">
+            <span>🇺🇸</span> English
+        </button>
     </div>
 
     <div id="main-grid" class="grid grid-cols-2 gap-4">
@@ -145,24 +136,11 @@
                 <span class="text-2xl">💬</span>
             </div>
             <div>
-                <h2 id="m-chat" class="font-black uppercase italic text-sm tracking-tighter">Clinical Feedback</h2>
+                <h2 id="m-chat" class="font-black uppercase italic text-sm tracking-tighter">Asynchronous Chat</h2>
                 <p id="chat-d" class="text-purple-300/60 text-[9px] font-bold uppercase italic">Direct Channel with your Dr.</p>
             </div>
         </div>
         <div class="bg-purple-600 text-white px-4 py-1 rounded-full text-[8px] font-black uppercase italic">Message</div>
-    </div>
-
-    <div onclick="location.href='https://montcode-rescue.vercel.app/'" class="rescue-card mt-4 p-5 rounded-[28px] flex justify-between items-center cursor-pointer active:scale-95 transition">
-        <div class="flex items-center gap-4 text-white">
-            <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/20">
-                <span class="text-2xl">⚕️</span>
-            </div>
-            <div>
-                <h2 id="res-t" class="font-black uppercase italic text-sm tracking-tighter">MontCode™ RESCUE</h2>
-                <p id="res-d" class="text-white/60 text-[9px] font-bold uppercase">Tactical Emergency Bridge</p>
-            </div>
-        </div>
-        <div class="bg-red-500 text-white px-4 py-1 rounded-full text-[8px] font-black uppercase italic animate-pulse">Live Link</div>
     </div>
 
     <footer class="mt-12 opacity-30 text-center pb-10">
@@ -177,40 +155,29 @@
         let adminTimer;
         let lastMsgCount = parseInt(localStorage.getItem('montcode_msg_count')) || 0;
 
-        // Función Generadora de Sonido (Oscilador Sintetizado)
         function playNotificationSound() {
             const context = new (window.AudioContext || window.webkitAudioContext)();
             const osc = context.createOscillator();
             const gain = context.createGain();
-
             osc.type = 'sine'; 
-            osc.frequency.setValueAtTime(880, context.currentTime); // La natural
+            osc.frequency.setValueAtTime(880, context.currentTime);
             osc.frequency.exponentialRampToValueAtTime(440, context.currentTime + 0.2);
-
             gain.gain.setValueAtTime(0, context.currentTime);
             gain.gain.linearRampToValueAtTime(0.2, context.currentTime + 0.05);
             gain.gain.linearRampToValueAtTime(0, context.currentTime + 0.3);
-
             osc.connect(gain);
             gain.connect(context.destination);
-
             osc.start();
             osc.stop(context.currentTime + 0.3);
         }
 
-        // Sistema de Escucha de Mensajes
         function checkNewMessages() {
             const messages = JSON.parse(localStorage.getItem('montcode_feedback_logs')) || [];
-            const currentCount = messages.length;
-
-            if (currentCount > lastMsgCount) {
-                const lastMsg = messages[currentCount - 1];
-                // Solo suena si el mensaje viene del sistema/doctor (no del paciente)
-                if (lastMsg.type === 'doctor') {
-                    playNotificationSound();
-                }
-                lastMsgCount = currentCount;
-                localStorage.setItem('montcode_msg_count', currentCount);
+            if (messages.length > lastMsgCount) {
+                const lastMsg = messages[messages.length - 1];
+                if (lastMsg.type === 'doctor') playNotificationSound();
+                lastMsgCount = messages.length;
+                localStorage.setItem('montcode_msg_count', lastMsgCount);
             }
         }
 
@@ -219,7 +186,7 @@
             const license = JSON.parse(localStorage.getItem('montcode_activation'));
             
             document.getElementById('welcomeTxt').innerText = isEN ? "Welcome" : "Bienvenido";
-            document.getElementById('langBtn').innerText = isEN ? 'English' : 'Español';
+            document.getElementById('langBtn').innerHTML = isEN ? '<span>🇺🇸</span> English' : '<span>🇪🇸</span> Español';
             
             const banner = document.getElementById('activation-banner');
             const cards = document.querySelectorAll('.dash-card, .chat-card');
@@ -256,9 +223,8 @@
                 'm4-t': isEN ? 'Glucose' : 'Glucosa',
                 'm5-t': isEN ? 'Food Scan' : 'Scanner Comida',
                 'm-sync': isEN ? 'Sync Data' : 'Sincronizar',
-                'm-chat': isEN ? 'Clinical Feedback' : 'Feedback Clínico',
-                'chat-d': isEN ? 'Direct Channel with your Dr.' : 'Canal Directo con tu Dr.',
-                'res-d': isEN ? 'Tactical Emergency Bridge' : 'Puente Táctico Emergencia'
+                'm-chat': isEN ? 'Asynchronous Chat' : 'Chat Asincrónico',
+                'chat-d': isEN ? 'Direct Channel with your Dr.' : 'Canal Directo con tu Dr.'
             };
             for (let id in texts) { if(document.getElementById(id)) document.getElementById(id).innerText = texts[id]; }
         }
@@ -281,7 +247,6 @@
 
         window.onload = () => {
             updateUI();
-            // Revisar cada 5 segundos si hay mensajes nuevos del Dr.
             setInterval(checkNewMessages, 5000);
         };
     </script>
