@@ -56,10 +56,14 @@
         .neon-red { border-color: #dc2626; box-shadow: 0 0 10px rgba(220, 38, 38, 0.2); }
         .neon-green { border-color: #16a34a; box-shadow: 0 0 10px rgba(22, 163, 74, 0.2); }
         .neon-yellow { border-color: #eab308; box-shadow: 0 0 10px rgba(234, 179, 8, 0.2); }
+        .neon-blue { border-color: #2563eb; box-shadow: 0 0 10px rgba(37, 99, 235, 0.2); }
+        .neon-purple { border-color: #9333ea; box-shadow: 0 0 10px rgba(147, 51, 234, 0.2); }
 
         .bg-red-btn { background: #dc2626; }
         .bg-green-btn { background: #16a34a; }
         .bg-yellow-btn { background: #eab308; color: black; }
+        .bg-blue-btn { background: #2563eb; }
+        .bg-purple-btn { background: #9333ea; }
 
         .rescue-card {
             background: linear-gradient(135deg, #7f1d1d 0%, #000000 100%);
@@ -117,6 +121,14 @@
         <div onclick="location.href='food.html'" class="dash-card neon-yellow">
             <div class="icon-box bg-yellow-btn">🥗</div>
             <h2 id="m5-t" class="btn-text">Food Scan</h2>
+        </div>
+        <div onclick="location.href='sync.html'" class="dash-card neon-blue">
+            <div class="icon-box bg-blue-btn">🔄</div>
+            <h2 id="m-sync" class="btn-text">Sync Data</h2>
+        </div>
+        <div onclick="location.href='feedback.html'" class="dash-card neon-purple">
+            <div class="icon-box bg-purple-btn">💬</div>
+            <h2 id="m-chat" class="btn-text">Chat Dr.</h2>
         </div>
     </div>
 
@@ -185,6 +197,8 @@
                 'm3-t': isEN ? 'BP Log' : 'Presión Art.',
                 'm4-t': isEN ? 'Glucose' : 'Glucosa',
                 'm5-t': isEN ? 'Food Scan' : 'Scanner Comida',
+                'm-sync': isEN ? 'Sync Data' : 'Sincronizar',
+                'm-chat': isEN ? 'Chat Dr.' : 'Chat Dr.',
                 'res-d': isEN ? 'Tactical Emergency Bridge' : 'Puente Táctico Emergencia'
             };
             for (let id in texts) { if(document.getElementById(id)) document.getElementById(id).innerText = texts[id]; }
@@ -196,7 +210,6 @@
             updateUI();
         }
 
-        // Sistema de 5 clics ocultos en el Logo
         function adminTrigger() {
             clearTimeout(adminTimer);
             adminTaps++;
