@@ -1,1 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MontCode">
+    
+    <link rel="apple-touch-icon" href="Logo/logo.png.jpg">
+    <link rel="icon" type="image/jpeg" href="Logo/logo.png.jpg">
+    
+    <title>MontCode™ Patient</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background: #000; 
+            color: white; 
+            font-family: sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+            overflow-x: hidden;
+            -webkit-text-size-adjust: 100%;
+        }
+        
+        .dash-card { 
+            background: #111; 
+            border-radius: 28px; 
+            padding: 16px; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+            cursor: pointer; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            text-align: center;
+            min-height: 120px;
+            box-shadow: inset 0 -4px 0 rgba(0,0,0,0.4);
+            border-width: 2px;
+            border-style: solid;
+        }
+        .dash-card:active { transform: scale(0.92); filter: brightness(1.3); }
+        
+        .icon-box { 
+            width: 50px; 
+            height: 50px; 
+            border-radius: 16px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            margin-bottom: 12px; 
+            font-size: 1.8rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
 
+        /* Neon Borders */
+        .neon-blue { border-color: #2563eb; box-shadow: 0 0 10px rgba(37, 99, 235, 0.2); }
+        .neon-purple { border-color: #9333ea; box-shadow: 0 0 10px rgba(147, 51, 234, 0.2); }
+        .neon-red { border-color: #dc2626; box-shadow: 0 0 10px rgba(220, 38, 38, 0.2); }
+        .neon-green { border-color: #16a34a; box-shadow: 0 0 10px rgba(22, 163, 74, 0.2); }
+        .neon-orange { border-color: #ea580c; box-shadow: 0 0 10px rgba(234, 88, 12, 0.2); }
+        .neon-lime { border-color: #84cc16; box-shadow: 0 0 10px rgba(132, 204, 22, 0.2); }
+        .neon-yellow { border-color: #eab308; box-shadow: 0 0 10px rgba(234, 179, 8, 0.2); }
+        .neon-pink { border-color: #db2777; box-shadow: 0 0 10px rgba(219, 39, 119, 0.2); }
+        .neon-cyan { border-color: #0891b2; box-shadow: 0 0 10px rgba(8, 145, 178, 0.2); }
+        .neon-white { border-color: #ffffff; box-shadow: 0 0 10px rgba(255, 255, 255, 0.2); }
+        .neon-zinc { border-color: #52525b; box-shadow: 0 0 10px rgba(82, 82, 91, 0.2); }
+        .neon-navy { border-color: #1e3a8a; box-shadow: 0 0 10px rgba(30, 58, 138, 0.2); }
+
+        .bg-blue-btn { background: #2563eb; }
+        .bg-purple-btn { background: #9333ea; }
+        .bg-red-btn { background: #dc2626; }
+        .bg-green-btn { background: #16a34a; }
+        .bg-orange-btn { background: #ea580c; }
+        .bg-lime-btn { background: #84cc16; color: black; }
+        .bg-yellow-btn { background: #eab308; color: black; }
+        .bg-pink-btn { background: #db2777; }
+        .bg-cyan-btn { background: #0891b2; }
+        .bg-white-btn { background: #ffffff; color: black; }
+        .bg-zinc-btn { background: #52525b; }
+        .bg-navy-btn { background: #1e3a8a; }
+
+        .rescue-card {
+            background: linear-gradient(135deg, #7f1d1d 0%, #000000 100%);
+            border: 2px solid #ef4444;
+            animation: rescue-glow 3s infinite alternate;
+        }
+        @keyframes rescue-glow {
+            from { box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); }
+            to { box-shadow: 0 0 25px rgba(239, 68, 68, 0.5); }
+        }
+
+        .active-status { background: #10b981 !important; border-color: #059669 !important; }
+        .critical-status { background: #ef4444 !important; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
+        .logo-glow { box-shadow: 0 0 30px rgba(218, 165, 32, 0.2); border: 2px solid #DAA520; }
+        .locked { opacity: 0.15; filter: grayscale(1); pointer-events: none; }
+        .btn-text { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; font-style: italic; margin-top: 4px; }
+    </style>
+</head>
+<body class="p-6 pb-24"> 
+
+    <div class="flex flex-col items-center justify-center mt-2 mb-8 w-full" onclick="adminTrigger()">
+        <img src="Logo/logo.png.jpg" class="w-28 h-28 rounded-full logo-glow object-cover">
+        <div class="mt-4 text-center">
+            <h1 class="text-3xl font-black tracking-tighter text-white uppercase italic">MONTCODE™</h1>
+            <p class="text-[7px] font-bold text-blue-500 uppercase tracking-[0.12em] mt-2 opacity-90">
+                Created by Providers • Tested by Patients • Trusted for Life
+            </p>
+        </div>
+    </div>
+
+    <div id="activation-banner" onclick="location.href='activation.html'" class="mb-6 p-4 bg-blue-600 rounded-[22px] flex justify-between items-center shadow-lg active:scale-95 transition">
+        <div class="flex items-center gap-3">
+            <span id="reg-icon">🔑</span>
+            <span id="reg-txt" class="text-[10px] font-black uppercase text-white italic">Device Activation Required</span>
+        </div>
+        <span id="days-display" class="text-[9px] font-bold text-blue-100 italic uppercase">Check Kit ></span>
+    </div>
+
+    <div class="flex justify-between items-center mb-6">
+        <h1 id="welcomeTxt" class="text-4xl font-black italic tracking-tighter uppercase">Welcome</h1>
+        <button onclick="toggleLang()" id="langBtn" class="bg-white text-black text-[10px] font-black px-4 py-2 rounded-full uppercase">English</button>
+    </div>
+
+    <div id="main-grid" class="grid grid-cols-2 gap-4">
+        <div onclick="location.href='bp.html'" class="dash-card neon-red">
+            <div class="icon-box bg-red-btn">❤️</div>
+            <h2 id="m3-t" class="btn-text">BP Log</h2>
+        </div>
+        <div onclick="location.href='glucose.html'" class="dash-card neon-green">
+            <div class="icon-box bg-green-btn">🩸</div>
+            <h2 id="m4-t" class="btn-text">Glucose</h2>
+        </div>
+        <div onclick="location.href='food.html'" class="dash-card neon-yellow">
+            <div class="icon-box bg-yellow-btn">🥗</div>
+            <h2 id="m5-t" class="btn-text">Food Scan</h2>
+        </div>
+        <div onclick="location.href='index.htm'" class="dash-card neon-zinc">
+            <div class="icon-box bg-zinc-btn">💊</div>
+            <h2 id="m11-t" class="btn-text">Library</h2>
+        </div>
+        <div onclick="location.href='activation.html'" class="dash-card neon-blue">
+            <div class="icon-box bg-blue-btn">📸</div>
+            <h2 id="m1-t" class="btn-text">Scan Kit</h2>
+        </div>
+        <div onclick="location.href='admin-kit.html'" class="dash-card neon-white">
+            <div class="icon-box bg-white-btn">📶</div>
+            <h2 id="m10-t" class="btn-text">Admin Kit</h2>
+        </div>
+    </div>
+
+    <div onclick="location.href='https://montcode-rescue.vercel.app/'" class="rescue-card mt-8 p-5 rounded-[28px] flex justify-between items-center cursor-pointer active:scale-95 transition">
+        <div class="flex items-center gap-4 text-white">
+            <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/20">
+                <span class="text-2xl">⚕️</span>
+            </div>
+            <div>
+                <h2 id="res-t" class="font-black uppercase italic text-sm tracking-tighter">MontCode™ RESCUE</h2>
+                <p id="res-d" class="text-white/60 text-[9px] font-bold uppercase">Tactical Emergency Bridge</p>
+            </div>
+        </div>
+        <div class="bg-red-500 text-white px-4 py-1 rounded-full text-[8px] font-black uppercase italic animate-pulse">Live Link</div>
+    </div>
+
+    <footer class="mt-12 opacity-30 text-center pb-10">
+        <p class="text-[7px] font-bold uppercase italic leading-tight text-zinc-500">
+            Disclaimer: All information provided by the patient using the app is not based on official medical records. 2026 Edition.
+        </p>
+    </footer>
+
+    <script>
+        let currentLang = localStorage.getItem('montcode_lang') || 'EN';
+        
+        function updateUI() {
+            const isEN = currentLang === 'EN';
+            const license = JSON.parse(localStorage.getItem('montcode_activation'));
+            
+            document.getElementById('welcomeTxt').innerText = isEN ? "Welcome" : "Bienvenido";
+            document.getElementById('langBtn').innerText = isEN ? 'English' : 'Español';
+            
+            const banner = document.getElementById('activation-banner');
+            const cards = document.querySelectorAll('.dash-card, .rescue-card');
+
+            if (license && license.isActive) {
+                const now = new Date().getTime();
+                const diff = license.expiryDate - now;
+                const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+                if (daysLeft <= 0) {
+                    localStorage.removeItem('montcode_activation');
+                    location.reload();
+                    return;
+                }
+
+                cards.forEach(card => card.classList.remove('locked'));
+
+                if (daysLeft <= 5) {
+                    banner.className = "mb-6 p-4 critical-status rounded-[22px] flex justify-between items-center shadow-lg transition";
+                    document.getElementById('reg-icon').innerText = "⚠️";
+                    document.getElementById('reg-txt').innerText = isEN ? "RENEW KIT SOON" : "RENOVAR KIT PRONTO";
+                } else {
+                    banner.className = "mb-6 p-4 active-status rounded-[22px] flex justify-between items-center shadow-lg transition";
+                    document.getElementById('reg-icon').innerText = "✅";
+                    document.getElementById('reg-txt').innerText = isEN ? "WORKING FOR YOUR HEALTH" : "TRABAJANDO POR TU SALUD";
+                }
+                document.getElementById('days-display').innerText = `${daysLeft} ${isEN ? 'DAYS LEFT' : 'DÍAS'}`;
+            } else {
+                cards.forEach(card => {
+                    // Permitimos el acceso a Scan Kit y Admin Kit para poder activar
+                    if(!card.classList.contains('neon-blue') && !card.classList.contains('neon-white')) {
+                        card.classList.add('locked');
+                    }
+                });
+            }
+
+            // Traducciones dinámicas
+            const texts = {
+                'm3-t': isEN ? 'BP Log' : 'Presión Art.',
+                'm4-t': isEN ? 'Glucose' : 'Glucosa',
+                'm5-t': isEN ? 'Food Scan' : 'Scanner Comida',
+                'm11-t': isEN ? 'Library' : 'Biblioteca',
+                'm1-t': isEN ? 'Scan Kit' : 'Activar Kit',
+                'm10-t': isEN ? 'Admin Kit' : 'Panel Admin',
+                'res-t': 'MontCode™ RESCUE',
+                'res-d': isEN ? 'Tactical Emergency Bridge' : 'Puente Táctico Emergencia'
+            };
+            for (let id in texts) { if(document.getElementById(id)) document.getElementById(id).innerText = texts[id]; }
+        }
+
+        function toggleLang() {
+            currentLang = (currentLang === 'EN') ? 'ES' : 'EN';
+            localStorage.setItem('montcode_lang', currentLang);
+            updateUI();
+        }
+
+        let adminTaps = 0;
+        function adminTrigger() {
+            adminTaps++;
+            if (adminTaps === 5) window.location.href = 'admin-kit.html';
+            setTimeout(() => { adminTaps = 0; }, 3000);
+        }
+
+        window.onload = updateUI;
+    </script>
+</body>
+</html>
