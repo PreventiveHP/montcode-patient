@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -53,31 +53,13 @@
         }
 
         /* Neon Borders */
-        .neon-blue { border-color: #2563eb; box-shadow: 0 0 10px rgba(37, 99, 235, 0.2); }
-        .neon-purple { border-color: #9333ea; box-shadow: 0 0 10px rgba(147, 51, 234, 0.2); }
         .neon-red { border-color: #dc2626; box-shadow: 0 0 10px rgba(220, 38, 38, 0.2); }
         .neon-green { border-color: #16a34a; box-shadow: 0 0 10px rgba(22, 163, 74, 0.2); }
-        .neon-orange { border-color: #ea580c; box-shadow: 0 0 10px rgba(234, 88, 12, 0.2); }
-        .neon-lime { border-color: #84cc16; box-shadow: 0 0 10px rgba(132, 204, 22, 0.2); }
         .neon-yellow { border-color: #eab308; box-shadow: 0 0 10px rgba(234, 179, 8, 0.2); }
-        .neon-pink { border-color: #db2777; box-shadow: 0 0 10px rgba(219, 39, 119, 0.2); }
-        .neon-cyan { border-color: #0891b2; box-shadow: 0 0 10px rgba(8, 145, 178, 0.2); }
-        .neon-white { border-color: #ffffff; box-shadow: 0 0 10px rgba(255, 255, 255, 0.2); }
-        .neon-zinc { border-color: #52525b; box-shadow: 0 0 10px rgba(82, 82, 91, 0.2); }
-        .neon-navy { border-color: #1e3a8a; box-shadow: 0 0 10px rgba(30, 58, 138, 0.2); }
 
-        .bg-blue-btn { background: #2563eb; }
-        .bg-purple-btn { background: #9333ea; }
         .bg-red-btn { background: #dc2626; }
         .bg-green-btn { background: #16a34a; }
-        .bg-orange-btn { background: #ea580c; }
-        .bg-lime-btn { background: #84cc16; color: black; }
         .bg-yellow-btn { background: #eab308; color: black; }
-        .bg-pink-btn { background: #db2777; }
-        .bg-cyan-btn { background: #0891b2; }
-        .bg-white-btn { background: #ffffff; color: black; }
-        .bg-zinc-btn { background: #52525b; }
-        .bg-navy-btn { background: #1e3a8a; }
 
         .rescue-card {
             background: linear-gradient(135deg, #7f1d1d 0%, #000000 100%);
@@ -94,7 +76,7 @@
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
 
         .logo-glow { box-shadow: 0 0 30px rgba(218, 165, 32, 0.2); border: 2px solid #DAA520; }
-        .locked { opacity: 0.15; filter: grayscale(1); pointer-events: none; }
+        .locked { opacity: 0.3; filter: grayscale(1); pointer-events: none; }
         .btn-text { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; font-style: italic; margin-top: 4px; }
     </style>
 </head>
@@ -110,12 +92,12 @@
         </div>
     </div>
 
-    <div id="activation-banner" onclick="location.href='activation.html'" class="mb-6 p-4 bg-blue-600 rounded-[22px] flex justify-between items-center shadow-lg active:scale-95 transition">
+    <div id="activation-banner" onclick="location.href='activation.html'" class="mb-6 p-4 bg-blue-600 rounded-[22px] flex justify-between items-center shadow-lg active:scale-95 transition cursor-pointer">
         <div class="flex items-center gap-3">
             <span id="reg-icon">🔑</span>
             <span id="reg-txt" class="text-[10px] font-black uppercase text-white italic">Device Activation Required</span>
         </div>
-        <span id="days-display" class="text-[9px] font-bold text-blue-100 italic uppercase">Check Kit ></span>
+        <span id="days-display" class="text-[9px] font-bold text-blue-100 italic uppercase">Setup Kit ></span>
     </div>
 
     <div class="flex justify-between items-center mb-6">
@@ -135,18 +117,6 @@
         <div onclick="location.href='food.html'" class="dash-card neon-yellow">
             <div class="icon-box bg-yellow-btn">🥗</div>
             <h2 id="m5-t" class="btn-text">Food Scan</h2>
-        </div>
-        <div onclick="location.href='index.htm'" class="dash-card neon-zinc">
-            <div class="icon-box bg-zinc-btn">💊</div>
-            <h2 id="m11-t" class="btn-text">Library</h2>
-        </div>
-        <div onclick="location.href='activation.html'" class="dash-card neon-blue">
-            <div class="icon-box bg-blue-btn">📸</div>
-            <h2 id="m1-t" class="btn-text">Scan Kit</h2>
-        </div>
-        <div onclick="location.href='admin-kit.html'" class="dash-card neon-white">
-            <div class="icon-box bg-white-btn">📶</div>
-            <h2 id="m10-t" class="btn-text">Admin Kit</h2>
         </div>
     </div>
 
@@ -171,7 +141,9 @@
 
     <script>
         let currentLang = localStorage.getItem('montcode_lang') || 'EN';
-        
+        let adminTaps = 0;
+        let adminTimer;
+
         function updateUI() {
             const isEN = currentLang === 'EN';
             const license = JSON.parse(localStorage.getItem('montcode_activation'));
@@ -180,7 +152,7 @@
             document.getElementById('langBtn').innerText = isEN ? 'English' : 'Español';
             
             const banner = document.getElementById('activation-banner');
-            const cards = document.querySelectorAll('.dash-card, .rescue-card');
+            const cards = document.querySelectorAll('.dash-card');
 
             if (license && license.isActive) {
                 const now = new Date().getTime();
@@ -206,23 +178,13 @@
                 }
                 document.getElementById('days-display').innerText = `${daysLeft} ${isEN ? 'DAYS LEFT' : 'DÍAS'}`;
             } else {
-                cards.forEach(card => {
-                    // Permitimos el acceso a Scan Kit y Admin Kit para poder activar
-                    if(!card.classList.contains('neon-blue') && !card.classList.contains('neon-white')) {
-                        card.classList.add('locked');
-                    }
-                });
+                cards.forEach(card => card.classList.add('locked'));
             }
 
-            // Traducciones dinámicas
             const texts = {
                 'm3-t': isEN ? 'BP Log' : 'Presión Art.',
                 'm4-t': isEN ? 'Glucose' : 'Glucosa',
                 'm5-t': isEN ? 'Food Scan' : 'Scanner Comida',
-                'm11-t': isEN ? 'Library' : 'Biblioteca',
-                'm1-t': isEN ? 'Scan Kit' : 'Activar Kit',
-                'm10-t': isEN ? 'Admin Kit' : 'Panel Admin',
-                'res-t': 'MontCode™ RESCUE',
                 'res-d': isEN ? 'Tactical Emergency Bridge' : 'Puente Táctico Emergencia'
             };
             for (let id in texts) { if(document.getElementById(id)) document.getElementById(id).innerText = texts[id]; }
@@ -234,11 +196,15 @@
             updateUI();
         }
 
-        let adminTaps = 0;
+        // Sistema de 5 clics ocultos en el Logo
         function adminTrigger() {
+            clearTimeout(adminTimer);
             adminTaps++;
-            if (adminTaps === 5) window.location.href = 'admin-kit.html';
-            setTimeout(() => { adminTaps = 0; }, 3000);
+            if (adminTaps === 5) {
+                adminTaps = 0;
+                window.location.href = 'admin-kit.html';
+            }
+            adminTimer = setTimeout(() => { adminTaps = 0; }, 2000);
         }
 
         window.onload = updateUI;
