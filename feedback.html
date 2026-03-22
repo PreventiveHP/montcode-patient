@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -34,7 +34,7 @@
 </head>
 <body class="p-6">
     <header class="flex justify-between items-center mb-8">
-        <button onclick="location.href='index.html'" class="text-zinc-500 font-black text-[10px] uppercase tracking-widest">← Back</button>
+        <button onclick="window.location.replace('index.html')" class="bg-zinc-900 text-blue-400 px-3 py-1 rounded-full text-[10px] font-black uppercase italic border border-zinc-800">← Back</button>
         <span class="p2p-badge font-black uppercase tracking-tighter italic">Secure P2P Node Active</span>
     </header>
 
@@ -75,21 +75,31 @@
 
     <script>
         function sendFeedback() {
-            const msg = document.getElementById('patient-msg').value;
+            const msgInput = document.getElementById('patient-msg');
+            const msg = msgInput.value.trim();
             if (msg) {
-                // Aquí iría la lógica de guardar localmente para el túnel P2P
+                // Almacenamiento local para simular la cola de transmisión P2P
+                let feedbackQueue = JSON.parse(localStorage.getItem('mc_feedback_queue')) || [];
+                feedbackQueue.push({
+                    text: msg,
+                    timestamp: new Date().toISOString(),
+                    status: 'pending'
+                });
+                localStorage.setItem('mc_feedback_queue', JSON.stringify(feedbackQueue));
+
                 alert("FEEDBACK TRANSMITTED SUCCESSFULLY\nYour provider will see this in the next sync.");
-                document.getElementById('patient-msg').value = '';
+                msgInput.value = '';
             }
         }
 
-        // Lógica para simular la recepción de datos desde el localstorage
         function checkIncoming() {
+            // Cargar avisos del doctor si existen en el storage local
             const lastAdvice = localStorage.getItem('dr_advice');
             if (lastAdvice) {
                 document.getElementById('dr-text').innerText = `"${lastAdvice}"`;
             }
         }
+
         window.onload = checkIncoming;
     </script>
 </body>
