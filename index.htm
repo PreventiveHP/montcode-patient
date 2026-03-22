@@ -1,158 +1,214 @@
-  <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MontCode™ Rescue | Official Hub</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <link rel="apple-touch-icon" href="logo.png.jpg">
+    <link rel="icon" type="image/jpeg" href="logo.png.jpg">
+    
+    <title>MontCode™ Patient</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap');
-        body { background: #000; color: white; font-family: sans-serif; overflow-x: hidden; }
+        body { 
+            background: #000; 
+            color: white; 
+            font-family: sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+            overflow-x: hidden;
+            -webkit-text-size-adjust: 100%;
+        }
         
-        /* Contenedor del Logo con Carpeta Guardada */
-        .logo-container {
-            transition: 0.3s;
-            cursor: pointer;
+        /* Iconos GRANDES Y CUADRADOS (dash-card) */
+        .dash-card { 
+            background: #111; 
+            border-radius: 20px; 
+            padding: 24px; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+            cursor: pointer; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
             text-align: center;
+            min-height: 140px; 
+            box-shadow: inset 0 -4px 0 rgba(0,0,0,0.4);
+            border-width: 2px;
+            border-style: solid;
         }
-        .logo-container:active { transform: scale(0.95); }
-        .logo-img { width: 80px; height: auto; margin: 0 auto; }
+        .dash-card:active { transform: scale(0.92); filter: brightness(1.3); }
+        
+        .icon-box { 
+            width: 65px; 
+            height: 65px; 
+            border-radius: 16px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            margin-bottom: 15px; 
+            font-size: 2.2rem; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
 
-        /* Grid de Auditoría Estilo MontCode */
-        .audit-grid {
-            display: grid;
-            grid-template-cols: repeat(2, 1fr);
-            gap: 15px;
-            margin-top: 20px;
-        }
-        .audit-card {
-            background: #0a0a0a;
-            border: 1px solid #1a1a1a;
-            border-radius: 28px;
-            padding: 22px;
-            min-height: 150px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            position: relative;
-        }
-        .audit-card:active { background: #111; }
+        /* Neon Themes */
+        .neon-red { border-color: #dc2626; box-shadow: 0 0 10px rgba(220, 38, 38, 0.2); }
+        .neon-green { border-color: #16a34a; box-shadow: 0 0 10px rgba(22, 163, 74, 0.2); }
+        .neon-blue { border-color: #2563eb; box-shadow: 0 0 10px rgba(37, 99, 235, 0.2); }
 
-        /* Panel Admin Deslizable */
-        #admin-panel {
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            background: rgba(5, 5, 5, 0.98);
-            backdrop-filter: blur(20px);
-            z-index: 100;
-            transform: translateY(100%);
-            transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            border-top: 1px solid #222;
+        .bg-red-btn { background: #dc2626; color: white; }
+        .bg-green-btn { background: #16a34a; color: white; }
+        .bg-blue-btn { background: #2563eb; color: white; }
+
+        /* Estilo CHAT LATIDO (alargado abajo) */
+        .chat-card {
+            background: linear-gradient(135deg, #3b0764 0%, #000000 100%);
+            border: 2px solid #a855f7;
+            animation: neon-heartbeat 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
         }
-        #admin-panel.open { transform: translateY(0); }
+
+        @keyframes neon-heartbeat {
+            0%, 100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); border-color: #a855f7; }
+            50% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.6); border-color: #c084fc; }
+        }
+
+        .active-status { background: #10b981 !important; border-color: #059669 !important; }
+        .critical-status { background: #ef4444 !important; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
+        .logo-glow { box-shadow: 0 0 30px rgba(218, 165, 32, 0.2); border: 2px solid #DAA520; }
+        .locked { opacity: 0.15; filter: grayscale(1); pointer-events: none; transition: 0.5s; }
+        .btn-text { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; font-style: italic; margin-top: 4px; }
     </style>
 </head>
-<body class="p-6">
+<body class="p-6 pb-24"> 
 
     <div class="flex justify-between items-start mb-8">
         <div class="flex gap-2">
-            <button onclick="setLang('en')" class="w-8 h-8 rounded-full border border-zinc-800 bg-zinc-900 flex items-center justify-center">🇺🇸</button>
-            <button onclick="setLang('es')" class="w-8 h-8 rounded-full border border-zinc-800 bg-zinc-900 flex items-center justify-center opacity-50 hover:opacity-100">🇪🇸</button>
+            <button onclick="toggleLang()" id="langBtn" class="bg-white text-black text-[10px] font-black px-4 py-2 rounded-full uppercase flex items-center gap-2">
+                🇺🇸 English
+            </button>
         </div>
         <div class="text-right">
             <p class="text-[7px] text-[#ccff00] font-black uppercase tracking-[0.3em]">MontCode™ Rescue System</p>
-            <p class="text-[6px] text-zinc-500 font-bold uppercase">U.S. PAT. REGISTERED 2026</p>
         </div>
     </div>
 
-    <header class="flex flex-col items-center mb-12">
-        <div class="logo-container" onclick="toggleAdmin()">
-            <img src="img/logo.png" alt="MontCode" class="logo-img mb-2" onerror="this.src='https://ui-avatars.com/api/?name=M&background=ccff00&color=000&bold=true'">
-            <h1 class="text-xs font-black uppercase tracking-[0.6em] text-white">MONTCODE</h1>
-        </div>
-    </header>
-
-    <div class="audit-grid">
-        
-        <div onclick="window.location.replace('bp.html')" class="audit-card">
-            <div class="flex justify-between items-start">
-                <span class="text-red-500 font-bold text-xl">🫀</span>
-                <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-            </div>
-            <div>
-                <p class="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Arterial</p>
-                <h2 class="text-lg font-black italic uppercase text-white">BP Audit</h2>
-            </div>
-        </div>
-
-        <div onclick="window.location.replace('glucose.html')" class="audit-card">
-            <div class="flex justify-between items-start">
-                <span class="text-[#ccff00] font-bold text-xl">🩸</span>
-                <div class="w-2 h-2 rounded-full bg-[#ccff00]"></div>
-            </div>
-            <div>
-                <p class="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Metabolic</p>
-                <h2 class="text-lg font-black italic uppercase text-white">Glucose</h2>
-            </div>
-        </div>
-
-        <div onclick="window.location.replace('feedback.html')" class="audit-card">
-            <div class="flex justify-between items-start">
-                <span class="text-blue-400 font-bold text-xl">📡</span>
-                <div class="w-2 h-2 rounded-full bg-blue-500"></div>
-            </div>
-            <div>
-                <p class="text-[8px] font-black text-zinc-500 uppercase tracking-widest">P2P Node</p>
-                <h2 class="text-lg font-black italic uppercase text-white">Feedback</h2>
-            </div>
-        </div>
-
-        <div onclick="alert('Syncing Clinical Data...')" class="audit-card border-[#ccff00]/10">
-            <div class="flex justify-between items-start">
-                <span class="text-zinc-400 font-bold text-xl">🔄</span>
-                <div class="w-2 h-2 rounded-full bg-zinc-600"></div>
-            </div>
-            <div>
-                <p class="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Global</p>
-                <h2 class="text-lg font-black italic uppercase text-white">Full Sync</h2>
-            </div>
-        </div>
-
+    <div class="flex flex-col items-center justify-center mb-10 w-full" onclick="adminTrigger()">
+        <img src="logo.png.jpg" class="w-28 h-28 rounded-full logo-glow object-cover mb-4">
+        <h1 class="text-3xl font-black tracking-tighter text-white uppercase italic leading-none">MONTCODE™</h1>
+        <p class="text-[7px] font-bold text-blue-500 uppercase tracking-[0.12em] mt-2">Tactical Health Provider Node</p>
     </div>
 
-    <div id="admin-panel" class="p-10 rounded-t-[40px]">
-        <div class="w-12 h-1 bg-zinc-800 rounded-full mx-auto mb-8" onclick="toggleAdmin()"></div>
-        <h3 class="text-center font-black italic uppercase text-[#ccff00] mb-8">Admin Terminal</h3>
-        
-        <div class="grid grid-cols-1 gap-4">
-            <button onclick="clearAll()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 p-4 rounded-2xl font-black uppercase text-[10px]">Purge Audit Database</button>
-            <button class="w-full bg-zinc-900 p-4 rounded-2xl font-black uppercase text-[10px]">Developer Sandbox</button>
-            <button class="w-full bg-zinc-900 p-4 rounded-2xl font-black uppercase text-[10px]">NFC Key Manager</button>
+    <div id="activation-banner" onclick="location.href='activation.html'" class="mb-8 p-4 bg-blue-600 rounded-[22px] flex justify-between items-center shadow-lg active:scale-95 transition">
+        <div class="flex items-center gap-3">
+            <span id="reg-icon">🔑</span>
+            <span id="reg-txt" class="text-[10px] font-black uppercase text-white italic">Activation Required</span>
         </div>
-        
-        <button onclick="toggleAdmin()" class="w-full mt-10 text-zinc-600 font-black uppercase text-[8px] tracking-[0.4em]">Exit Master Mode</button>
+        <span id="days-display" class="text-[9px] font-bold text-blue-100 italic uppercase">CHECK KIT ></span>
     </div>
 
-    <footer class="mt-12 text-center">
-        <p class="text-[6px] text-zinc-700 font-black uppercase tracking-[0.2em]">Zero-Cloud Architecture • HIPAA Compliant PWA</p>
+    <div id="main-grid" class="grid grid-cols-2 gap-5 mb-8">
+        
+        <div onclick="window.location.replace('bp.html')" class="dash-card neon-red locked">
+            <div class="icon-box bg-red-600">🫀</div>
+            <h2 id="m-bp" class="btn-text">BP Log</h2>
+        </div>
+
+        <div onclick="window.location.replace('glucose.html')" class="dash-card neon-green locked">
+            <div class="icon-box bg-green-600">🩸</div>
+            <h2 id="m-glu" class="btn-text">Glucose</h2>
+        </div>
+
+        <div onclick="location.href='sync.html'" class="dash-card neon-blue locked">
+            <div class="icon-box bg-blue-600">🔄</div>
+            <h2 id="m-sync" class="btn-text">Full Sync</h2>
+        </div>
+    </div>
+
+    <div onclick="window.location.replace('feedback.html')" id="chat-card" class="chat-card mt-8 p-5 rounded-[28px] flex justify-between items-center cursor-pointer active:scale-95 transition locked">
+        <div class="flex items-center gap-4 text-white">
+            <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/20">
+                <span class="text-2xl">💬</span>
+            </div>
+            <div>
+                <h2 id="m-feed" class="font-black uppercase italic text-sm tracking-tighter text-white">Clinical Feedback</h2>
+                <p id="feed-d" class="text-purple-300/60 text-[9px] font-bold uppercase italic">Direct Channel with your Dr.</p>
+            </div>
+        </div>
+        <div class="bg-purple-600 text-white px-4 py-1 rounded-full text-[8px] font-black uppercase italic">Message</div>
+    </div>
+
+    <footer class="mt-16 opacity-30 text-center pb-10">
+        <p class="text-[7px] font-bold uppercase italic text-zinc-500">
+            Disclaimer: Not based on official medical records. 2026 Edition.
+        </p>
     </footer>
 
-    <script>
-        function toggleAdmin() {
-            document.getElementById('admin-panel').classList.toggle('open');
-        }
+    <audio id="notification-sound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_1334914177.mp3" preload="auto"></audio>
 
-        function clearAll() {
-            if(confirm("DANGER: Delete all clinical logs?")) {
-                localStorage.clear();
-                location.reload();
+    <script>
+        let currentLang = localStorage.getItem('montcode_lang') || 'EN';
+        
+        function updateUI() {
+            const isEN = currentLang === 'EN';
+            const license = JSON.parse(localStorage.getItem('montcode_activation'));
+            
+            document.getElementById('langBtn').innerText = isEN ? 'English' : 'Español';
+            
+            // Text Translation Logic
+            const texts = {
+                'm-bp': isEN ? 'BP Log' : 'Presión Art.',
+                'm-glu': isEN ? 'Glucose' : 'Glucosa',
+                'm-sync': isEN ? 'Full Sync' : 'Sincronizar',
+                'm-feed': isEN ? 'Clinical Feedback' : 'Mensajes',
+                'feed-d': isEN ? 'Direct Channel with your Dr.' : 'Canal Directo con tu Dr.'
+            };
+            for (let id in texts) { if(document.getElementById(id)) document.getElementById(id).innerText = texts[id]; }
+
+            // Activation Logic
+            const cards = document.querySelectorAll('.dash-card, #chat-card');
+            if (license && license.isActive) {
+                cards.forEach(c => c.classList.remove('locked'));
+                document.getElementById('activation-banner').className = "mb-8 p-4 active-status rounded-[22px] flex justify-between items-center shadow-lg";
+                document.getElementById('reg-txt').innerText = isEN ? "SYSTEM ACTIVE" : "SISTEMA ACTIVO";
+                document.getElementById('reg-icon').innerText = "✅";
+                document.getElementById('days-display').innerText = ""; 
+            } else {
+                cards.forEach(c => c.classList.add('locked'));
             }
         }
 
-        function setLang(lang) {
-            // Lógica para cambiar idioma en el Hub si es necesario
-            console.log("Language changed to: " + lang);
+        function toggleLang() {
+            currentLang = (currentLang === 'EN') ? 'ES' : 'EN';
+            localStorage.setItem('montcode_lang', currentLang);
+            updateUI();
         }
+
+        let adminTaps = 0;
+        function adminTrigger() {
+            adminTaps++;
+            if (adminTaps === 5) window.location.href = 'admin-kit.html';
+            setTimeout(() => { adminTaps = 0; }, 3000);
+        }
+
+        // Lógica para el sonido de notificación
+        function playNotification() {
+            const sound = document.getElementById('notification-sound');
+            if (sound) {
+                sound.play().catch(error => {
+                    console.log("Autoplay del sonido bloqueado por el navegador.");
+                });
+            }
+        }
+
+        window.onload = () => {
+            updateUI();
+            
+            // SIMULACIÓN: Sonido a los 3 segundos
+            setTimeout(playNotification, 3000);
+        };
     </script>
 </body>
 </html>
