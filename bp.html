@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -28,7 +28,8 @@
 <body class="pb-10">
 
     <div class="flex justify-between items-center mb-4">
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-center">
+            <button onclick="window.location.replace('index.html')" class="bg-zinc-900 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase italic border border-zinc-800 mr-2">← Back</button>
             <button onclick="setLang('en')" class="w-7 h-7 rounded-full border border-zinc-700 opacity-100" id="btn-en">🇺🇸</button>
             <button onclick="setLang('es')" class="w-7 h-7 rounded-full border border-zinc-700 opacity-40" id="btn-es">🇪🇸</button>
         </div>
@@ -86,7 +87,7 @@
     </div>
 
     <footer class="mt-8 text-[6px] text-zinc-700 text-center uppercase font-bold px-8 pb-10">
-        *Disclaimer: All information provided by the patient using the app is not based on official medical records.*
+        *Disclaimer: All information provided by the patient using the app is not based on official medical records. 2026 Edition.*
     </footer>
 
     <div id="qrModal" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-6">
@@ -112,9 +113,12 @@
     };
 
     function unlockHardware() {
-        document.getElementById('status-box').classList.add('bg-blue-900/10', 'border-blue-500/30');
-        document.getElementById('status-box').classList.remove('border-dashed');
-        document.getElementById('status-text').innerText = "DEVICE SYNCED ✅";
+        const box = document.getElementById('status-box');
+        if(box) {
+            box.classList.add('bg-blue-900/10', 'border-blue-500/30');
+            box.classList.remove('border-dashed');
+            document.getElementById('status-text').innerText = "DEVICE SYNCED ✅";
+        }
         document.getElementById('main-pad').classList.add('active');
     }
 
@@ -132,9 +136,6 @@
         };
 
         const base64Data = btoa(JSON.stringify(payloadObj));
-        
-        // --- CAMBIO DE SEGURIDAD ---
-        // Usamos window.location.origin para que detecte automáticamente tu URL de Vercel
         const doctorLink = `${window.location.origin}/view.html#${base64Data}`;
 
         document.getElementById('qrModal').classList.remove('hidden');
@@ -145,7 +146,7 @@
             width: 200, 
             height: 200, 
             colorDark : "#003366",
-            correctLevel : QRCode.CorrectLevel.L // Nivel de corrección bajo para URLs largas
+            correctLevel : QRCode.CorrectLevel.L
         });
     }
 
@@ -293,4 +294,4 @@
     function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_bp_master_2026'); location.reload(); } }
 </script>
 </body>
-</html>
+</html> 
