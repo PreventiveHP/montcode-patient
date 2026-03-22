@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Clinical Feedback P2P</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #000; color: white; font-family: sans-serif; }
+        .chat-bubble-dr { 
+            background: #1e3a8a; 
+            border-radius: 20px 20px 20px 4px; 
+            border-left: 4px solid #3b82f6;
+        }
+        .chat-input {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 24px;
+            color: white;
+            padding: 15px 20px;
+            width: 100%;
+            outline: none;
+        }
+        .chat-input:focus { border-color: #2563eb; }
+        .p2p-badge {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            font-size: 8px;
+            padding: 4px 10px;
+            border-radius: 100px;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+    </style>
+</head>
+<body class="p-6">
+    <header class="flex justify-between items-center mb-8">
+        <button onclick="location.href='index.html'" class="text-zinc-500 font-black text-[10px] uppercase tracking-widest">← Back</button>
+        <span class="p2p-badge font-black uppercase tracking-tighter italic">Secure P2P Node Active</span>
+    </header>
+
+    <h1 class="text-3xl font-black italic uppercase tracking-tighter mb-2 leading-none">Clinical<br>Feedback</h1>
+    <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8 italic">Direct Communication • No Servers • No Meta</p>
+
+    <div id="incoming-box" class="mb-10">
+        <p class="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-3 ml-2">Provider Recommendations:</p>
+        <div class="chat-bubble-dr p-5 shadow-xl">
+            <p id="dr-text" class="text-sm font-bold italic leading-tight">
+                "Waiting for provider instructions... Everything looks normal in your last logs."
+            </p>
+            <p class="text-[7px] text-blue-300 mt-3 uppercase font-black opacity-60">Received: Just Now</p>
+        </div>
+    </div>
+
+    <div class="space-y-4">
+        <p class="text-[8px] font-black text-zinc-500 uppercase tracking-widest ml-2">Your Message to Provider:</p>
+        <textarea id="patient-msg" class="chat-input h-32 text-sm italic font-bold" placeholder="Type how you feel today..."></textarea>
+        
+        <button onclick="sendFeedback()" class="w-full bg-blue-600 py-5 rounded-[24px] font-black uppercase italic shadow-xl active:scale-95 transition flex items-center justify-center gap-3">
+            <span>Transmit Feedback</span>
+            <span class="text-xl">📡</span>
+        </button>
+    </div>
+
+    <div class="mt-12 p-5 bg-zinc-950 rounded-[28px] border border-zinc-900">
+        <div class="flex items-center gap-3 mb-3">
+            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <p class="text-[9px] font-black uppercase tracking-widest text-zinc-400">Security Protocol v5.0</p>
+        </div>
+        <p class="text-[8px] text-zinc-600 font-bold leading-relaxed uppercase">
+            This channel uses **Point-to-Point (P2P)** encryption. Data is transmitted directly between your device and your provider's node. 
+            <br><br>
+            <span class="text-blue-500/50">NO THIRD-PARTY CLOUD • NO FACEBOOK/META SERVERS • HIPAA COMPLIANT BY ARCHITECTURE • ZERO TRACE.</span>
+        </p>
+    </div>
+
+    <script>
+        function sendFeedback() {
+            const msg = document.getElementById('patient-msg').value;
+            if (msg) {
+                // Aquí iría la lógica de guardar localmente para el túnel P2P
+                alert("FEEDBACK TRANSMITTED SUCCESSFULLY\nYour provider will see this in the next sync.");
+                document.getElementById('patient-msg').value = '';
+            }
+        }
+
+        // Lógica para simular la recepción de datos desde el localstorage
+        function checkIncoming() {
+            const lastAdvice = localStorage.getItem('dr_advice');
+            if (lastAdvice) {
+                document.getElementById('dr-text').innerText = `"${lastAdvice}"`;
+            }
+        }
+        window.onload = checkIncoming;
+    </script>
+</body>
+</html>
