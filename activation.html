@@ -1,23 +1,82 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>MontCode™ Activation</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="js/quagga.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
     <style>
-        body { background: #000; color: white; font-family: sans-serif; overflow: hidden; }
-        .scanner-view { width: 100%; height: 280px; background: #111; border-radius: 32px; overflow: hidden; position: relative; border: 2px solid #222; }
-        #interactive.viewport video, canvas { position: absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; }
-        .scan-line { position: absolute; top: 50%; left: 10%; width: 80%; height: 2px; background: #3b82f6; box-shadow: 0 0 15px #3b82f6; animation: move 2s infinite ease-in-out; }
-        @keyframes move { 0%, 100% { top: 20%; } 50% { top: 80%; } }
+        body { 
+            background: #000; 
+            color: white; 
+            font-family: sans-serif; 
+            overflow: hidden; 
+            -webkit-text-size-adjust: 100%;
+        }
+        
+        /* Visor de la Cámara con efecto Neón Azul */
+        .scanner-view { 
+            width: 100%; 
+            height: 300px; 
+            background: #111; 
+            border-radius: 32px; 
+            overflow: hidden; 
+            position: relative; 
+            border: 2px solid #2563eb;
+            box-shadow: 0 0 25px rgba(37, 99, 235, 0.25);
+        }
+
+        #interactive.viewport video, canvas { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+        }
+
+        /* Línea de escaneo láser */
+        .scan-line { 
+            position: absolute; 
+            top: 50%; 
+            left: 10%; 
+            width: 80%; 
+            height: 2px; 
+            background: #3b82f6; 
+            box-shadow: 0 0 15px #3b82f6; 
+            animation: move 2s infinite ease-in-out; 
+            z-index: 10;
+        }
+
+        @keyframes move { 
+            0%, 100% { top: 25%; } 
+            50% { top: 75%; } 
+        }
+
+        .btn-active:active { transform: scale(0.96); }
+        
+        /* Logo pequeño con resplandor dorado */
+        .logo-mini {
+            box-shadow: 0 0 15px rgba(218, 165, 32, 0.3);
+            border: 1px solid #DAA520;
+        }
     </style>
 </head>
 <body class="p-6">
-    <button onclick="location.href='index.html'" class="mb-6 text-zinc-500 font-black text-[10px] uppercase">← Back</button>
+    <header class="flex justify-between items-center mb-6">
+        <button onclick="location.href='index.html'" class="text-zinc-500 font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
+            <span>←</span> Back
+        </button>
+        <div class="flex items-center gap-2">
+            <p class="text-[7px] font-bold text-blue-500 uppercase tracking-widest">Enrollment Node</p>
+            <img src="Logo/logo.png.jpg" class="w-8 h-8 rounded-full logo-mini object-cover">
+        </div>
+    </header>
     
-    <h1 class="text-3xl font-black italic uppercase tracking-tighter leading-none mb-1">Kit Enrollment</h1>
+    <h1 class="text-3xl font-black italic uppercase tracking-tighter leading-none mb-1">Kit Activation</h1>
     <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8 italic">Validated Series: 102XXX +</p>
 
     <div class="scanner-view mb-8">
@@ -25,29 +84,32 @@
         <div class="scan-line"></div>
     </div>
 
-    <div class="bg-zinc-900/50 p-5 rounded-[28px] border border-zinc-800 mb-6">
-        <p class="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-1">Status: <span id="scan-status">Waiting...</span></p>
-        <input type="number" id="kitID" placeholder="POINT CAMERA AT BARCODE" readonly
-               class="w-full bg-transparent font-black text-3xl text-white outline-none italic uppercase">
+    <div class="bg-zinc-900/80 p-6 rounded-[28px] border border-zinc-800 mb-8">
+        <p class="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2">System Status: <span id="scan-status" class="text-zinc-400">Waiting for Barcode...</span></p>
+        <input type="text" id="kitID" placeholder="POINT AT KIT BARCODE" readonly
+               class="w-full bg-transparent font-black text-3xl text-white outline-none italic uppercase placeholder:text-zinc-800 tracking-tight">
     </div>
 
-    <button onclick="activateSystem()" id="btn-activate" class="w-full bg-blue-600 py-5 rounded-[24px] font-black uppercase italic shadow-xl active:scale-95 transition">
+    <button onclick="activateSystem()" id="btn-activate" class="btn-active w-full bg-blue-600 py-6 rounded-[26px] font-black uppercase italic shadow-2xl transition-all text-lg tracking-tight">
         Confirm 365 Days Activation
     </button>
 
     <script>
+        // ... (Lógica Quagga y activación idéntica a la anterior) ...
         function startScanner() {
             Quagga.init({
                 inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#interactive'), constraints: { facingMode: "environment" } },
                 decoder: { readers: ["code_128_reader", "ean_reader", "code_39_reader"] },
                 locate: true
-            }, (err) => { if (!err) Quagga.start(); });
+            }, (err) => { if (!err) Quagga.start(); else console.error(err); });
 
             Quagga.onDetected((data) => {
                 const code = data.codeResult.code;
                 if (/^102\d{3,}/.test(code)) {
                     document.getElementById('kitID').value = code;
-                    document.getElementById('scan-status').innerText = "DETECTED";
+                    document.getElementById('scan-status').innerText = "KIT VALIDATED";
+                    document.getElementById('scan-status').classList.remove('text-zinc-400');
+                    document.getElementById('scan-status').classList.add('text-green-500');
                     if (navigator.vibrate) navigator.vibrate(200);
                 }
             });
@@ -63,11 +125,10 @@
                     isActive: true
                 };
                 localStorage.setItem('montcode_activation', JSON.stringify(activation));
-                alert("SYSTEM ONLINE: 365 DAYS GRANTED");
-                location.href = 'index.html';
-            } else {
-                alert("Please scan a valid Kit first.");
-            }
+                document.getElementById('btn-activate').innerText = "SUCCESSFUL ACTIVATION";
+                document.getElementById('btn-activate').classList.replace('bg-blue-600', 'bg-green-600');
+                setTimeout(() => { location.href = 'index.html'; }, 1500);
+            } else { alert("Please scan a valid Kit first."); }
         }
         window.onload = startScanner;
     </script>
