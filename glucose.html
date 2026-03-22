@@ -29,7 +29,6 @@
         .time-btn { padding: 10px 15px; border-radius: 15px; font-size: 9px; font-weight: 900; border: 1px solid #1a1a1a; color: #444; cursor: pointer; background: #0a0a0a; }
         .time-btn.active { border-color: #ccff00; color: #ccff00; background: rgba(204, 255, 0, 0.1); }
         
-        /* Efecto de destello de alerta */
         @keyframes alert-flash-red { 0% { background: #450a0a; } 100% { background: #000; } }
         @keyframes alert-flash-orange { 0% { background: #452a0a; } 100% { background: #000; } }
         .flash-red { animation: alert-flash-red 0.8s ease-out; }
@@ -38,7 +37,8 @@
 </head>
 <body class="pb-10" id="body-bg">
     <div class="flex justify-between items-center mb-6">
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-center">
+            <button onclick="window.location.replace('index.html')" class="bg-zinc-900 text-[#ccff00] px-3 py-1 rounded-full text-[10px] font-black uppercase italic border border-zinc-800 mr-2">← Back</button>
             <button onclick="setLang('en')" class="w-8 h-8 rounded-full border border-zinc-800 flex items-center justify-center bg-zinc-900" id="btn-en">🇺🇸</button>
             <button onclick="setLang('es')" class="w-8 h-8 rounded-full border border-zinc-800 flex items-center justify-center bg-zinc-900" id="btn-es">🇪🇸</button>
         </div>
@@ -114,7 +114,7 @@
     </div>
 
     <footer class="mt-10 text-[6px] text-zinc-700 text-center uppercase font-bold px-12 pb-10 leading-relaxed">
-        *Disclaimer: All information provided by the patient using the app is not based on official medical records.*
+        *Disclaimer: All information provided by the patient using the app is not based on official medical records. 2026 Edition.*
     </footer>
 
     <div id="qrModal" class="hidden fixed inset-0 bg-black/98 flex items-center justify-center z-50 p-6 backdrop-blur-md">
@@ -137,9 +137,11 @@
         setLang('en');
         setTimeout(() => {
             const sb = document.getElementById('status-box');
-            sb.style.background = "rgba(20, 30, 10, 0.4)";
-            sb.style.borderColor = "rgba(163, 230, 53, 0.3)";
-            document.getElementById('status-text').innerText = "GLUCOSE DEVICE SYNCED ✅";
+            if(sb) {
+                sb.style.background = "rgba(20, 30, 10, 0.4)";
+                sb.style.borderColor = "rgba(163, 230, 53, 0.3)";
+                document.getElementById('status-text').innerText = "GLUCOSE DEVICE SYNCED ✅";
+            }
             document.getElementById('main-pad').classList.add('active');
         }, 800);
     };
@@ -162,13 +164,12 @@
         const val = parseInt(currentInput);
         const body = document.getElementById('body-bg');
 
-        // Lógica de Alerta Visual (Flash)
         body.classList.remove('flash-red', 'flash-orange');
         if (val < 70) {
-            void body.offsetWidth; // Trigger reflow
+            void body.offsetWidth;
             body.classList.add('flash-red');
         } else if (val > 180) {
-            void body.offsetWidth; // Trigger reflow
+            void body.offsetWidth;
             body.classList.add('flash-orange');
         }
 
