@@ -1,0 +1,22 @@
+{
+  "short_name": "MontCode",
+  "name": "MontCode™ Rescue 2026",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/index.htm",
+  "background_color": "#000000",
+  "display": "standalone",
+  "theme_color": "#ccff00",
+  "scope": "/",
+  "description": "Tactical Health & Medication Adherence System"
+}
