@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MontCode">
     
     <link rel="apple-touch-icon" href="logo.png.jpg">
     <link rel="icon" type="image/jpeg" href="logo.png.jpg">
@@ -159,6 +162,15 @@
     <audio id="notification-sound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_1334914177.mp3" preload="auto"></audio>
 
     <script>
+        // REGISTRO DEL SERVICE WORKER PARA PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                .then(reg => console.log('MontCode PWA: Ready'))
+                .catch(err => console.log('PWA Registry Fail:', err));
+            });
+        }
+
         let currentLang = localStorage.getItem('montcode_lang') || 'EN';
         
         function updateUI() {
@@ -203,7 +215,6 @@
             const badge = document.getElementById('msg-badge');
             chatCard.classList.remove('critical-msg');
             badge.style.display = 'none';
-            // IMPORTANTE: Asegúrate que feedback.html use href="index.htm" en su flecha atrás
             window.location.href = 'feedback.html'; 
         }
 
