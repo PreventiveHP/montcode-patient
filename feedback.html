@@ -1,153 +1,112 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clinical Feedback P2P</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
-        body { background: #000; color: white; font-family: 'Inter', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; min-height: 100vh; }
+        
         .chat-bubble-dr { 
             background: #1e3a8a; 
             border-radius: 20px 20px 20px 4px; 
-            border-left: 4px solid #3b82f6;
+            border-left: 4px solid #3b82f6; 
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
-        .chat-input {
-            background: #0a0a0a;
-            border: 1px solid #1a1a1a;
-            border-radius: 24px;
-            color: white;
-            padding: 15px 20px;
-            width: 100%;
-            outline: none;
-            transition: 0.3s;
-        }
-        .chat-input:focus { border-color: #3b82f6; background: #0f172a; }
-        .p2p-badge {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-            font-size: 8px;
-            padding: 4px 10px;
-            border-radius: 100px;
-            border: 1px solid rgba(16, 185, 129, 0.3);
+
+        .status-pill {
+            background: rgba(204, 255, 0, 0.1);
+            color: #ccff00;
+            border: 1px solid rgba(204, 255, 0, 0.2);
+            font-size: 10px;
+            font-weight: 900;
+            padding: 4px 12px;
+            border-radius: 50px;
+            text-transform: uppercase;
         }
     </style>
 </head>
 <body class="p-6">
-    <header class="flex justify-between items-center mb-8">
-        <button onclick="window.location.href='index.htm'" class="bg-zinc-900 text-blue-400 px-3 py-1 rounded-full text-[10px] font-black uppercase italic border border-zinc-800">← Back</button>
-        <span class="p2p-badge font-black uppercase tracking-tighter italic">Secure P2P Node Active</span>
+
+    <header class="flex justify-between items-center mb-10">
+        <button onclick="history.back()" class="text-zinc-500 font-black text-[10px] uppercase tracking-widest">← Return</button>
+        <h1 class="text-xs font-black italic uppercase text-zinc-400">Dr. Direct Link</h1>
     </header>
 
-    <h1 class="text-3xl font-black italic uppercase tracking-tighter mb-2 leading-none" id="title-main">Clinical<br>Feedback</h1>
-    <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8 italic" id="sub-main">Direct Communication • No Servers • No Meta</p>
-
-    <div id="incoming-box" class="mb-10">
-        <p class="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-3 ml-2" id="label-provider">Provider Recommendations:</p>
-        <div class="chat-bubble-dr p-5 shadow-xl">
-            <p id="dr-text" class="text-sm font-bold italic leading-tight">
-                "Waiting for provider instructions... Everything looks normal in your last logs."
-            </p>
-            <p class="text-[7px] text-blue-300 mt-3 uppercase font-black opacity-60" id="label-received">Received: Just Now</p>
+    <main id="chat-container" class="max-w-md mx-auto">
+        <div class="flex justify-center mb-8">
+            <span id="connection-status" class="status-pill animate-pulse">Checking Relay...</span>
         </div>
-    </div>
 
-    <div class="space-y-4">
-        <p class="text-[8px] font-black text-zinc-500 uppercase tracking-widest ml-2" id="label-your-msg">Your Message to Provider:</p>
-        <textarea id="patient-msg" class="chat-input h-32 text-sm italic font-bold" placeholder="Type how you feel today..."></textarea>
-        
-        <button onclick="sendFeedback()" class="w-full bg-blue-600 py-5 rounded-[24px] font-black uppercase italic shadow-xl active:scale-95 transition flex items-center justify-center gap-3">
-            <span id="btn-transmit">Transmit Feedback</span>
-            <span class="text-xl">📡</span>
-        </button>
-    </div>
-
-    <div class="mt-12 p-5 bg-zinc-950 rounded-[28px] border border-zinc-900">
-        <div class="flex items-center gap-3 mb-3">
-            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <p class="text-[9px] font-black uppercase tracking-widest text-zinc-400">Security Protocol v5.0</p>
+        <div id="message-area">
+            <p class="text-center text-zinc-600 italic text-xs py-20">Waiting for clinical instructions...</p>
         </div>
-        <p class="text-[8px] text-zinc-600 font-bold leading-relaxed uppercase" id="legal-disclaimer">
-            This channel uses **Point-to-Point (P2P)** encryption. Data is transmitted directly between your device and your provider's node. 
-            <br><br>
-            <span class="text-blue-500/50">NO THIRD-PARTY CLOUD • NO FACEBOOK/META SERVERS • HIPAA COMPLIANT BY ARCHITECTURE • ZERO TRACE.</span>
-        </p>
-    </div>
+    </main>
+
+    <footer class="fixed bottom-10 left-0 right-0 p-6">
+        <div class="max-w-md mx-auto bg-zinc-900/50 p-4 rounded-3xl border border-zinc-800 backdrop-blur-md">
+            <p class="text-[8px] font-black text-zinc-500 uppercase tracking-widest text-center mb-2">Instructions stored locally</p>
+            <div class="flex gap-2">
+                <button onclick="checkRelayNow()" class="flex-1 bg-white text-black text-[10px] font-black py-3 rounded-2xl uppercase italic">Manual Sync</button>
+                <button onclick="window.print()" class="bg-zinc-800 text-white px-4 py-3 rounded-2xl">📋</button>
+            </div>
+        </div>
+    </footer>
 
     <script>
-        // Detectar idioma de la aplicación
-        let currentLang = localStorage.getItem('mc_lang') || 'en';
+        const kitID = localStorage.getItem('my_kit_id') || "102"; // ID del paciente
 
-        const translations = {
-            en: {
-                title: "Clinical<br>Feedback",
-                sub: "Direct Communication • No Servers • No Meta",
-                provider: "Provider Recommendations:",
-                yourMsg: "Your Message to Provider:",
-                btn: "Transmit Feedback",
-                placeholder: "Type how you feel today...",
-                received: "Received: Just Now",
-                waiting: "Waiting for provider instructions... Everything looks normal in your last logs.",
-                alert: "FEEDBACK TRANSMITTED SUCCESSFULLY\nYour provider will see this in the next sync."
-            },
-            es: {
-                title: "Feedback<br>Clínico",
-                sub: "Comunicación Directa • Sin Servidores • Sin Meta",
-                provider: "Recomendaciones del Médico:",
-                yourMsg: "Tu Mensaje al Médico:",
-                btn: "Transmitir Feedback",
-                placeholder: "Escribe cómo te sientes hoy...",
-                received: "Recibido: Ahora mismo",
-                waiting: "Esperando instrucciones... Todo parece normal en tus últimos registros.",
-                alert: "FEEDBACK TRANSMITIDO CON ÉXITO\nTu médico verá esto en la próxima sincronización."
-            }
-        };
+        async function checkRelayNow() {
+            const status = document.getElementById('connection-status');
+            status.innerText = "Syncing...";
 
-        function applyLang() {
-            const t = translations[currentLang];
-            document.getElementById('title-main').innerHTML = t.title;
-            document.getElementById('sub-main').innerText = t.sub;
-            document.getElementById('label-provider').innerText = t.provider;
-            document.getElementById('label-your-msg').innerText = t.yourMsg;
-            document.getElementById('btn-transmit').innerText = t.btn;
-            document.getElementById('patient-msg').placeholder = t.placeholder;
-            document.getElementById('label-received').innerText = t.received;
-            
-            if (document.getElementById('dr-text').innerText.includes("Waiting")) {
-                document.getElementById('dr-text').innerText = `"${t.waiting}"`;
+            try {
+                // El paciente pregunta al "Buzón Muerto"
+                const response = await fetch(`https://your-relay-server.com/get/montcode_${kitID}`);
+                const data = await response.json();
+
+                if (data && data.message) {
+                    const decodedText = atob(data.message.t);
+                    saveAndDisplay(decodedText, data.message.d);
+                    status.innerText = "Updated";
+                } else {
+                    status.innerText = "No New Messages";
+                }
+            } catch (e) {
+                status.innerText = "Offline Mode";
+                // Cargar lo que ya teníamos guardado
+                const lastMsg = localStorage.getItem('last_dr_note');
+                if(lastMsg) displayMessage(lastMsg, "Previous Note");
             }
         }
 
-        function sendFeedback() {
-            const msgInput = document.getElementById('patient-msg');
-            const msg = msgInput.value.trim();
-            if (msg) {
-                let feedbackQueue = JSON.parse(localStorage.getItem('mc_feedback_queue')) || [];
-                feedbackQueue.push({
-                    text: msg,
-                    timestamp: new Date().toISOString(),
-                    status: 'pending'
-                });
-                localStorage.setItem('mc_feedback_queue', JSON.stringify(feedbackQueue));
-
-                alert(translations[currentLang].alert);
-                msgInput.value = '';
-                
-                // Efecto de haptic/vibración si está disponible
-                if (window.navigator.vibrate) window.navigator.vibrate(50);
-            }
+        function saveAndDisplay(text, timestamp) {
+            const dateStr = new Date(timestamp).toLocaleString();
+            localStorage.setItem('last_dr_note', text);
+            localStorage.setItem('last_dr_note_date', dateStr);
+            displayMessage(text, dateStr);
         }
 
-        function checkIncoming() {
-            applyLang();
-            const lastAdvice = localStorage.getItem('dr_advice');
-            if (lastAdvice) {
-                document.getElementById('dr-text').innerText = `"${lastAdvice}"`;
-            }
+        function displayMessage(text, date) {
+            const area = document.getElementById('message-area');
+            area.innerHTML = `
+                <div class="chat-bubble-dr animate-in fade-in duration-500">
+                    <p class="text-[10px] font-black text-blue-300 uppercase mb-2">Clinical Note • ${date}</p>
+                    <p class="text-sm font-medium leading-relaxed">${text}</p>
+                </div>
+                <div class="px-4 py-2 bg-[#ccff00]/10 border border-[#ccff00]/20 rounded-2xl">
+                    <p class="text-[9px] text-[#ccff00] font-black uppercase italic">✓ Action Required</p>
+                    <p class="text-[10px] text-zinc-400 mt-1">This instruction has updated your clinical roadmap.</p>
+                </div>
+            `;
         }
 
-        window.onload = checkIncoming;
+        // Ejecutar al abrir
+        window.onload = checkRelayNow;
     </script>
 </body>
 </html>
