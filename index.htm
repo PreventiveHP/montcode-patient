@@ -24,7 +24,7 @@
         .dash-card { 
             background: #111; 
             border-radius: 20px; 
-            padding: 24px; 
+            padding: 20px; 
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
             cursor: pointer; 
             display: flex; 
@@ -32,7 +32,7 @@
             align-items: center; 
             justify-content: center;
             text-align: center;
-            min-height: 140px; 
+            min-height: 130px; 
             box-shadow: inset 0 -4px 0 rgba(0,0,0,0.4);
             border-width: 2px;
             border-style: solid;
@@ -40,18 +40,18 @@
         .dash-card:active { transform: scale(0.92); filter: brightness(1.3); }
         
         .icon-box { 
-            width: 65px; height: 65px; 
-            border-radius: 16px; 
+            width: 55px; height: 55px; 
+            border-radius: 14px; 
             display: flex; align-items: center; justify-content: center; 
-            margin-bottom: 15px; font-size: 2.2rem; 
+            margin-bottom: 12px; font-size: 1.8rem; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
         .neon-red { border-color: #dc2626; box-shadow: 0 0 10px rgba(220, 38, 38, 0.2); }
         .neon-green { border-color: #16a34a; box-shadow: 0 0 10px rgba(22, 163, 74, 0.2); }
         .neon-blue { border-color: #2563eb; box-shadow: 0 0 10px rgba(37, 99, 235, 0.2); }
+        .neon-yellow { border-color: #eab308; box-shadow: 0 0 10px rgba(234, 179, 8, 0.2); }
 
-        /* Estilo CHAT LATIDO NEON */
         .chat-card {
             background: linear-gradient(135deg, #3b0764 0%, #000000 100%);
             border: 2px solid #a855f7;
@@ -64,7 +64,6 @@
             50% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.6); border-color: #c084fc; }
         }
 
-        /* ESTADO MENSAJE NUEVO (CRÍTICO) */
         .critical-msg {
             background: linear-gradient(135deg, #7f1d1d 0%, #000000 100%) !important;
             border-color: #ef4444 !important;
@@ -79,14 +78,10 @@
 
         .badge-new {
             position: absolute;
-            top: -5px;
-            right: -5px;
-            background: #ff0000;
-            color: white;
-            font-size: 8px;
-            font-weight: 900;
-            padding: 4px 8px;
-            border-radius: 50px;
+            top: -5px; right: -5px;
+            background: #ff0000; color: white;
+            font-size: 8px; font-weight: 900;
+            padding: 4px 8px; border-radius: 50px;
             text-transform: uppercase;
             box-shadow: 0 0 10px rgba(255,0,0,0.5);
             display: none;
@@ -94,8 +89,7 @@
 
         .logo-glow { box-shadow: 0 0 30px rgba(218, 165, 32, 0.2); border: 2px solid #DAA520; }
         .locked { opacity: 0.15; filter: grayscale(1); pointer-events: none; transition: 0.5s; }
-        .btn-text { font-size: 11px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-top: 4px; }
-        
+        .btn-text { font-size: 10px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-top: 4px; }
         .active-status { background: #10b981 !important; border-color: #059669 !important; }
     </style>
 </head>
@@ -123,19 +117,24 @@
     </div>
 
     <div id="main-grid" class="grid grid-cols-2 gap-5 mb-8">
-        <div onclick="window.location.replace('bp.html')" class="dash-card neon-red locked">
+        <div onclick="window.location.href='bp.html'" class="dash-card neon-red locked">
             <div class="icon-box bg-red-600">🫀</div>
             <h2 id="m-bp" class="btn-text">BP Log</h2>
         </div>
 
-        <div onclick="window.location.replace('glucose.html')" class="dash-card neon-green locked">
+        <div onclick="window.location.href='glucose.html'" class="dash-card neon-green locked">
             <div class="icon-box bg-green-600">🩸</div>
             <h2 id="m-glu" class="btn-text">Glucose</h2>
         </div>
 
-        <div onclick="location.href='sync.html'" class="dash-card neon-blue locked col-span-2">
+        <div onclick="window.location.href='food.html'" class="dash-card neon-yellow locked">
+            <div class="icon-box bg-yellow-600">🥗</div>
+            <h2 id="m-food" class="btn-text">Food Scan</h2>
+        </div>
+
+        <div onclick="window.location.href='sync.html'" class="dash-card neon-blue locked">
             <div class="icon-box bg-blue-600">🔄</div>
-            <h2 id="m-sync" class="btn-text">Full Sync with Provider</h2>
+            <h2 id="m-sync" class="btn-text">Full Sync</h2>
         </div>
     </div>
 
@@ -170,7 +169,8 @@
             const texts = {
                 'm-bp': isEN ? 'BP Log' : 'Presión Art.',
                 'm-glu': isEN ? 'Glucose' : 'Glucosa',
-                'm-sync': isEN ? 'Full Sync with Provider' : 'Sincronizar con Dr.',
+                'm-food': isEN ? 'Food Scan' : 'Escanear Comida',
+                'm-sync': isEN ? 'Full Sync' : 'Sincronizar',
                 'm-feed': isEN ? 'Clinical Feedback' : 'Mensajes Clínicos',
                 'feed-d': isEN ? 'Direct Channel with your Dr.' : 'Canal Directo con tu Dr.',
                 'msg-badge': isEN ? 'New Message' : 'Mensaje Nuevo'
@@ -189,24 +189,21 @@
             }
         }
 
-        // Lógica cuando llega el mensaje (Simulación a los 3 segundos)
         function incomingMessage() {
             const chatCard = document.getElementById('chat-card');
             const badge = document.getElementById('msg-badge');
             const sound = document.getElementById('notification-sound');
-
-            chatCard.classList.add('critical-msg'); // Cambia a color rojo y parpadea
-            badge.style.display = 'block'; // Muestra la etiqueta "New Message"
+            chatCard.classList.add('critical-msg');
+            badge.style.display = 'block';
             if (sound) sound.play().catch(() => {});
         }
 
         function readMessage() {
-            // Al hacer clic, quitamos el estado de "nuevo" y vamos al feedback
             const chatCard = document.getElementById('chat-card');
             const badge = document.getElementById('msg-badge');
             chatCard.classList.remove('critical-msg');
             badge.style.display = 'none';
-            window.location.replace('feedback.html');
+            window.location.href = 'feedback.html';
         }
 
         function toggleLang() {
@@ -223,7 +220,7 @@
 
         window.onload = () => {
             updateUI();
-            setTimeout(incomingMessage, 3000); // Simula la llegada del mensaje
+            setTimeout(incomingMessage, 4000);
         };
     </script>
 </body>
