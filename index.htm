@@ -203,7 +203,8 @@
             const badge = document.getElementById('msg-badge');
             chatCard.classList.remove('critical-msg');
             badge.style.display = 'none';
-            window.location.href = 'feedback.html';
+            // IMPORTANTE: Asegúrate que feedback.html use href="index.htm" en su flecha atrás
+            window.location.href = 'feedback.html'; 
         }
 
         function toggleLang() {
