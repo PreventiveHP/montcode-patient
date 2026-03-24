@@ -1,23 +1,24 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <script>
     function generateSyncQR() {
         const qrContainer = document.getElementById("qrcode");
         if (!qrContainer) return;
-        qrContainer.innerHTML = ""; // Limpiar antes de generar
-
-        // 1. Recuperamos activación con "Safety Catch"
+        
+        // 1. Limpiamos y preparamos datos
+        qrContainer.innerHTML = ""; 
         let kitID, patientName;
+        
         try {
             const licenseData = localStorage.getItem('montcode_activation');
             const license = licenseData ? JSON.parse(licenseData) : null;
-            
             kitID = license?.kitID || "MC-" + Math.random().toString(36).substring(2, 7).toUpperCase();
             patientName = license?.name || "New Patient";
         } catch (e) {
-            kitID = "MC-RECOVERY";
-            patientName = "Guest User";
+            kitID = "MC-TEMP";
+            patientName = "Guest";
         }
 
-        // 2. Objeto de Identidad
         const syncData = {
             k: kitID,
             n: patientName,
@@ -27,22 +28,28 @@
 
         document.getElementById('node-id').innerText = `ID: ${kitID}`;
 
-        // 3. Generación con re-intento si la librería tarda en cargar
-        if (typeof QRCode !== "undefined") {
-            new QRCode(qrContainer, {
-                text: JSON.stringify(syncData),
-                width: 220,
-                height: 220,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.M
-            });
-            localStorage.setItem('my_kit_id', kitID);
-        } else {
-            console.error("QRCode library not loaded yet");
-            setTimeout(generateSyncQR, 500); // Re-intento en medio segundo
-        }
+        // 2. Intento de renderizado con "Retry" automático
+        const renderQR = () => {
+            if (typeof QRCode !== "undefined") {
+                new QRCode(qrContainer, {
+                    text: JSON.stringify(syncData),
+                    width: 220,
+                    height: 220,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.M
+                });
+                localStorage.setItem('my_kit_id', kitID);
+                console.log("QR Generated Successfully");
+            } else {
+                console.log("Waiting for library...");
+                setTimeout(renderQR, 300); // Re-intento cada 300ms
+            }
+        };
+
+        renderQR();
     }
 
-    window.onload = generateSyncQR;
+    // Usamos 'load' en lugar de 'onload' para mayor compatibilidad
+    window.addEventListener('load', generateSyncQR);
 </script>
