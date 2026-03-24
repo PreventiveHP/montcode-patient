@@ -3,17 +3,22 @@
 <script>
     function generateSyncQR() {
         const qrContainer = document.getElementById("qrcode");
+        const nodeIdElement = document.getElementById('node-id');
+        
         if (!qrContainer) return;
         
-        // 1. Limpiamos y preparamos datos
+        // Limpiamos rastro previo
         qrContainer.innerHTML = ""; 
+        
         let kitID, patientName;
         
         try {
             const licenseData = localStorage.getItem('montcode_activation');
             const license = licenseData ? JSON.parse(licenseData) : null;
-            kitID = license?.kitID || "MC-" + Math.random().toString(36).substring(2, 7).toUpperCase();
-            patientName = license?.name || "New Patient";
+            
+            // Prioridad: 1. Licencia, 2. Cache local, 3. Nuevo Random
+            kitID = license?.kitID || localStorage.getItem('my_kit_id') || "MC-" + Math.random().toString(36).substring(2, 7).toUpperCase();
+            patientName = license?.name || "Patient Node";
         } catch (e) {
             kitID = "MC-TEMP";
             patientName = "Guest";
@@ -26,30 +31,35 @@
             r: "https://montcode-patient.vercel.app/api/relay"
         };
 
-        document.getElementById('node-id').innerText = `ID: ${kitID}`;
+        if (nodeIdElement) nodeIdElement.innerText = `ID: ${kitID}`;
 
-        // 2. Intento de renderizado con "Retry" automático
-        const renderQR = () => {
+        // Intento de renderizado con "Wait-and-Retry"
+        const renderLoop = () => {
             if (typeof QRCode !== "undefined") {
-                new QRCode(qrContainer, {
-                    text: JSON.stringify(syncData),
-                    width: 220,
-                    height: 220,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.M
-                });
-                localStorage.setItem('my_kit_id', kitID);
-                console.log("QR Generated Successfully");
+                try {
+                    new QRCode(qrContainer, {
+                        text: JSON.stringify(syncData),
+                        width: 220,
+                        height: 220,
+                        colorDark : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.M
+                    });
+                    localStorage.setItem('my_kit_id', kitID);
+                    console.log("MontCode™ Sync QR Generated");
+                } catch (err) {
+                    console.error("QR Error:", err);
+                }
             } else {
-                console.log("Waiting for library...");
-                setTimeout(renderQR, 300); // Re-intento cada 300ms
+                console.warn("QR Library not ready... retrying in 400ms");
+                setTimeout(renderLoop, 400);
             }
         };
 
-        renderQR();
+        renderLoop();
     }
 
-    // Usamos 'load' en lugar de 'onload' para mayor compatibilidad
+    // Ejecutar en cuanto el DOM esté listo y cuando la ventana cargue totalmente
+    document.addEventListener('DOMContentLoaded', generateSyncQR);
     window.addEventListener('load', generateSyncQR);
 </script>
