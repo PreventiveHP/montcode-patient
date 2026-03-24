@@ -1,105 +1,42 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MontCode™ Sync Node</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs2@0.0.2/qrcode.min.js"></script>
-    <style>
-        body { background: #000; color: white; font-family: sans-serif; overflow: hidden; }
+<script>
+    function generateSyncQR() {
+        // 1. Recuperamos los datos de activación del paciente
+        const licenseData = localStorage.getItem('montcode_activation');
         
-        /* Contenedor del QR optimizado para escaneo difícil */
-        .qr-frame { 
-            background: white; 
-            padding: 16px; /* "Quiet Zone" necesaria para lectores */
-            border-radius: 24px; 
-            box-shadow: 0 0 50px rgba(37, 99, 235, 0.5);
-            display: inline-block;
-            /* Forzamos renderizado nítido de pixeles (Crucial para webcams) */
-            image-rendering: pixelated; 
-            image-rendering: crisp-edges;
+        if (!licenseData) {
+            // Si no hay activación, usamos un ID genérico de prueba o redirigimos
+            console.warn("Device not activated. Using Guest ID for demo.");
         }
         
-        /* Asegurar que el canvas del QR no se deforme */
-        #qrcode canvas, #qrcode img {
-            display: block;
-            margin: 0 auto;
-        }
+        const license = licenseData ? JSON.parse(licenseData) : { kitID: "MC-TEMP", name: "New Patient" };
+        const kitID = license.kitID || "MC-" + Math.random().toString(36).substring(2, 7).toUpperCase();
+        
+        // 2. Creamos el objeto de Identidad MontCode™
+        // Este objeto es lo que la laptop del Dr. "leerá" para dar de alta al paciente
+        const syncData = {
+            k: kitID,              // ID Único del Kit
+            n: license.name || "Pending Name", // Nombre del paciente
+            v: "2.6-P2P",          // Versión del protocolo
+            r: "https://montcode-patient.vercel.app/api/relay" // La ruta de tu casillero en Vercel
+        };
 
-        .status-pill {
-            background: rgba(37, 99, 235, 0.1);
-            border: 1px solid #2563eb;
-            color: #3b82f6;
-            padding: 6px 16px;
-            border-radius: 100px;
-            font-size: 10px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-    </style>
-</head>
-<body class="p-6 flex flex-col items-center justify-center min-h-screen text-center">
-    
-    <header class="absolute top-8 left-6 right-6 flex justify-between items-center">
-        <button onclick="location.href='index.html'" class="text-zinc-500 font-black text-[10px] uppercase italic tracking-widest">← Close</button>
-        <div class="status-pill animate-pulse">P2P Node: Online</div>
-    </header>
+        // Mostramos el ID en pantalla para referencia visual
+        document.getElementById('node-id').innerText = `ID: ${kitID}`;
 
-    <div class="mb-10">
-        <h1 class="text-3xl font-black italic uppercase tracking-tighter leading-none mb-2">Sync Profile</h1>
-        <p class="text-[9px] text-zinc-500 font-bold uppercase italic px-10 leading-relaxed">Show this code to your Provider's laptop camera<br>to establish the P2P connection.</p>
-    </div>
+        // 3. Generamos el QR con el JSON convertido a texto
+        // Usamos JSON.stringify para que el Dr. reciba un paquete de datos, no solo una URL
+        new QRCode(document.getElementById("qrcode"), {
+            text: JSON.stringify(syncData),
+            width: 220,
+            height: 220,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.M // Nivel M es ideal para cámaras de laptop
+        });
+        
+        // Guardamos nuestro propio ID por si acaso
+        localStorage.setItem('my_kit_id', kitID);
+    }
 
-    <div class="qr-frame mb-10">
-        <div id="qrcode"></div>
-    </div>
-
-    <div class="bg-zinc-900/70 p-5 rounded-[28px] border border-zinc-800 w-full max-w-xs shadow-inner">
-        <p class="text-[9px] font-black text-blue-500 uppercase mb-2 italic tracking-widest">Unique Sync Address:</p>
-        <p id="node-id" class="text-xs font-mono text-zinc-400 break-all opacity-70 italic bg-black/50 p-3 rounded-lg border border-zinc-900">Generating...</p>
-    </div>
-
-    <p class="mt-10 text-[7px] text-zinc-600 font-bold uppercase tracking-widest leading-relaxed">
-        One-time synchronization.<br>Data refreshes automatically on provider's view.
-    </p>
-
-    <script>
-        function generateSyncQR() {
-            // Recuperamos datos de activación para crear la URL única
-            const licenseData = localStorage.getItem('montcode_activation');
-            if (!licenseData) {
-                alert("Device must be activated first!");
-                location.href = 'activation.html';
-                return;
-            }
-            
-            const license = JSON.parse(licenseData);
-            const kitID = license.kitID;
-            // Generamos una sub-llave aleatoria para seguridad extra
-            const syncToken = Math.random().toString(36).substring(2, 8).toUpperCase();
-            
-            // Esta es la URL de enlace P2P
-            const syncURL = `https://montcode-bridge.app/P2P/${kitID}-${syncToken}`;
-            
-            // Mostramos la dirección de texto
-            document.getElementById('node-id').innerText = `${kitID}-${syncToken}`;
-
-            // Configuración del QR optimizada para webcams de laptop:
-            new QRCode(document.getElementById("qrcode"), {
-                text: syncURL,
-                width: 200,      // Tamaño medio para que quepa bien en pantalla y cámara
-                height: 200,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                // NIVEL DE CORRECCIÓN 'Q' (25%)
-                // Es el equilibrio perfecto: aguanta borrosidad de webcam pero no es tan denso como 'H'.
-                correctLevel : QRCode.CorrectLevel.Q 
-            });
-        }
-
-        window.onload = generateSyncQR;
-    </script>
-</body>
-</html>
+    window.onload = generateSyncQR;
+</script>
