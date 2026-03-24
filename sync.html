@@ -1,82 +1,81 @@
-<!-- 1. Librería Ultra-Compatible -->
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MontCode™ | Sync Node</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js"></script>
+</head>
+<body class="bg-black text-white flex flex-col items-center justify-center min-h-screen p-6 overflow-hidden">
 
-<div class="p-6 bg-black min-h-screen text-white flex flex-col items-center">
-    <h1 class="text-[#ccff00] font-black italic mb-4">DR. SYNC TERMINAL</h1>
-    
-    <!-- Contenedor del Escáner -->
-    <div id="reader" style="width: 100%; max-width: 400px; border-radius: 24px; overflow: hidden; border: 2px solid #333;"></div>
+    <div class="text-center space-y-8 animate-in fade-in duration-700">
+        <div class="space-y-1">
+            <h1 class="text-3xl font-black italic uppercase tracking-tighter text-[#ccff00]">Sync Node</h1>
+            <p class="text-[8px] font-bold text-zinc-500 uppercase tracking-[0.4em]">P2P Clinical Bridge v2.6</p>
+        </div>
+        
+        <div class="relative group">
+            <div class="absolute -inset-1 bg-[#ccff00]/20 rounded-[40px] blur-xl group-hover:opacity-100 transition"></div>
+            <div class="relative bg-white p-6 rounded-[32px] shadow-2xl">
+                <div id="qrcode"></div>
+            </div>
+        </div>
 
-    <div class="mt-6 space-y-4 w-full max-w-md text-center">
-        <button id="start-btn" onclick="initDrCamera()" class="w-full bg-[#ccff00] text-black font-black p-5 rounded-2xl uppercase italic shadow-[0_0_20px_rgba(204,255,0,0.3)]">
-            Activar Escáner Dr.
-        </button>
-        <p id="status" class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest pt-2">Esperando permiso...</p>
+        <div class="space-y-3">
+            <div class="inline-block px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-full">
+                <p id="node-id" class="text-[10px] font-black uppercase tracking-widest text-[#ccff00]">Initializing...</p>
+            </div>
+            <p class="text-[9px] text-zinc-600 uppercase font-bold italic max-w-[200px] mx-auto leading-relaxed">
+                Point Provider Camera here to link this device
+            </p>
+        </div>
     </div>
-</div>
 
-<script>
-let scanner;
+    <script>
+        function generateSyncQR() {
+            const container = document.getElementById("qrcode");
+            if (!container) return;
 
-async function initDrCamera() {
-    const status = document.getElementById('status');
-    const startBtn = document.getElementById('start-btn');
-    
-    status.innerText = "Solicitando acceso...";
+            container.innerHTML = ""; // Limpiar rastro
 
-    // REGLA 1: Solo HTTPS (Vercel lo da, asegúrate de usarlo)
-    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-        alert("ERROR: La cámara requiere HTTPS. Entra por Vercel.");
-        return;
-    }
-
-    // REGLA 2: Crear instancia si no existe
-    if (!scanner) {
-        scanner = new Html5Qrcode("reader");
-    }
-
-    const config = { 
-        fps: 15, 
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0 
-    };
-
-    try {
-        // REGLA 3: Forzar cámara trasera (environment)
-        await scanner.start(
-            { facingMode: "environment" }, 
-            config,
-            (decodedText) => {
-                console.log("QR Detectado:", decodedText);
-                status.innerText = "¡Sincronizado!";
-                status.style.color = "#ccff00";
-                
-                // Procesar datos y parar cámara
-                processSyncData(decodedText);
-                scanner.stop();
+            // 1. Recuperar o Generar ID Único
+            let kitID = localStorage.getItem('my_kit_id');
+            if (!kitID) {
+                kitID = "MC-" + Math.random().toString(36).substring(2, 7).toUpperCase();
+                localStorage.setItem('my_kit_id', kitID);
             }
-        );
-        startBtn.style.display = 'none'; // Ocultar botón al iniciar
-        status.innerText = "Escaneando Paciente...";
-    } catch (err) {
-        console.error("Error Cámara:", err);
-        status.innerText = "Error: Acceso Denegado. Revisa permisos.";
-        alert("Por favor, permite el acceso a la cámara en los ajustes de tu navegador.");
-    }
-}
 
-function processSyncData(data) {
-    try {
-        const patient = JSON.parse(data);
-        if(patient.k) {
-            localStorage.setItem('target_kit_id', patient.k);
-            localStorage.setItem('target_relay', patient.r);
-            alert("Conectado con éxito a: " + (patient.n || patient.k));
-            // Redirigir al panel de control del Dr. después de 1 seg
-            setTimeout(() => { window.location.href = "admin-kit.html"; }, 1500);
+            // 2. Datos del Protocolo
+            const syncData = {
+                k: kitID,
+                n: "Active Patient",
+                v: "2.6-P2P",
+                r: "https://montcode-patient.vercel.app/api/relay"
+            };
+
+            document.getElementById('node-id').innerText = `ID: ${kitID}`;
+
+            // 3. Renderizado con Reintento (Anti-Blanco)
+            if (typeof QRCode !== "undefined") {
+                new QRCode(container, {
+                    text: JSON.stringify(syncData),
+                    width: 220,
+                    height: 220,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+                console.log("QR Sync Ready");
+            } else {
+                console.warn("Library missing... retrying");
+                setTimeout(generateSyncQR, 500);
+            }
         }
-    } catch (e) {
-        alert("QR no válido para MontCode™");
-    }
-}
-</script>
+
+        // Forzar ejecución al cargar
+        window.onload = generateSyncQR;
+        document.addEventListener('DOMContentLoaded', generateSyncQR);
+    </script>
+</body>
+</html>
