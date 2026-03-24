@@ -1,41 +1,47 @@
 <script>
     function generateSyncQR() {
-        // 1. Recuperamos los datos de activación del paciente
-        const licenseData = localStorage.getItem('montcode_activation');
-        
-        if (!licenseData) {
-            // Si no hay activación, usamos un ID genérico de prueba o redirigimos
-            console.warn("Device not activated. Using Guest ID for demo.");
+        const qrContainer = document.getElementById("qrcode");
+        if (!qrContainer) return;
+        qrContainer.innerHTML = ""; // Limpiar antes de generar
+
+        // 1. Recuperamos activación con "Safety Catch"
+        let kitID, patientName;
+        try {
+            const licenseData = localStorage.getItem('montcode_activation');
+            const license = licenseData ? JSON.parse(licenseData) : null;
+            
+            kitID = license?.kitID || "MC-" + Math.random().toString(36).substring(2, 7).toUpperCase();
+            patientName = license?.name || "New Patient";
+        } catch (e) {
+            kitID = "MC-RECOVERY";
+            patientName = "Guest User";
         }
-        
-        const license = licenseData ? JSON.parse(licenseData) : { kitID: "MC-TEMP", name: "New Patient" };
-        const kitID = license.kitID || "MC-" + Math.random().toString(36).substring(2, 7).toUpperCase();
-        
-        // 2. Creamos el objeto de Identidad MontCode™
-        // Este objeto es lo que la laptop del Dr. "leerá" para dar de alta al paciente
+
+        // 2. Objeto de Identidad
         const syncData = {
-            k: kitID,              // ID Único del Kit
-            n: license.name || "Pending Name", // Nombre del paciente
-            v: "2.6-P2P",          // Versión del protocolo
-            r: "https://montcode-patient.vercel.app/api/relay" // La ruta de tu casillero en Vercel
+            k: kitID,
+            n: patientName,
+            v: "2.6-P2P",
+            r: "https://montcode-patient.vercel.app/api/relay"
         };
 
-        // Mostramos el ID en pantalla para referencia visual
         document.getElementById('node-id').innerText = `ID: ${kitID}`;
 
-        // 3. Generamos el QR con el JSON convertido a texto
-        // Usamos JSON.stringify para que el Dr. reciba un paquete de datos, no solo una URL
-        new QRCode(document.getElementById("qrcode"), {
-            text: JSON.stringify(syncData),
-            width: 220,
-            height: 220,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.M // Nivel M es ideal para cámaras de laptop
-        });
-        
-        // Guardamos nuestro propio ID por si acaso
-        localStorage.setItem('my_kit_id', kitID);
+        // 3. Generación con re-intento si la librería tarda en cargar
+        if (typeof QRCode !== "undefined") {
+            new QRCode(qrContainer, {
+                text: JSON.stringify(syncData),
+                width: 220,
+                height: 220,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.M
+            });
+            localStorage.setItem('my_kit_id', kitID);
+        } else {
+            console.error("QRCode library not loaded yet");
+            setTimeout(generateSyncQR, 500); // Re-intento en medio segundo
+        }
     }
 
     window.onload = generateSyncQR;
