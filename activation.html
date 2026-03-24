@@ -3,67 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>MontCode™ Activation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
     <style>
-        body { 
-            background: #000; 
-            color: white; 
-            font-family: sans-serif; 
-            overflow: hidden; 
-            -webkit-text-size-adjust: 100%;
-        }
-        
-        .scanner-view { 
-            width: 100%; 
-            height: 300px; 
-            background: #111; 
-            border-radius: 32px; 
-            overflow: hidden; 
-            position: relative; 
-            border: 2px solid #2563eb;
-            box-shadow: 0 0 25px rgba(37, 99, 235, 0.25);
-        }
-
-        #interactive.viewport video, canvas { 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
-        }
-
-        .scan-line { 
-            position: absolute; 
-            top: 50%; 
-            left: 10%; 
-            width: 80%; 
-            height: 2px; 
-            background: #3b82f6; 
-            box-shadow: 0 0 15px #3b82f6; 
-            animation: move 2s infinite ease-in-out; 
-            z-index: 10;
-        }
-
-        @keyframes move { 
-            0%, 100% { top: 25%; } 
-            50% { top: 75%; } 
-        }
-
-        .btn-active:active { transform: scale(0.96); }
-        .logo-mini { box-shadow: 0 0 15px rgba(218, 165, 32, 0.3); border: 1px solid #DAA520; }
-        
-        /* Animación para validación exitosa */
-        .valid-pulse { animation: success-glow 0.5s ease-in-out; }
-        @keyframes success-glow {
-            0% { box-shadow: 0 0 0px #16a34a; }
-            50% { box-shadow: 0 0 30px #16a34a; }
-            100% { box-shadow: 0 0 0px #16a34a; }
-        }
+        body { background: #000; color: white; font-family: sans-serif; overflow: hidden; }
+        .scanner-view { width: 100%; height: 300px; background: #111; border-radius: 32px; overflow: hidden; position: relative; border: 2px solid #2563eb; }
+        #interactive.viewport video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        .scan-line { position: absolute; top: 50%; left: 10%; width: 80%; height: 2px; background: #3b82f6; box-shadow: 0 0 15px #3b82f6; animation: move 2s infinite ease-in-out; }
+        @keyframes move { 0%, 100% { top: 25%; } 50% { top: 75%; } }
     </style>
 </head>
 <body class="p-6">
@@ -71,13 +19,10 @@
         <button onclick="location.href='index.html'" class="text-zinc-500 font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
             <span>←</span> Back
         </button>
-        <div class="flex items-center gap-2">
-            <p class="text-[7px] font-bold text-blue-500 uppercase tracking-widest">Enrollment Node</p>
-            <img src="Logo/logo.png.jpg" class="w-8 h-8 rounded-full logo-mini object-cover">
-        </div>
+        <img src="logo.png.jpg" class="w-8 h-8 rounded-full border border-[#DAA520] object-cover">
     </header>
     
-    <h1 class="text-3xl font-black italic uppercase tracking-tighter leading-none mb-1">Kit Activation</h1>
+    <h1 class="text-3xl font-black italic uppercase tracking-tighter leading-none mb-1 text-white">Kit Activation</h1>
     <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8 italic">Validated Series: 102XXX +</p>
 
     <div id="scanner-container" class="scanner-view mb-8">
@@ -86,13 +31,13 @@
     </div>
 
     <div class="bg-zinc-900/80 p-6 rounded-[28px] border border-zinc-800 mb-8">
-        <p class="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2">System Status: <span id="scan-status" class="text-zinc-400 italic">Waiting for Barcode...</span></p>
+        <p class="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2 italic">System Status: <span id="scan-status" class="text-zinc-400">Waiting...</span></p>
         <input type="text" id="kitID" placeholder="POINT AT KIT" readonly
                class="w-full bg-transparent font-black text-4xl text-white outline-none italic uppercase placeholder:text-zinc-800 tracking-tight">
     </div>
 
-    <button onclick="activateSystem()" id="btn-activate" class="btn-active w-full bg-blue-600 py-6 rounded-[26px] font-black uppercase italic shadow-2xl transition-all text-lg tracking-tight">
-        Confirm 365 Days Activation
+    <button onclick="activateSystem()" id="btn-activate" class="w-full bg-blue-600 py-6 rounded-[26px] font-black uppercase italic text-lg shadow-2xl transition-all">
+        Confirm Activation
     </button>
 
     <script>
@@ -100,57 +45,26 @@
 
         function startScanner() {
             Quagga.init({
-                inputStream: { 
-                    name: "Live", 
-                    type: "LiveStream", 
-                    target: document.querySelector('#interactive'), 
-                    constraints: { 
-                        facingMode: "environment",
-                        aspectRatio: { min: 1, max: 2 } 
-                    } 
-                },
-                decoder: { 
-                    readers: ["code_128_reader", "ean_reader", "code_39_reader"] 
-                },
-                locate: true
-            }, (err) => { 
-                if (!err) {
-                    Quagga.start(); 
-                } else { 
-                    document.getElementById('scan-status').innerText = "CAMERA ERROR";
-                    console.error(err); 
-                } 
-            });
+                inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#interactive'), constraints: { facingMode: "environment" } },
+                decoder: { readers: ["code_128_reader", "ean_reader", "code_39_reader"] }
+            }, (err) => { if (!err) Quagga.start(); });
 
             Quagga.onDetected((data) => {
                 const code = data.codeResult.code;
-                // Validamos que empiece por 102 para asegurar que es un kit oficial MontCode™
-                if (/^102\d{3,}/.test(code) && !isDetected) {
+                if (/^102/.test(code) && !isDetected) {
                     isDetected = true;
-                    handleDetection(code);
+                    document.getElementById('kitID').value = code;
+                    document.getElementById('scan-status').innerText = "KIT VALIDATED ✓";
+                    document.getElementById('scan-status').className = "text-green-500 font-black italic";
+                    if (navigator.vibrate) navigator.vibrate(200);
                 }
             });
         }
 
-        function handleDetection(code) {
-            const kitInput = document.getElementById('kitID');
-            const status = document.getElementById('scan-status');
-            const container = document.getElementById('scanner-container');
-
-            kitInput.value = code;
-            status.innerText = "KIT VALIDATED ✓";
-            status.className = "text-green-500 font-black italic";
-            container.classList.add('valid-pulse');
-            container.style.borderColor = "#16a34a";
-            
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-        }
-
         function activateSystem() {
             const code = document.getElementById('kitID').value;
-            const btn = document.getElementById('btn-activate');
-
             if (code) {
+                // ESTRUCTURA EXACTA QUE PIDE TU INDEX:
                 const activation = {
                     kitID: code,
                     startDate: new Date().getTime(),
@@ -158,30 +72,22 @@
                     isActive: true
                 };
 
-                // Guardar en almacenamiento local para que index.html lo reconozca
+                // Guardamos la activación principal
                 localStorage.setItem('montcode_activation', JSON.stringify(activation));
                 
-                btn.innerText = "SYSTEM ARMED";
-                btn.style.background = "#16a34a";
-                btn.classList.add('animate-pulse');
+                // Guardamos el ID por separado para el Clinical Feedback
+                localStorage.setItem('my_kit_id', code);
+                localStorage.setItem('target_kit_id', code);
 
-                // Detener cámara para ahorrar batería
+                document.getElementById('btn-activate').innerText = "SYSTEM ARMED";
+                document.getElementById('btn-activate').style.background = "#16a34a";
+
                 Quagga.stop();
 
-                setTimeout(() => { 
-                    location.href = 'index.html'; 
-                }, 1200);
-            } else { 
-                // Feedback visual si intentan activar sin escanear
-                btn.innerText = "SCAN REQUIRED";
-                btn.style.background = "#dc2626";
-                setTimeout(() => {
-                    btn.innerText = "Confirm 365 Days Activation";
-                    btn.style.background = "#2563eb";
-                }, 2000);
+                // Redirección a la raíz (donde está tu index.html)
+                setTimeout(() => { location.href = 'index.html'; }, 1200);
             }
         }
-
         window.onload = startScanner;
     </script>
 </body>
