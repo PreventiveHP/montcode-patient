@@ -6,6 +6,8 @@
     <title>MontCode™ Activation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <!-- Cargamos librerías para QR (Doctor) y Barcode (Kit) -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body { background: #000; color: white; font-family: sans-serif; overflow: hidden; }
         .scanner-view { 
@@ -26,27 +28,21 @@
         }
         @keyframes move { 0%, 100% { top: 25%; } 50% { top: 75%; } }
         .disabled-btn { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
-        /* Estilo para el logo admin */
         #admin-trigger { cursor: pointer; transition: 0.3s; }
-        #admin-trigger:active { transform: scale(0.9); opacity: 0.5; }
     </style>
 </head>
 <body class="p-6">
     <header class="flex justify-between items-center mb-6">
-        <button onclick="location.href='index.html'" class="text-zinc-500 font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
-            <span>←</span> Back
-        </button>
-        <!-- RUTA ADMIN: Mantén presionado el logo para ir a admin.html -->
-        <div id="admin-trigger" oncontextmenu="return false;">
-            <img src="logo.png.jpg" class="w-8 h-8 rounded-full border border-[#DAA520] object-cover">
-        </div>
+        <button onclick="location.href='index.html'" class="text-zinc-500 font-black text-[10px] uppercase tracking-widest flex items-center gap-2"><span>←</span> Back</button>
+        <div id="admin-trigger"><img src="logo.png.jpg" class="w-8 h-8 rounded-full border border-[#DAA520] object-cover"></div>
     </header>
     
-    <h1 class="text-3xl font-black italic uppercase tracking-tighter leading-none mb-1 text-white">Kit Activation</h1>
-    <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8 italic">Validated Series: 102XXX +</p>
+    <h1 id="step-title" class="text-3xl font-black italic uppercase tracking-tighter leading-none mb-1 text-white">Kit Activation</h1>
+    <p id="step-desc" class="text-[9px] text-zinc-500 font-bold uppercase mb-8 italic">Validated Series: 102XXX +</p>
 
     <div id="scanner-container" class="scanner-view mb-8">
         <div id="interactive" class="viewport"></div>
+        <div id="qr-reader" style="display:none;"></div>
         <div class="scan-line"></div>
     </div>
 
@@ -54,104 +50,103 @@
         <p class="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2 italic">
             System Status: <span id="scan-status" class="text-zinc-400">Searching for Code...</span>
         </p>
-        <input type="text" id="kitID" placeholder="POINT AT KIT" readonly
+        <input type="text" id="masterID" placeholder="POINT AT KIT" readonly
                class="w-full bg-transparent font-black text-4xl text-white outline-none italic uppercase placeholder:text-zinc-800 tracking-tight">
     </div>
 
-    <button onclick="activateSystem()" id="btn-activate" class="w-full bg-blue-600 py-6 rounded-[26px] font-black uppercase italic text-lg shadow-2xl transition-all disabled-btn">
-        Confirm Activation
+    <button onclick="nextStep()" id="btn-main" class="w-full bg-blue-600 py-6 rounded-[26px] font-black uppercase italic text-lg shadow-2xl transition-all disabled-btn">
+        Validate Kit
     </button>
 
     <script>
-        let isDetected = false;
-        let adminTimer;
+        let isKitDetected = false;
+        let doctorID = null;
+        let step = 1; // 1: Kit, 2: Doctor QR
 
-        // Lógica de Ruta Admin Oculta (3 segundos presionado)
-        const trigger = document.getElementById('admin-trigger');
-        trigger.addEventListener('mousedown', () => { adminTimer = setTimeout(() => { location.href='admin.html' }, 3000); });
-        trigger.addEventListener('mouseup', () => { clearTimeout(adminTimer); });
-        trigger.addEventListener('touchstart', () => { adminTimer = setTimeout(() => { location.href='admin.html' }, 3000); });
-        trigger.addEventListener('touchend', () => { clearTimeout(adminTimer); });
-
-        function startScanner() {
+        function startBarcodeScanner() {
             Quagga.init({
-                inputStream: { 
-                    name: "Live", 
-                    type: "LiveStream", 
-                    target: document.querySelector('#interactive'), 
-                    constraints: { facingMode: "environment", focusMode: "continuous" } 
-                },
-                decoder: { 
-                    readers: ["code_128_reader", "ean_reader", "code_39_reader"] 
-                },
+                inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#interactive'), constraints: { facingMode: "environment" } },
+                decoder: { readers: ["code_128_reader", "ean_reader"] },
                 locate: true
-            }, (err) => { 
-                if (err) {
-                    document.getElementById('scan-status').innerText = "CAMERA ERROR";
-                    return;
-                }
-                Quagga.start(); 
-            });
+            }, (err) => { if (!err) Quagga.start(); });
 
             Quagga.onDetected((data) => {
                 const code = data.codeResult.code;
-                // Valida que empiece por 102
-                if (/^102/.test(code) && !isDetected) {
-                    isDetected = true;
-                    const kitInput = document.getElementById('kitID');
-                    const status = document.getElementById('scan-status');
-                    const btn = document.getElementById('btn-activate');
-                    
-                    kitInput.value = code;
-                    status.innerText = "KIT VALIDATED ✓";
-                    status.className = "text-green-500 font-black italic";
-                    
-                    btn.classList.remove('disabled-btn');
-                    btn.style.background = "#3b82f6";
-                    
+                if (/^102/.test(code) && !isKitDetected) {
+                    isKitDetected = true;
+                    document.getElementById('masterID').value = code;
+                    document.getElementById('scan-status').innerText = "KIT VALIDATED ✓";
+                    document.getElementById('scan-status').className = "text-green-500 font-black italic";
+                    document.getElementById('btn-main').classList.remove('disabled-btn');
                     if (navigator.vibrate) navigator.vibrate(200);
                     Quagga.stop();
                 }
             });
         }
 
-        function activateSystem() {
-            const code = document.getElementById('kitID').value;
+        function nextStep() {
+            if (step === 1) {
+                // Preparar para Escaneo de Doctor
+                step = 2;
+                document.getElementById('step-title').innerText = "Doctor Link";
+                document.getElementById('step-desc').innerText = "Scan Doctor's Master QR Code";
+                document.getElementById('masterID').value = "";
+                document.getElementById('masterID').placeholder = "SCAN DR QR";
+                document.getElementById('scan-status').innerText = "Awaiting Doctor Scan...";
+                document.getElementById('scan-status').className = "text-blue-400 font-black italic";
+                document.getElementById('btn-main').classList.add('disabled-btn');
+                document.getElementById('btn-main').innerText = "Linking Doctor...";
+                
+                // Cambiar a lector QR
+                document.getElementById('interactive').style.display = "none";
+                document.getElementById('qr-reader').style.display = "block";
+                startQRScanner();
+            } else {
+                finalizeActivation();
+            }
+        }
+
+        function startQRScanner() {
+            const html5QrCode = new Html5Qrcode("qr-reader");
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    doctorID = decodedText;
+                    document.getElementById('masterID').value = "DR-OK";
+                    document.getElementById('scan-status').innerText = "DOCTOR LINKED ✓";
+                    document.getElementById('btn-main').classList.remove('disabled-btn');
+                    document.getElementById('btn-main').innerText = "Complete Activation";
+                    html5QrCode.stop();
+                }
+            );
+        }
+
+        function finalizeActivation() {
+            const patientName = prompt("Patient Name:");
+            const patientDOB = prompt("Date of Birth (MM/DD/YYYY):");
             
-            if (code) {
-                const patientName = prompt("Enter Patient Full Name:", "New Patient");
-                if (!patientName) return alert("Patient name required.");
-
-                const patientDOB = prompt("Enter Date of Birth (MM/DD/YYYY):", "01/01/1980");
-                if (!patientDOB) return alert("DOB required.");
-
-                const now = Date.now();
-                const oneYearInMs = 365 * 24 * 60 * 60 * 1000;
-
+            if (patientName && patientDOB) {
                 const activation = {
-                    kitID: code,
+                    kitID: document.getElementById('masterID').value,
+                    drID: doctorID,
                     patientName: patientName,
                     patientDOB: patientDOB,
-                    startDate: now,
-                    expiryDate: now + oneYearInMs,
-                    daysLeft: 365,
+                    expiryDate: Date.now() + (365 * 24 * 60 * 60 * 1000),
+                    dr_notes: [], // Espacio para mensajes del Dr.
                     isActive: true
                 };
 
-                // GUARDADO MASTER
                 localStorage.setItem('montcode_activation', JSON.stringify(activation));
-                localStorage.setItem('mc_patient_name', patientName);
-                localStorage.setItem('mc_kit_id', code);
+                localStorage.setItem('mc_dr_id', doctorID);
                 
-                const btn = document.getElementById('btn-activate');
-                btn.innerText = "SYSTEM ARMED (365 DAYS)";
-                btn.style.background = "#16a34a";
-
+                document.getElementById('btn-main').innerText = "READY FOR DR";
+                document.getElementById('btn-main').style.background = "#16a34a";
                 setTimeout(() => { location.href = 'index.html'; }, 1500);
             }
         }
 
-        window.onload = startScanner;
+        window.onload = startBarcodeScanner;
     </script>
 </body>
 </html>
