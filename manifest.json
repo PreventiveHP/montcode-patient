@@ -1,22 +1,22 @@
 {
-  "short_name": "MontCode",
-  "name": "MontCode™ Rescue 2026",
+  "short_name": "MontCode Rescue",
+  "name": "MontCode™ Rescue & Wellness",
   "icons": [
     {
-      "src": "icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192"
+      "src": "logo.png.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
     },
     {
-      "src": "icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "src": "logo.png.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
     }
   ],
-  "start_url": "/index.htm",
-  "background_color": "#000000",
+  "start_url": "./index.html",
   "display": "standalone",
-  "theme_color": "#ccff00",
-  "scope": "/",
-  "description": "Tactical Health & Medication Adherence System"
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "orientation": "portrait",
+  "description": "Tactical clinical triage and medication safety system."
 }
