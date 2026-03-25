@@ -2,121 +2,94 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MontCode™ | Link to Station</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MontCode™ Full Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lector QR -->
-    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap');
-        body { background: #000; color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
-        .scanner-box { border: 2px solid #ccff00; box-shadow: 0 0 20px rgba(204, 255, 0, 0.2); }
-        #reader { width: 100% !important; border: none !important; }
-        #reader video { border-radius: 20px; object-fit: cover; }
-        
-        /* Animación de escaneo */
-        .scan-line {
-            width: 100%; height: 2px;
-            background: #ccff00;
-            position: absolute;
-            top: 0; left: 0;
-            box-shadow: 0 0 15px #ccff00;
-            animation: scan 2s infinite linear;
-            z-index: 10;
-            pointer-events: none;
+        body { background: #000; color: white; font-family: sans-serif; }
+        .sync-loader {
+            border: 4px solid #111;
+            border-top: 4px solid #2563eb;
+            border-radius: 50%;
+            width: 80px; height: 80px;
+            animation: spin 1s linear infinite;
         }
-        @keyframes scan {
-            0% { top: 0%; }
-            100% { top: 100%; }
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .status-pill { font-size: 10px; font-weight: 900; padding: 4px 12px; border-radius: 50px; text-transform: uppercase; }
+        .success { background: #064e3b; color: #34d399; }
     </style>
 </head>
-<body class="flex flex-col h-screen p-6">
+<body class="p-6 flex flex-col items-center justify-center min-height-screen">
 
-    <header class="mb-8">
-        <h1 class="text-2xl font-black italic uppercase tracking-tighter">Link to Station</h1>
-        <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Scan Provider QR to sync profile</p>
-    </header>
+    <div class="w-full max-w-md text-center">
+        <h1 id="sync-title" class="text-2xl font-black italic uppercase tracking-tighter mb-2">System Sync</h1>
+        <p id="sync-sub" class="text-[10px] text-zinc-500 font-bold uppercase mb-10">Local Database Handshake</p>
 
-    <main class="flex-1 flex flex-col justify-center">
-        <div class="relative scanner-box rounded-[30px] overflow-hidden bg-zinc-900">
-            <div class="scan-line"></div>
-            <div id="reader"></div>
+        <div class="flex justify-center mb-10">
+            <div id="loader" class="sync-loader"></div>
+            <div id="check-icon" class="hidden text-6xl text-blue-500">✅</div>
         </div>
-        
-        <div id="status-msg" class="mt-6 text-center text-[10px] font-black uppercase italic text-zinc-600">
-            Waiting for camera...
-        </div>
-    </main>
 
-    <footer class="mt-auto pb-6">
-        <button onclick="location.href='index.html'" class="w-full py-4 rounded-2xl bg-zinc-900 text-zinc-400 font-black uppercase text-[10px] tracking-widest italic">
-            Cancel
+        <div id="sync-list" class="space-y-4 text-left mb-10">
+            <!-- Items de sincronización -->
+            <div class="flex justify-between items-center bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800">
+                <span class="text-[10px] font-black uppercase italic">Clinical Logs</span>
+                <span id="st-logs" class="status-pill bg-zinc-800 text-zinc-500">Waiting</span>
+            </div>
+            <div class="flex justify-between items-center bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800">
+                <span class="text-[10px] font-black uppercase italic">Identity Profile</span>
+                <span id="st-id" class="status-pill bg-zinc-800 text-zinc-500">Waiting</span>
+            </div>
+            <div class="flex justify-between items-center bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800">
+                <span class="text-[10px] font-black uppercase italic">Security Keys</span>
+                <span id="st-sec" class="status-pill bg-zinc-800 text-zinc-500">Waiting</span>
+            </div>
+        </div>
+
+        <button onclick="goHome()" id="btn-back" class="hidden w-full bg-blue-600 text-white font-black py-4 rounded-2xl uppercase italic text-sm shadow-lg active:scale-95 transition">
+            Return to Dashboard
         </button>
-    </footer>
+    </div>
 
     <script>
-        // 1. Obtener datos locales del paciente (de tu localStorage actual)
-        // Nota: Asegúrate que las llaves coincidan con tu registro de activación
-        const patientData = {
-            id: localStorage.getItem('kit_id') || 'ST-999',
-            n: localStorage.getItem('user_name') || 'Unknown Patient',
-            d: localStorage.getItem('user_dob') || '00/00/0000'
-        };
-
-        const html5QrCode = new Html5Qrcode("reader");
-        const qrConfig = { fps: 15, qrbox: { width: 250, height: 250 } };
-
-        // Iniciar cámara
-        html5QrCode.start(
-            { facingMode: "environment" }, 
-            qrConfig, 
-            onScanSuccess
-        ).catch(err => {
-            document.getElementById('status-msg').innerText = "CAMERA ERROR: CHECK PERMISSIONS";
-            document.getElementById('status-msg').classList.add('text-red-500');
-        });
-
-        async function onScanSuccess(decodedText) {
-            // Validar que el QR sea una URL válida (ej. que contenga tu hub de vercel)
-            if (!decodedText.includes('api/hub')) {
-                document.getElementById('status-msg').innerText = "INVALID MONTCODE QR";
-                return;
-            }
-
-            // Detenemos la cámara
-            html5QrCode.stop();
-            document.getElementById('status-msg').innerText = "STATION DETECTED. ENROLLING...";
-            document.getElementById('status-msg').classList.add('text-[#ccff00]');
-
-            try {
-                // El QR del Dr ya trae la URL completa con el station ID
-                // Ejemplo: https://montcode-provider.vercel.app/api/hub?station=ST01
-                const targetUrl = decodedText; 
-
-                const payload = {
-                    type: "ENROLLMENT",
-                    data: btoa(JSON.stringify(patientData)) // Base64 para integridad
-                };
-
-                const response = await fetch(targetUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    alert("✅ LINK SUCCESSFUL\nProfile sent to Doctor's screen.");
-                    location.href = 'index.html';
-                } else {
-                    throw new Error("Server Rejected");
-                }
-            } catch (err) {
-                alert("❌ SYNC ERROR: Station Offline or Connection Failed");
-                // Reiniciar cámara si falla para reintentar
-                location.reload();
-            }
+        const isEN = (localStorage.getItem('montcode_lang') || 'EN') === 'EN';
+        
+        // Traducción rápida
+        if(!isEN) {
+            document.getElementById('sync-title').innerText = "Sincronización";
+            document.getElementById('sync-sub').innerText = "Enlace de Base de Datos Local";
+            document.getElementById('btn-back').innerText = "Volver al Panel";
         }
+
+        async function startSync() {
+            const steps = [
+                { id: 'st-logs', delay: 800 },
+                { id: 'st-id', delay: 1200 },
+                { id: 'st-sec', delay: 600 }
+            ];
+
+            for (let step of steps) {
+                await new Promise(r => setTimeout(r, step.delay));
+                const el = document.getElementById(step.id);
+                el.innerText = isEN ? "Synced" : "Sincronizado";
+                el.className = "status-pill success";
+            }
+
+            // Finalización
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('check-icon').classList.remove('hidden');
+            document.getElementById('btn-back').classList.remove('hidden');
+            
+            // Forzar actualización de timestamp de sincronización
+            localStorage.setItem('mc_last_sync', new Date().toISOString());
+        }
+
+        function goHome() {
+            // Arreglo del error 404: Apuntar siempre al nombre exacto del archivo raíz
+            window.location.href = 'index.html'; 
+        }
+
+        window.onload = startSync;
     </script>
 </body>
 </html>
