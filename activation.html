@@ -84,7 +84,6 @@
                 const code = data.codeResult.code;
                 if (/^102/.test(code) && !isDetected) {
                     isDetected = true;
-                    
                     const kitInput = document.getElementById('kitID');
                     const status = document.getElementById('scan-status');
                     const btn = document.getElementById('btn-activate');
@@ -106,30 +105,37 @@
             const code = document.getElementById('kitID').value;
             
             if (code) {
-                // CAPTURA DE IDENTIDAD PROFESIONAL
+                // CAPTURA DE PERFIL CLÍNICO
                 const patientName = prompt("Enter Patient Full Name:", "New Patient");
-                
                 if (!patientName) {
                     alert("Patient name is required for clinical records.");
+                    return;
+                }
+
+                const patientDOB = prompt("Enter Date of Birth (MM/DD/YYYY):", "01/01/1980");
+                if (!patientDOB) {
+                    alert("Date of birth is required for dosage & triage logic.");
                     return;
                 }
 
                 const activation = {
                     kitID: code,
                     patientName: patientName,
+                    patientDOB: patientDOB,
                     startDate: Date.now(),
                     expiryDate: Date.now() + (365 * 24 * 60 * 60 * 1000),
                     isActive: true
                 };
 
-                // PERSISTENCIA DE IDENTIDAD UNIFICADA
+                // PERSISTENCIA DE DATOS MASTER
                 localStorage.setItem('montcode_activation', JSON.stringify(activation));
                 
-                // Estas llaves alimentan automáticamente a Glucosa.html y BP.html
+                // Llaves de acceso rápido para otros módulos
                 localStorage.setItem('mc_patient_name', patientName);
+                localStorage.setItem('mc_patient_dob', patientDOB);
                 localStorage.setItem('mc_kit_id', code);
                 
-                // Llaves legacy para compatibilidad
+                // Compatibilidad legacy
                 localStorage.setItem('kit_id', code);
                 localStorage.setItem('my_kit_id', code);
                 
@@ -140,6 +146,11 @@
                 setTimeout(() => { location.href = 'index.html'; }, 1000);
             }
         }
+
+        window.onload = startScanner;
+    </script>
+</body>
+</html>
 
         window.onload = startScanner;
     </script>
