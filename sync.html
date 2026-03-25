@@ -1,8 +1,8 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MontCode™ | Link to Station</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lector QR -->
@@ -13,6 +13,22 @@
         .scanner-box { border: 2px solid #ccff00; box-shadow: 0 0 20px rgba(204, 255, 0, 0.2); }
         #reader { width: 100% !important; border: none !important; }
         #reader video { border-radius: 20px; object-fit: cover; }
+        
+        /* Animación de escaneo */
+        .scan-line {
+            width: 100%; height: 2px;
+            background: #ccff00;
+            position: absolute;
+            top: 0; left: 0;
+            box-shadow: 0 0 15px #ccff00;
+            animation: scan 2s infinite linear;
+            z-index: 10;
+            pointer-events: none;
+        }
+        @keyframes scan {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
     </style>
 </head>
 <body class="flex flex-col h-screen p-6">
@@ -23,7 +39,8 @@
     </header>
 
     <main class="flex-1 flex flex-col justify-center">
-        <div class="scanner-box rounded-[30px] overflow-hidden bg-zinc-900">
+        <div class="relative scanner-box rounded-[30px] overflow-hidden bg-zinc-900">
+            <div class="scan-line"></div>
             <div id="reader"></div>
         </div>
         
@@ -33,40 +50,53 @@
     </main>
 
     <footer class="mt-auto pb-6">
-        <button onclick="location.href='index.htm'" class="w-full py-4 rounded-2xl bg-zinc-900 text-zinc-400 font-black uppercase text-[10px] tracking-widest italic">
+        <button onclick="location.href='index.html'" class="w-full py-4 rounded-2xl bg-zinc-900 text-zinc-400 font-black uppercase text-[10px] tracking-widest italic">
             Cancel
         </button>
     </footer>
 
     <script>
-        // 1. Obtener datos locales del paciente (encriptados/locales)
+        // 1. Obtener datos locales del paciente (de tu localStorage actual)
+        // Nota: Asegúrate que las llaves coincidan con tu registro de activación
         const patientData = {
-            kit: localStorage.getItem('kit_id') || 'ST-999',
-            name: localStorage.getItem('user_name') || 'Guest Patient',
-            dob: localStorage.getItem('user_dob') || '00/00/0000'
+            id: localStorage.getItem('kit_id') || 'ST-999',
+            n: localStorage.getItem('user_name') || 'Unknown Patient',
+            d: localStorage.getItem('user_dob') || '00/00/0000'
         };
 
         const html5QrCode = new Html5Qrcode("reader");
+        const qrConfig = { fps: 15, qrbox: { width: 250, height: 250 } };
 
-        const qrConfig = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-        html5QrCode.start({ facingMode: "environment" }, qrConfig, onScanSuccess);
+        // Iniciar cámara
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            qrConfig, 
+            onScanSuccess
+        ).catch(err => {
+            document.getElementById('status-msg').innerText = "CAMERA ERROR: CHECK PERMISSIONS";
+            document.getElementById('status-msg').classList.add('text-red-500');
+        });
 
         async function onScanSuccess(decodedText) {
-            // Detenemos la cámara al detectar éxito
+            // Validar que el QR sea una URL válida (ej. que contenga tu hub de vercel)
+            if (!decodedText.includes('api/hub')) {
+                document.getElementById('status-msg').innerText = "INVALID MONTCODE QR";
+                return;
+            }
+
+            // Detenemos la cámara
             html5QrCode.stop();
             document.getElementById('status-msg').innerText = "STATION DETECTED. ENROLLING...";
             document.getElementById('status-msg').classList.add('text-[#ccff00]');
 
             try {
-                // El QR del Dr tendrá una URL de tu Vercel: https://.../api/hub?station=STATION01
+                // El QR del Dr ya trae la URL completa con el station ID
+                // Ejemplo: https://montcode-provider.vercel.app/api/hub?station=ST01
                 const targetUrl = decodedText; 
 
-                // Enviamos el "paquete de inscripción" (Sin nube, directo al hub de relevo)
                 const payload = {
-                    from: "PATIENT",
                     type: "ENROLLMENT",
-                    data: btoa(JSON.stringify(patientData)) // Base64 para evitar errores de red
+                    data: btoa(JSON.stringify(patientData)) // Base64 para integridad
                 };
 
                 const response = await fetch(targetUrl, {
@@ -76,12 +106,15 @@
                 });
 
                 if (response.ok) {
-                    alert("✅ LINK SUCCESSFUL\nProfile sent to Station.");
-                    location.href = 'index.htm';
+                    alert("✅ LINK SUCCESSFUL\nProfile sent to Doctor's screen.");
+                    location.href = 'index.html';
+                } else {
+                    throw new Error("Server Rejected");
                 }
             } catch (err) {
-                alert("❌ SYNC ERROR: Check Connection");
-                console.error(err);
+                alert("❌ SYNC ERROR: Station Offline or Connection Failed");
+                // Reiniciar cámara si falla para reintentar
+                location.reload();
             }
         }
     </script>
