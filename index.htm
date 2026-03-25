@@ -31,9 +31,30 @@
             background: linear-gradient(135deg, #1e1b4b 0%, #000000 100%);
             border: 2px solid #a855f7;
             animation: neon-heartbeat 2s infinite;
+            position: relative; /* Para el punto de notificación */
         }
-        @keyframes neon-heartbeat { 0%, 100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); } 50% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.5); } }
+        
+        /* NUEVO: Punto de notificación parpadeante */
+        .notification-dot {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 14px;
+            height: 14px;
+            background: #ef4444;
+            border-radius: 50%;
+            border: 2px solid #000;
+            display: none; /* Oculto por defecto */
+            animation: pulse-red 1.5s infinite;
+        }
 
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        @keyframes neon-heartbeat { 0%, 100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); } 50% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.5); } }
         .logo-glow { border: 2px solid #DAA520; box-shadow: 0 0 20px rgba(218, 165, 32, 0.3); }
         .btn-text { font-size: 10px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-top: 4px; }
         #qr-layer { position: fixed; inset: 0; background: black; z-index: 100; display: none; flex-direction: column; }
@@ -73,8 +94,9 @@
         <div onclick="location.href='activation.html'" class="dash-card neon-blue"><div class="icon-box bg-blue-600">🆔</div><h2 class="btn-text">Kit Activation</h2></div>
     </div>
 
-    <!-- FEEDBACK / VAULT (Integrado con Notas del Dr) -->
-    <div onclick="location.href='vault.html'" class="chat-card p-5 rounded-[28px] border-l-4 border-l-purple-500 cursor-pointer active:scale-95 transition">
+    <!-- FEEDBACK / VAULT con PUNTO ROJO -->
+    <div onclick="markAsReadAndOpen()" class="chat-card p-5 rounded-[28px] border-l-4 border-l-purple-500 cursor-pointer active:scale-95 transition">
+        <div id="unread-dot" class="notification-dot"></div>
         <div class="flex flex-col w-full">
             <div class="flex justify-between items-center mb-3">
                 <div class="flex items-center gap-2">
@@ -113,11 +135,9 @@
         const codeReader = new ZXing.BrowserQRCodeReader();
 
         function updateHub() {
-            // Cargar Identidad
             document.getElementById('display-name').innerText = localStorage.getItem('mc_patient_name') || "Admin User";
             document.getElementById('display-dob').innerText = `DOB: ${localStorage.getItem('mc_patient_dob') || "--/--/----"}`;
             
-            // Cargar Estado de Enlace Dr.
             const linkedDr = localStorage.getItem('mc_linked_dr_id');
             if(linkedDr) {
                 document.getElementById('dr-status').innerText = "Linked: " + linkedDr;
@@ -125,38 +145,25 @@
                 document.getElementById('conn-icon').innerText = "✅";
             }
 
-            // CARGAR NOTAS DEL DR
+            // CARGAR NOTAS Y REVISAR SI HAY NUEVAS
             const activation = JSON.parse(localStorage.getItem('montcode_activation') || '{}');
             if (activation.dr_notes && activation.dr_notes.length > 0) {
                 const lastNote = activation.dr_notes[activation.dr_notes.length - 1];
                 document.getElementById('dr-note-text').innerText = `"${lastNote.message}"`;
                 
-                // Formatear Fecha
+                // Fecha
                 const d = new Date(lastNote.timestamp);
-                const dateStr = d.toLocaleDateString([], {day:'2-digit', month:'2-digit'});
-                const timeStr = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                document.getElementById('note-date').innerText = `${dateStr} @ ${timeStr}`;
+                document.getElementById('note-date').innerText = d.toLocaleDateString([], {day:'2-digit', month:'2-digit'}) + " @ " + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+                // Lógica del Punto Rojo: Si el mensaje es nuevo (no marcado como leído)
+                const lastReadTime = localStorage.getItem('mc_last_note_read') || 0;
+                if (lastNote.timestamp > lastReadTime) {
+                    document.getElementById('unread-dot').style.display = 'block';
+                }
             }
         }
 
-        async function startQrScan() {
-            document.getElementById('qr-layer').style.display = 'flex';
-            try {
-                const devices = await codeReader.listVideoInputDevices();
-                codeReader.decodeFromVideoElement(document.getElementById('video'), (result) => {
-                    if (result) {
-                        localStorage.setItem('mc_linked_dr_id', result.text);
-                        alert("LINKED TO DOCTOR: " + result.text);
-                        stopQrScan();
-                        updateHub();
-                    }
-                });
-            } catch (e) { alert("Camera Error"); stopQrScan(); }
-        }
-
-        function stopQrScan() { codeReader.reset(); document.getElementById('qr-layer').style.display = 'none'; }
-
-        window.onload = updateHub;
-    </script>
-</body>
-</html>
+        // Al hacer clic, marcamos como leído y vamos al Vault
+        function markAsReadAndOpen() {
+            const activation = JSON.parse(localStorage.getItem('montcode_activation') || '{}');
+            if (activation.dr_notes && activation.dr_notes.length >
