@@ -24,7 +24,7 @@
             box-shadow: 0 0 15px #ccff00;
         }
         @keyframes scan { 0%, 100% { top: 5%; } 50% { top: 95%; } }
-        .status-tag { background: #ccff00; color: black; font-size: 10px; font-weight: 900; padding: 4px 12px; border-radius: 4px; text-transform: uppercase; margin-top: 15px; }
+        .status-tag { background: #ccff00; color: black; font-size: 10px; font-weight: 900; padding: 4px 12px; border-radius: 4px; text-transform: uppercase; margin-top: 15px; transition: all 0.3s ease; }
     </style>
 </head>
 <body>
@@ -52,6 +52,7 @@
     </button>
 
     <script>
+        // Apuntamos directo al HUB para centralizar la lógica
         const RELAY_URL = "/api/hub";
 
         async function initSync() {
@@ -77,27 +78,30 @@
             document.getElementById('instruction').innerText = "LOCK ACQUIRED";
             document.getElementById('instruction').style.color = "#ccff00";
 
-            // 1. Obtener Perfil
+            // 1. Obtener Perfil del Paciente
             const pName = localStorage.getItem('mc_patient_name') || "Anonymous Patient";
             const pDob = localStorage.getItem('mc_patient_dob') || "00/00/0000";
             
-            // 2. Obtener Signos (Última entrada de cada array)
+            // 2. Obtener Signos Vitales y Síntomas
             const bpDb = JSON.parse(localStorage.getItem('mc_bp_master_2026') || '[]');
             const gluDb = JSON.parse(localStorage.getItem('mc_glucose_history') || '[]');
+            const activeSymptoms = JSON.parse(localStorage.getItem('mc_active_symptoms') || '[]');
             
             const lastBP = bpDb.length ? bpDb[0] : { sys: 0, dia: 0 };
             const lastGL = gluDb.length ? gluDb[0].value : 0;
 
-            // 3. Crear Payload (Formato JSON Directo para el nuevo Hub)
+            // 3. Crear Payload Táctico (Incluye síntomas para el reporte del Dr.)
             const clinicalPayload = {
                 name: pName,
                 dob: pDob,
                 sys: lastBP.sys,
                 dia: lastBP.dia,
-                gl: lastGL
+                gl: lastGL,
+                symptoms: activeSymptoms,
+                timestamp: new Date().toISOString()
             };
 
-            // 4. Envío a Vercel
+            // 4. Envío al Hub en Vercel
             try {
                 tagLabel.innerText = "UPLINKING...";
                 
@@ -106,19 +110,26 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         id: kitID, 
-                        data: clinicalPayload // Enviamos el objeto directo para evitar errores de atob()
+                        data: clinicalPayload,
+                        type: "TACTICAL_TRIAGE" 
                     })
                 });
 
+                const feedback = await response.json();
+
                 if(response.ok) {
-                    tagLabel.innerText = "SUCCESSFUL UPLINK";
-                    tagLabel.style.background = "#2563eb";
+                    // Feedback visual basado en la respuesta real del servidor
+                    tagLabel.innerText = feedback.message || "SUCCESSFUL UPLINK";
+                    tagLabel.style.background = "#2563eb"; // Azul éxito
                     tagLabel.style.color = "white";
                     
-                    // Vibración táctica si el dispositivo lo permite
+                    // Feedback háptico
                     if (navigator.vibrate) navigator.vibrate([100, 30, 100]);
 
-                    setTimeout(() => window.location.href = 'index.html', 2000);
+                    // Limpieza de síntomas enviados para evitar duplicidad en la próxima sesión
+                    localStorage.removeItem('mc_active_symptoms');
+
+                    setTimeout(() => window.location.href = 'index.html', 2500);
                 } else {
                     throw new Error("Server Rejected");
                 }
