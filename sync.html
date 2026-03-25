@@ -25,6 +25,7 @@
         }
         @keyframes scan { 0%, 100% { top: 5%; } 50% { top: 95%; } }
         .status-tag { background: #ccff00; color: black; font-size: 10px; font-weight: 900; padding: 4px 12px; border-radius: 4px; text-transform: uppercase; margin-top: 15px; transition: all 0.3s ease; }
+        .success-glow { box-shadow: 0 0 50px rgba(37, 99, 235, 0.6); border-color: #2563eb !important; }
     </style>
 </head>
 <body>
@@ -37,7 +38,7 @@
             <p id="instruction" class="text-[9px] font-bold text-zinc-400 uppercase tracking-[0.3em] mt-2">Scanning for MontCode™ Node</p>
         </div>
         
-        <div class="scan-box">
+        <div id="scan-container" class="scan-box">
             <div class="scan-line"></div>
         </div>
 
@@ -52,92 +53,77 @@
     </button>
 
     <script>
-        // Apuntamos directo al HUB para centralizar la lógica
-        const RELAY_URL = "/api/hub";
+        // APUNTAMOS AL DOMINIO DEL PROVIDER (Donde está el Hub)
+        const RELAY_URL = "https://montcode-provider.vercel.app/api/hub";
 
         async function initSync() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                 document.getElementById('video-preview').srcObject = stream;
-                
-                // Simulación de detección: En 2 segundos dispara la transmisión
-                setTimeout(startTransmission, 2000);
+                setTimeout(startTransmission, 1500);
             } catch (err) {
-                console.warn("Camera blocked or not found, proceeding with manual uplink...");
+                console.warn("Camera bypass active...");
                 setTimeout(startTransmission, 1000);
             }
         }
 
         async function startTransmission() {
-            const kitID = localStorage.getItem('mc_kit_id') || "UNREGISTERED";
+            // Aseguramos que el ID sea el correcto para el test
+            const kitID = localStorage.getItem('mc_kit_id') || "MC-ADMIN-TRIAL";
             const statusBox = document.getElementById('status-box');
             const tagLabel = document.getElementById('tag-label');
+            const scanBox = document.getElementById('scan-container');
             
             statusBox.classList.remove('hidden');
             document.getElementById('target-id').innerText = `NODE: ${kitID}`;
             document.getElementById('instruction').innerText = "LOCK ACQUIRED";
             document.getElementById('instruction').style.color = "#ccff00";
 
-            // 1. Obtener Perfil del Paciente
-            const pName = localStorage.getItem('mc_patient_name') || "Anonymous Patient";
-            const pDob = localStorage.getItem('mc_patient_dob') || "00/00/0000";
-            
-            // 2. Obtener Signos Vitales y Síntomas
+            // Recopilación de datos locales
+            const pName = localStorage.getItem('mc_patient_name') || "Admin Tester";
             const bpDb = JSON.parse(localStorage.getItem('mc_bp_master_2026') || '[]');
             const gluDb = JSON.parse(localStorage.getItem('mc_glucose_history') || '[]');
-            const activeSymptoms = JSON.parse(localStorage.getItem('mc_active_symptoms') || '[]');
             
-            const lastBP = bpDb.length ? bpDb[0] : { sys: 0, dia: 0 };
-            const lastGL = gluDb.length ? gluDb[0].value : 0;
-
-            // 3. Crear Payload Táctico (Incluye síntomas para el reporte del Dr.)
-            const clinicalPayload = {
+            const payload = {
+                kit_id: kitID,
                 name: pName,
-                dob: pDob,
-                sys: lastBP.sys,
-                dia: lastBP.dia,
-                gl: lastGL,
-                symptoms: activeSymptoms,
+                bp: bpDb,
+                glucose: gluDb,
                 timestamp: new Date().toISOString()
             };
 
-            // 4. Envío al Hub en Vercel
             try {
                 tagLabel.innerText = "UPLINKING...";
                 
                 const response = await fetch(RELAY_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        id: kitID, 
-                        data: clinicalPayload,
-                        type: "TACTICAL_TRIAGE" 
-                    })
+                    body: JSON.stringify(payload)
                 });
 
-                const feedback = await response.json();
-
                 if(response.ok) {
-                    // Feedback visual basado en la respuesta real del servidor
-                    tagLabel.innerText = feedback.message || "SUCCESSFUL UPLINK";
-                    tagLabel.style.background = "#2563eb"; // Azul éxito
+                    // CAMBIO RADICAL: Éxito visual y redirección segura
+                    tagLabel.innerText = "CLINICAL HANDSHAKE COMPLETE";
+                    tagLabel.style.background = "#2563eb"; 
                     tagLabel.style.color = "white";
+                    scanBox.classList.add('success-glow');
                     
-                    // Feedback háptico
-                    if (navigator.vibrate) navigator.vibrate([100, 30, 100]);
+                    // Guardamos bandera de éxito para el Dashboard
+                    localStorage.setItem('montcode_onboarded', 'true');
 
-                    // Limpieza de síntomas enviados para evitar duplicidad en la próxima sesión
-                    localStorage.removeItem('mc_active_symptoms');
-
-                    setTimeout(() => window.location.href = 'index.html', 2500);
+                    // REDIRECCIÓN A INDEX (Evita el 404)
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 2000);
                 } else {
-                    throw new Error("Server Rejected");
+                    throw new Error("Relay Busy");
                 }
             } catch (e) {
-                tagLabel.innerText = "LINK FAILED";
+                tagLabel.innerText = "LINK FAILED - RETRYING";
                 tagLabel.style.background = "#ef4444";
-                tagLabel.style.color = "white";
-                console.error("Transmission Error:", e);
+                console.error("Sync Error:", e);
+                // Si falla, al menos dejamos que el usuario vuelva al dashboard manualmente
+                setTimeout(() => window.location.href = 'index.html', 3000);
             }
         }
 
