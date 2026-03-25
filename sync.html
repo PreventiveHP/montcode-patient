@@ -56,69 +56,77 @@
 
         async function initSync() {
             try {
-                // Iniciar cámara real
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                 document.getElementById('video-preview').srcObject = stream;
                 
-                // Simulación de detección para disparar el envío de datos reales
+                // Simulación de detección: En 2 segundos dispara la transmisión
                 setTimeout(startTransmission, 2000);
             } catch (err) {
-                alert("Camera Error: Please check permissions.");
+                console.warn("Camera blocked or not found, proceeding with manual uplink...");
+                setTimeout(startTransmission, 1000);
             }
         }
 
         async function startTransmission() {
-            // MOSTRAR STATUS
             const kitID = localStorage.getItem('mc_kit_id') || "UNREGISTERED";
-            document.getElementById('status-box').classList.remove('hidden');
+            const statusBox = document.getElementById('status-box');
+            const tagLabel = document.getElementById('tag-label');
+            
+            statusBox.classList.remove('hidden');
             document.getElementById('target-id').innerText = `NODE: ${kitID}`;
             document.getElementById('instruction').innerText = "LOCK ACQUIRED";
             document.getElementById('instruction').style.color = "#ccff00";
 
-            // 1. EXTRAER IDENTIDAD COMPLETA (Lo que el Dr. necesita ver)
+            // 1. Obtener Perfil
             const pName = localStorage.getItem('mc_patient_name') || "Anonymous Patient";
             const pDob = localStorage.getItem('mc_patient_dob') || "00/00/0000";
             
-            // 2. EXTRAER ÚLTIMOS SIGNOS
+            // 2. Obtener Signos (Última entrada de cada array)
             const bpDb = JSON.parse(localStorage.getItem('mc_bp_master_2026') || '[]');
             const gluDb = JSON.parse(localStorage.getItem('mc_glucose_history') || '[]');
             
             const lastBP = bpDb.length ? bpDb[0] : { sys: 0, dia: 0 };
             const lastGL = gluDb.length ? gluDb[0].value : 0;
 
-            // 3. CREAR EL PAYLOAD CLÍNICO (Todo lo que el Dr. ve en su Hub)
+            // 3. Crear Payload (Formato JSON Directo para el nuevo Hub)
             const clinicalPayload = {
                 name: pName,
                 dob: pDob,
                 sys: lastBP.sys,
                 dia: lastBP.dia,
-                gl: lastGL,
-                ts: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                gl: lastGL
             };
 
-            // 4. ENVIAR A VERCEL (api/hub.js)
+            // 4. Envío a Vercel
             try {
-                const encodedData = btoa(JSON.stringify(clinicalPayload));
+                tagLabel.innerText = "UPLINKING...";
                 
                 const response = await fetch(RELAY_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         id: kitID, 
-                        data: encodedData 
+                        data: clinicalPayload // Enviamos el objeto directo para evitar errores de atob()
                     })
                 });
 
                 if(response.ok) {
-                    document.getElementById('tag-label').innerText = "SUCCESSFUL UPLINK";
-                    document.getElementById('tag-label').style.background = "#2563eb";
-                    document.getElementById('tag-label').style.color = "white";
+                    tagLabel.innerText = "SUCCESSFUL UPLINK";
+                    tagLabel.style.background = "#2563eb";
+                    tagLabel.style.color = "white";
                     
+                    // Vibración táctica si el dispositivo lo permite
+                    if (navigator.vibrate) navigator.vibrate([100, 30, 100]);
+
                     setTimeout(() => window.location.href = 'index.html', 2000);
+                } else {
+                    throw new Error("Server Rejected");
                 }
             } catch (e) {
-                document.getElementById('tag-label').innerText = "CONNECTION ERROR";
-                document.getElementById('tag-label').style.background = "#ef4444";
+                tagLabel.innerText = "LINK FAILED";
+                tagLabel.style.background = "#ef4444";
+                tagLabel.style.color = "white";
+                console.error("Transmission Error:", e);
             }
         }
 
