@@ -24,7 +24,7 @@
             box-shadow: 0 0 15px #ccff00;
         }
         @keyframes scan { 0%, 100% { top: 5%; } 50% { top: 95%; } }
-        .status-tag { background: #ccff00; color: black; font-size: 10px; font-weight: 900; padding: 4px 12px; border-radius: 4px; text-transform: uppercase; margin-top: 15px; transition: all 0.3s ease; }
+        .status-tag { background: #ccff00; color: black; font-size: 10px; font-weight: 900; padding: 4px 12px; border-radius: 4px; text-transform: uppercase; margin-top: 15px; }
         .success-glow { box-shadow: 0 0 50px rgba(37, 99, 235, 0.6); border-color: #2563eb !important; }
     </style>
 </head>
@@ -48,12 +48,8 @@
         </div>
     </div>
 
-    <button onclick="window.location.href='index.html'" class="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 bg-white/5 border border-white/10 px-10 py-4 rounded-2xl text-[10px] font-black uppercase italic backdrop-blur-xl">
-        Abort Link
-    </button>
-
     <script>
-        // APUNTAMOS AL DOMINIO DEL PROVIDER (Donde está el Hub)
+        // URL ABSOLUTA PARA EVITAR EL 404
         const RELAY_URL = "https://montcode-provider.vercel.app/api/hub";
 
         async function initSync() {
@@ -62,72 +58,21 @@
                 document.getElementById('video-preview').srcObject = stream;
                 setTimeout(startTransmission, 1500);
             } catch (err) {
-                console.warn("Camera bypass active...");
+                // Si la cámara falla en el simulador, igual dispara la transmisión
                 setTimeout(startTransmission, 1000);
             }
         }
 
         async function startTransmission() {
-            // Aseguramos que el ID sea el correcto para el test
             const kitID = localStorage.getItem('mc_kit_id') || "MC-ADMIN-TRIAL";
-            const statusBox = document.getElementById('status-box');
             const tagLabel = document.getElementById('tag-label');
+            const statusBox = document.getElementById('status-box');
             const scanBox = document.getElementById('scan-container');
             
             statusBox.classList.remove('hidden');
             document.getElementById('target-id').innerText = `NODE: ${kitID}`;
-            document.getElementById('instruction').innerText = "LOCK ACQUIRED";
-            document.getElementById('instruction').style.color = "#ccff00";
 
-            // Recopilación de datos locales
-            const pName = localStorage.getItem('mc_patient_name') || "Admin Tester";
-            const bpDb = JSON.parse(localStorage.getItem('mc_bp_master_2026') || '[]');
-            const gluDb = JSON.parse(localStorage.getItem('mc_glucose_history') || '[]');
-            
             const payload = {
                 kit_id: kitID,
-                name: pName,
-                bp: bpDb,
-                glucose: gluDb,
-                timestamp: new Date().toISOString()
-            };
-
-            try {
-                tagLabel.innerText = "UPLINKING...";
-                
-                const response = await fetch(RELAY_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if(response.ok) {
-                    // CAMBIO RADICAL: Éxito visual y redirección segura
-                    tagLabel.innerText = "CLINICAL HANDSHAKE COMPLETE";
-                    tagLabel.style.background = "#2563eb"; 
-                    tagLabel.style.color = "white";
-                    scanBox.classList.add('success-glow');
-                    
-                    // Guardamos bandera de éxito para el Dashboard
-                    localStorage.setItem('montcode_onboarded', 'true');
-
-                    // REDIRECCIÓN A INDEX (Evita el 404)
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 2000);
-                } else {
-                    throw new Error("Relay Busy");
-                }
-            } catch (e) {
-                tagLabel.innerText = "LINK FAILED - RETRYING";
-                tagLabel.style.background = "#ef4444";
-                console.error("Sync Error:", e);
-                // Si falla, al menos dejamos que el usuario vuelva al dashboard manualmente
-                setTimeout(() => window.location.href = 'index.html', 3000);
-            }
-        }
-
-        window.onload = initSync;
-    </script>
-</body>
-</html>
+                name: localStorage.getItem('mc_patient_name') || "Admin Tester",
+                bp: JSON.parse(localStorage.getItem('mc_bp
