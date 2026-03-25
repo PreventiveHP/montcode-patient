@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -159,13 +159,41 @@
         document.getElementById('display').innerText = currentInput || "---";
     }
 
-    // FUNCIÓN INTEGRADA CON RUTA AL HUB DEL DR.
+    // --- INTEGRACIÓN HUB VERCEL ---
+    async function sendToHub(val, time) {
+        const kitID = localStorage.getItem('mc_kit_id') || "MC-GLU-001";
+        const patientName = localStorage.getItem('mc_patient_name') || "User-Rescue";
+        
+        const payload = {
+            type: 'GLU',
+            kit: kitID,
+            patient: patientName,
+            data: { 
+                val: val, 
+                period: time,
+                a1c: ((46.7 + val) / 28.7).toFixed(1)
+            },
+            timestamp: new Date().toLocaleString()
+        };
+
+        try {
+            await fetch('https://montcode-provider.vercel.app/api/hub', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            console.log("✈️ Glucose Sync Success");
+        } catch (e) {
+            console.warn("📡 Sync failed, local only.");
+        }
+    }
+
     async function saveGlu() {
         if(!currentInput) return;
         const val = parseInt(currentInput);
         const body = document.getElementById('body-bg');
 
-        // Mantenemos efectos visuales originales
+        // Efectos visuales tácticos
         body.classList.remove('flash-red', 'flash-orange');
         if (val < 70) {
             void body.offsetWidth;
@@ -179,33 +207,10 @@
         db.push({ v: val, t: selectedTime, d: new Date().toISOString() });
         localStorage.setItem('mc_glu_master_2026', JSON.stringify(db));
         
-        // --- LOGICA FEEDBACK AL DR (RUTA BRIDGE) ---
-        const kitID = localStorage.getItem('mc_kit_id') || "MC-001";
-        const patientName = localStorage.getItem('mc_patient_name') || "User-Rescue";
+        // --- ENVÍO AL HUB DEL DR ---
+        await sendToHub(val, selectedTime);
 
-        try {
-            const clinicalData = {
-                k: kitID,
-                n: patientName,
-                gl: val,
-                sys: 0,
-                dia: 0,
-                ts: Date.now()
-            };
-
-            fetch('https://montcode-provider.vercel.app/api/hub', {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({
-                    type: "CLINICAL_UPDATE",
-                    station: "STATION-01",
-                    data: btoa(JSON.stringify(clinicalData))
-                })
-            });
-        } catch (e) { console.warn("Local storage only mode."); }
-        // --- FIN LOGICA FEEDBACK ---
-
-        // Voz original
+        // Feedback de voz
         const msg = currentLang === 'es' ? `${val} miligramos.` : `${val} milligrams.`;
         const u = new SpeechSynthesisUtterance(msg);
         u.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
@@ -309,9 +314,22 @@
         document.querySelector('.lang-save').innerText = t.save;
         document.getElementById('time-fast').innerText = t.fast;
         document.getElementById('time-post').innerText = t.post;
+        
+        document.getElementById('btn-en').style.opacity = lang === 'en' ? '1' : '0.4';
+        document.getElementById('btn-es').style.opacity = lang === 'es' ? '1' : '0.4';
     }
 
     function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_glu_master_2026'); location.reload(); } }
+
+    function startMic() {
+        const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
+        rec.onresult = (e) => {
+            const v = e.results[0][0].transcript.replace(/\D/g,'');
+            if(v) { currentInput = v.slice(0,3); document.getElementById('display').innerText = currentInput; }
+        };
+        rec.start();
+    }
 </script>
 </body>
 </html>
