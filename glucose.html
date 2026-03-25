@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MontCode™ Glucose Master 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -38,7 +38,8 @@
 <body class="pb-10" id="body-bg">
     <div class="flex justify-between items-center mb-6">
         <div class="flex gap-2 items-center">
-            <button onclick="window.location.href='index.htm'" class="bg-zinc-900 text-[#ccff00] px-3 py-1 rounded-full text-[10px] font-black uppercase italic border border-zinc-800 mr-2">← Back</button>
+            <!-- RUTA CORREGIDA A index.html -->
+            <button onclick="window.location.href='index.html'" class="bg-zinc-900 text-[#ccff00] px-4 py-2 rounded-full text-[10px] font-black uppercase italic border border-zinc-800 mr-2 active:scale-90 transition">← Back</button>
             <button onclick="setLang('en')" class="w-8 h-8 rounded-full border border-zinc-800 flex items-center justify-center bg-zinc-900" id="btn-en">🇺🇸</button>
             <button onclick="setLang('es')" class="w-8 h-8 rounded-full border border-zinc-800 flex items-center justify-center bg-zinc-900" id="btn-es">🇪🇸</button>
         </div>
@@ -119,7 +120,7 @@
 
     <div id="qrModal" class="hidden fixed inset-0 bg-black/98 flex items-center justify-center z-50 p-6 backdrop-blur-md">
         <div class="bg-white rounded-[40px] p-8 w-full max-w-sm text-center shadow-2xl">
-            <div id="qrcode" class="bg-white p-2 inline-block rounded-xl mb-6"></div>
+            <div id="qrcode" class="bg-white p-2 inline-block rounded-xl mb-6 mx-auto"></div>
             <button onclick="document.getElementById('qrModal').classList.add('hidden')" class="bg-red-600 text-white w-full py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest">Close Bridge</button>
         </div>
     </div>
@@ -159,21 +160,23 @@
         document.getElementById('display').innerText = currentInput || "---";
     }
 
-    // --- INTEGRACIÓN HUB VERCEL ---
     async function sendToHub(val, time) {
         const kitID = localStorage.getItem('mc_kit_id') || "MC-GLU-001";
         const patientName = localStorage.getItem('mc_patient_name') || "User-Rescue";
+        const drLink = localStorage.getItem('mc_linked_dr_id');
         
+        if(!drLink) return;
+
         const payload = {
-            type: 'GLU',
-            kit: kitID,
-            patient: patientName,
+            id: kitID,
+            dr_id: drLink,
+            type: 'GLUCOSE_UPDATE',
+            name: patientName,
             data: { 
                 val: val, 
                 period: time,
-                a1c: ((46.7 + val) / 28.7).toFixed(1)
-            },
-            timestamp: new Date().toLocaleString()
+                timestamp: new Date().toISOString()
+            }
         };
 
         try {
@@ -182,18 +185,14 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            console.log("✈️ Glucose Sync Success");
-        } catch (e) {
-            console.warn("📡 Sync failed, local only.");
-        }
+        } catch (e) { console.warn("Sync delayed."); }
     }
 
     async function saveGlu() {
-        if(!currentInput) return;
+        if(!currentInput) return alert("Enter value");
         const val = parseInt(currentInput);
         const body = document.getElementById('body-bg');
 
-        // Efectos visuales tácticos
         body.classList.remove('flash-red', 'flash-orange');
         if (val < 70) {
             void body.offsetWidth;
@@ -203,14 +202,12 @@
             body.classList.add('flash-orange');
         }
 
-        // Guardado local
         db.push({ v: val, t: selectedTime, d: new Date().toISOString() });
         localStorage.setItem('mc_glu_master_2026', JSON.stringify(db));
         
-        // --- ENVÍO AL HUB DEL DR ---
         await sendToHub(val, selectedTime);
 
-        // Feedback de voz
+        // Feedback de voz mantenido
         const msg = currentLang === 'es' ? `${val} miligramos.` : `${val} milligrams.`;
         const u = new SpeechSynthesisUtterance(msg);
         u.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
@@ -219,6 +216,7 @@
         currentInput = ""; 
         document.getElementById('display').innerText = "---";
         updateUI();
+        alert("Glucose Logged");
     }
 
     function getClinicalStatus(val) {
@@ -244,16 +242,10 @@
 
     function generateDoctorQR() {
         if (!db || db.length < 1) return;
-        const avg = document.getElementById('avg-val').innerText;
-        const a1c = document.getElementById('a1c-val').innerText.replace('%','');
-        const detailedLogs = db.slice(-15).map(log => [log.v, log.t === 'fasting' ? 0 : 1, Math.floor(new Date(log.d).getTime() / 1000)]);
-        const payload = { a: parseInt(avg), h: parseFloat(a1c), l: detailedLogs, ts: Math.floor(Date.now() / 1000) };
-        const jsonStr = JSON.stringify(payload);
-        const base64Safe = btoa(unescape(encodeURIComponent(jsonStr))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-        const targetUrl = `${window.location.origin}/glu-audit.html#${base64Safe}`;
         const qrContainer = document.getElementById("qrcode");
         qrContainer.innerHTML = "";
-        new QRCode(qrContainer, { text: targetUrl, width: 220, height: 220, colorDark: "#000000", correctLevel: QRCode.CorrectLevel.L });
+        const payload = {id: localStorage.getItem('mc_kit_id'), type: 'GLUCOSE', data: db.slice(-10)};
+        new QRCode(qrContainer, { text: JSON.stringify(payload), width: 220, height: 220 });
         document.getElementById('qrModal').classList.remove('hidden');
     }
 
@@ -268,7 +260,7 @@
                     borderWidth: 3, 
                     tension: 0.4, 
                     pointRadius: 4, 
-                    segment: { borderColor: ctx => getClinicalStatus(ctx.p1.parsed.y).hex },
+                    segment: { borderColor: ctx => ctx.p1 ? getClinicalStatus(ctx.p1.parsed.y).hex : '#ccff00' },
                     pointBackgroundColor: ctx => getClinicalStatus(ctx.raw).hex,
                     fill: true, 
                     backgroundColor: 'rgba(204, 255, 0, 0.02)' 
@@ -278,7 +270,7 @@
                 responsive: true, maintainAspectRatio: false, 
                 plugins: { legend: { display: false } },
                 scales: { 
-                    y: { min: 40, max: 250, grid: { color: '#111' }, ticks: { color: '#444', font: { size: 9 } } },
+                    y: { min: 40, max: 250, grid: { color: '#111' }, ticks: { color: '#444' } },
                     x: { ticks: { color: '#888', font: { size: 8 } } }
                 } 
             }
@@ -295,13 +287,10 @@
     async function generatePDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        const avg = document.getElementById('avg-val').innerText;
-        const a1c = document.getElementById('a1c-val').innerText;
         doc.setFillColor(0, 0, 0); doc.rect(0, 0, 210, 45, 'F');
-        doc.setTextColor(204, 255, 0); doc.setFontSize(18); doc.text("MontCode™ Glucose Audit Report", 15, 20);
-        doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.text(`AVG: ${avg} | A1C: ${a1c}`, 15, 32);
+        doc.setTextColor(204, 255, 0); doc.text("MontCode™ Glucose Audit", 15, 20);
         doc.addImage(document.getElementById('gluChart').toDataURL('image/png'), 'PNG', 15, 60, 180, 70);
-        doc.save(`MontCode_Glucose_Audit.pdf`);
+        doc.save(`Glucose_Report.pdf`);
     }
 
     function setLang(lang) {
@@ -314,7 +303,6 @@
         document.querySelector('.lang-save').innerText = t.save;
         document.getElementById('time-fast').innerText = t.fast;
         document.getElementById('time-post').innerText = t.post;
-        
         document.getElementById('btn-en').style.opacity = lang === 'en' ? '1' : '0.4';
         document.getElementById('btn-es').style.opacity = lang === 'es' ? '1' : '0.4';
     }
@@ -322,11 +310,17 @@
     function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_glu_master_2026'); location.reload(); } }
 
     function startMic() {
-        const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) return alert("Mic not supported in this browser.");
+        
+        const rec = new SpeechRecognition();
         rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
         rec.onresult = (e) => {
             const v = e.results[0][0].transcript.replace(/\D/g,'');
-            if(v) { currentInput = v.slice(0,3); document.getElementById('display').innerText = currentInput; }
+            if(v) { 
+                currentInput = v.slice(0,3); 
+                document.getElementById('display').innerText = currentInput; 
+            }
         };
         rec.start();
     }
