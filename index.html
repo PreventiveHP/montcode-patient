@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -13,7 +13,7 @@
     <link rel="apple-touch-icon" href="logo.png.jpg">
     <link rel="icon" type="image/jpeg" href="logo.png.jpg">
     
-    <title>MontCode™</title>
+    <title>MontCode™ Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 
@@ -72,13 +72,13 @@
             <span id="conn-icon" class="text-lg">🔗</span>
             <div>
                 <span id="conn-txt" class="text-[9px] font-black uppercase text-white italic">Link with Doctor</span>
-                <p id="dr-status" class="text-[7px] text-zinc-500 font-bold uppercase tracking-tighter">Tap to open scanner</p>
+                <p id="dr-status" class="text-[7px] text-zinc-500 font-bold uppercase tracking-tighter">Tap to open auditor scanner</p>
             </div>
         </div>
         <div id="status-led" class="w-2 h-2 rounded-full bg-zinc-700"></div>
     </div>
 
-    <!-- TOOLS GRID WITH LOGOS -->
+    <!-- TOOLS GRID -->
     <div class="grid grid-cols-2 gap-5 mb-8">
         <div onclick="location.href='bp.html'" class="dash-card neon-red">
             <div class="icon-box bg-red-600">🫀</div>
@@ -107,7 +107,7 @@
                     <span class="text-lg">💬</span>
                     <h2 class="font-black uppercase italic text-[10px] tracking-widest text-purple-400">Clinical Vault</h2>
                 </div>
-                <span id="note-date" class="text-[8px] font-bold text-zinc-500 uppercase italic">No messages</span>
+                <span id="note-date" class="text-[8px] font-bold text-zinc-500 uppercase italic">Checking...</span>
             </div>
             
             <div class="bg-black/40 p-4 rounded-2xl border border-white/5">
@@ -128,7 +128,7 @@
         <video id="video" class="w-full h-full object-cover absolute"></video>
         <div class="relative z-10 flex flex-col items-center justify-center h-full bg-black/60 p-10 text-center">
             <div class="w-64 h-64 border-2 border-blue-500 rounded-3xl mb-10 shadow-[0_0_30px_#2563eb]"></div>
-            <p class="text-white font-black italic uppercase text-[10px] tracking-widest mb-4">Scan Provider QR Code</p>
+            <p class="text-white font-black italic uppercase text-[10px] tracking-widest mb-4">Audit Provider QR Code</p>
             <button onclick="stopQrScan()" class="bg-white text-black font-black uppercase text-xs px-10 py-4 rounded-full">Cancel</button>
         </div>
     </div>
@@ -140,16 +140,14 @@
     <script>
         const codeReader = new ZXing.BrowserQRCodeReader();
 
-        // GATEKEEPER: Verifica enrolamiento antes de mostrar nada
         function checkEnrolment() {
             const profileName = localStorage.getItem('mc_patient_name');
             if (!profileName) {
-                // Si no hay perfil, va directo a activación
                 window.location.replace('activation.html');
             } else {
-                // Si hay perfil, muestra el index
                 document.body.style.visibility = 'visible';
                 updateHub();
+                syncVault(); // Auto-ping al iniciar
             }
         }
 
@@ -159,9 +157,9 @@
             
             const linkedDr = localStorage.getItem('mc_linked_dr_id');
             if(linkedDr) {
-                document.getElementById('dr-status').innerText = "Linked: " + linkedDr;
+                document.getElementById('dr-status').innerText = "Clinical Bridge: ACTIVE";
                 document.getElementById('status-led').classList.replace('bg-zinc-700', 'bg-green-500');
-                document.getElementById('conn-icon').innerText = "✅";
+                document.getElementById('conn-icon').innerText = "🛡️";
             }
 
             const activation = JSON.parse(localStorage.getItem('montcode_activation') || '{}');
@@ -170,11 +168,67 @@
                 document.getElementById('dr-note-text').innerText = `"${lastNote.message}"`;
                 const d = new Date(lastNote.timestamp);
                 document.getElementById('note-date').innerText = d.toLocaleDateString([], {day:'2-digit', month:'2-digit'}) + " @ " + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                
                 const lastReadTime = localStorage.getItem('mc_last_note_read') || 0;
                 if (lastNote.timestamp > lastReadTime) {
                     document.getElementById('unread-dot').style.display = 'block';
                 }
+            } else {
+                document.getElementById('note-date').innerText = "No messages";
             }
+        }
+
+        // FUNCIÓN DE AUDITORÍA Y SINCRONIZACIÓN
+        async function syncVault() {
+            const drId = localStorage.getItem('mc_linked_dr_id');
+            const kitId = localStorage.getItem('mc_kit_id');
+            if (!drId || !kitId) return;
+
+            try {
+                const response = await fetch(`https://montcode-provider.vercel.app/api/hub?dr_id=${drId}&kit_id=${kitId}`);
+                if (response.ok) {
+                    const newData = await response.json();
+                    let localData = JSON.parse(localStorage.getItem('montcode_activation') || '{"dr_notes":[]}');
+                    
+                    // Solo actualizamos si hay notas nuevas (basado en timestamp)
+                    if (newData.dr_notes && newData.dr_notes.length > localData.dr_notes.length) {
+                        localStorage.setItem('montcode_activation', JSON.stringify(newData));
+                        updateHub();
+                    }
+                }
+            } catch (e) { console.warn("Vault Sync Offline."); }
+        }
+
+        async function startQrScan() {
+            document.getElementById('qr-layer').style.display = 'flex';
+            try {
+                const videoElement = document.getElementById('video');
+                codeReader.decodeFromVideoElement(videoElement, (result, err) => {
+                    if (result) {
+                        let finalId = result.text;
+                        
+                        // AUDITORÍA DE DATOS: Extraer ID limpio de JSON si es necesario
+                        try {
+                            const parsed = JSON.parse(result.text);
+                            finalId = parsed.dr_id || parsed.id || result.text;
+                        } catch(e) { /* Texto plano */ }
+
+                        localStorage.setItem('mc_linked_dr_id', finalId);
+                        stopQrScan();
+                        updateHub();
+                        syncVault();
+                        alert("Provider Verified. Bridge Connected.");
+                    }
+                });
+            } catch (e) { 
+                alert("Camera Access Denied"); 
+                stopQrScan(); 
+            }
+        }
+
+        function stopQrScan() { 
+            codeReader.reset(); 
+            document.getElementById('qr-layer').style.display = 'none'; 
         }
 
         function markAsReadAndOpen() {
@@ -185,36 +239,6 @@
             }
             window.location.href = 'vault.html';
         }
-
-        async function startQrScan() {
-            document.getElementById('qr-layer').style.display = 'flex';
-            try {
-                const videoElement = document.getElementById('video');
-                codeReader.decodeFromVideoElement(videoElement, (result, err) => {
-                    if (result) {
-                        localStorage.setItem('mc_linked_dr_id', result.text);
-                        stopQrScan();
-                        updateHub();
-                    }
-                });
-            } catch (e) { 
-                alert("Camera Error"); 
-                stopQrScan(); 
-            }
-        }
-
-        function stopQrScan() { 
-            codeReader.reset(); 
-            document.getElementById('qr-layer').style.display = 'none'; 
-        }
-
-        // EMERGENCIA: Shift + A borra caché para volver a activar
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'A' && e.shiftKey) {
-                localStorage.clear();
-                location.reload();
-            }
-        });
 
         window.onload = checkEnrolment;
     </script>
