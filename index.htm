@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
+    <!-- PWA Meta -->
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -12,8 +13,11 @@
     <link rel="apple-touch-icon" href="logo.png.jpg">
     <link rel="icon" type="image/jpeg" href="logo.png.jpg">
     
-    <title>MontCode™ Patient Connection</title>
+    <title>MontCode™ Patient Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Librería para el escáner de QR del Doctor -->
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+
     <style>
         body { 
             background: #000; 
@@ -21,7 +25,6 @@
             font-family: sans-serif; 
             -webkit-tap-highlight-color: transparent; 
             overflow-x: hidden;
-            -webkit-text-size-adjust: 100%;
         }
         
         .dash-card { 
@@ -36,139 +39,167 @@
             justify-content: center;
             text-align: center;
             min-height: 130px; 
-            box-shadow: inset 0 -4px 0 rgba(0,0,0,0.4);
             border-width: 2px;
             border-style: solid;
         }
         .dash-card:active { transform: scale(0.92); filter: brightness(1.3); }
         
         .icon-box { 
-            width: 55px; height: 55px; 
+            width: 50px; height: 50px; 
             border-radius: 14px; 
             display: flex; align-items: center; justify-content: center; 
-            margin-bottom: 12px; font-size: 1.8rem; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            margin-bottom: 12px; font-size: 1.6rem; 
         }
 
-        .neon-red { border-color: #dc2626; box-shadow: 0 0 10px rgba(220, 38, 38, 0.2); }
-        .neon-green { border-color: #16a34a; box-shadow: 0 0 10px rgba(22, 163, 74, 0.2); }
-        .neon-blue { border-color: #2563eb; box-shadow: 0 0 10px rgba(37, 99, 235, 0.2); }
-        .neon-yellow { border-color: #eab308; box-shadow: 0 0 10px rgba(234, 179, 8, 0.2); }
+        .neon-red { border-color: #dc2626; box-shadow: 0 0 15px rgba(220, 38, 38, 0.2); }
+        .neon-green { border-color: #16a34a; box-shadow: 0 0 15px rgba(22, 163, 74, 0.2); }
+        .neon-blue { border-color: #2563eb; box-shadow: 0 0 15px rgba(37, 99, 235, 0.2); }
+        .neon-yellow { border-color: #eab308; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
 
         .chat-card {
             background: linear-gradient(135deg, #3b0764 0%, #000000 100%);
             border: 2px solid #a855f7;
-            animation: neon-heartbeat 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
-            position: relative;
+            animation: neon-heartbeat 2s infinite;
         }
 
         @keyframes neon-heartbeat {
-            0%, 100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); border-color: #a855f7; }
-            50% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.6); border-color: #c084fc; }
+            0%, 100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); }
+            50% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.5); }
         }
 
-        .logo-glow { box-shadow: 0 0 30px rgba(218, 165, 32, 0.2); border: 2px solid #DAA520; }
-        .locked { opacity: 0.15; filter: grayscale(1); pointer-events: none; }
+        .logo-glow { border: 2px solid #DAA520; box-shadow: 0 0 20px rgba(218, 165, 32, 0.3); }
         .btn-text { font-size: 10px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-top: 4px; }
-        .active-status { background: #10b981 !important; border-color: #059669 !important; }
-        .live-val { font-size: 14px; font-weight: 900; color: white; display: block; margin-top: 2px; }
+        
+        /* Modal del Escáner QR */
+        #qr-layer {
+            position: fixed; inset: 0; background: black; z-index: 100;
+            display: none; flex-direction: column;
+        }
     </style>
 </head>
 <body class="p-6 pb-24"> 
 
-    <!-- Header -->
+    <!-- Header & Lang -->
     <div class="flex justify-between items-start mb-8">
-        <button onclick="toggleLang()" id="langBtn" class="bg-white text-black text-[10px] font-black px-4 py-2 rounded-full uppercase">🇺🇸 English</button>
+        <button onclick="toggleLang()" id="langBtn" class="bg-white text-black text-[9px] font-black px-4 py-2 rounded-full uppercase italic">🇺🇸 English</button>
         <div class="text-right">
-            <p id="display-name" class="text-[10px] font-black text-blue-500 uppercase italic tracking-tighter">New Patient</p>
+            <p id="display-name" class="text-[10px] font-black text-blue-500 uppercase italic">Admin User</p>
             <p id="display-dob" class="text-[7px] text-zinc-500 font-bold uppercase tracking-widest">DOB: --/--/----</p>
         </div>
     </div>
 
     <!-- Main Identity -->
-    <div class="flex flex-col items-center justify-center mb-10 w-full" onclick="adminTrigger()">
-        <img src="logo.png.jpg" class="w-28 h-28 rounded-full logo-glow object-cover mb-4">
-        <h1 class="text-3xl font-black tracking-tighter text-white uppercase italic leading-none">MONTCODE™</h1>
-        <p class="text-[8px] font-bold text-blue-500 uppercase tracking-[0.10em] mt-2 italic text-center px-4">
-            Created by Provider • Tested by Patients • Trusted for Life
-        </p>
+    <div class="flex flex-col items-center justify-center mb-10 w-full">
+        <img src="logo.png.jpg" class="w-24 h-24 rounded-full logo-glow object-cover mb-4">
+        <h1 class="text-3xl font-black tracking-tighter text-white uppercase italic">MONTCODE™</h1>
+        <p class="text-[8px] font-bold text-blue-500 uppercase tracking-widest mt-2 italic">Remote Patient Terminal</p>
     </div>
 
-    <!-- Activation Banner -->
-    <div id="activation-banner" class="mb-8 p-4 bg-blue-600 rounded-[22px] flex justify-between items-center shadow-lg">
+    <!-- Connection Status / QR Scan -->
+    <div id="conn-banner" onclick="startQrScan()" class="mb-8 p-4 bg-zinc-900 border border-zinc-800 rounded-[22px] flex justify-between items-center cursor-pointer active:scale-95 transition">
         <div class="flex items-center gap-3">
-            <span id="reg-icon">✅</span>
-            <span id="reg-txt" class="text-[10px] font-black uppercase text-white italic">SYSTEM ACTIVE</span>
+            <span id="conn-icon" class="text-lg">🔗</span>
+            <div>
+                <span id="conn-txt" class="text-[9px] font-black uppercase text-white italic">Link with Doctor</span>
+                <p id="dr-status" class="text-[7px] text-zinc-500 font-bold uppercase tracking-tighter">Tap to open scanner</p>
+            </div>
         </div>
-        <span id="kit-label" class="text-[9px] font-bold text-blue-100 italic uppercase italic">ADMIN MODE</span>
+        <div id="status-led" class="w-2 h-2 rounded-full bg-zinc-700"></div>
     </div>
 
-    <!-- Feature Grid -->
-    <div id="main-grid" class="grid grid-cols-2 gap-5 mb-8">
-        <div onclick="window.location.href='bp.html'" class="dash-card neon-red" id="card-bp">
+    <!-- Feature Grid (Rutas exactas según tu imagen) -->
+    <div class="grid grid-cols-2 gap-5 mb-8">
+        <div onclick="location.href='bp.html'" class="dash-card neon-red">
             <div class="icon-box bg-red-600">🫀</div>
-            <h2 id="m-bp" class="btn-text">BP Log</h2>
-            <span id="live-bp" class="live-val">--/--</span>
+            <h2 class="btn-text">BP Log</h2>
         </div>
 
-        <div onclick="window.location.href='glucose.html'" class="dash-card neon-green" id="card-glu">
+        <div onclick="location.href='glucose.html'" class="dash-card neon-green">
             <div class="icon-box bg-green-600">🩸</div>
-            <h2 id="m-glu" class="btn-text">Glucose</h2>
-            <span id="live-glu" class="live-val">---</span>
+            <h2 class="btn-text">Glucose</h2>
         </div>
 
-        <div onclick="window.location.href='food.html'" class="dash-card neon-yellow" id="card-food">
+        <div onclick="location.href='food.html'" class="dash-card neon-yellow">
             <div class="icon-box bg-yellow-600">🥗</div>
-            <h2 id="m-food" class="btn-text">Food Scan</h2>
+            <h2 class="btn-text">Food Scan</h2>
         </div>
 
-        <div onclick="window.location.href='sync.html'" class="dash-card neon-blue" id="card-sync">
-            <div class="icon-box bg-blue-600">🔄</div>
-            <h2 id="m-sync" class="btn-text">Full Sync</h2>
+        <div onclick="location.href='activation.html'" class="dash-card neon-blue">
+            <div class="icon-box bg-blue-600">🆔</div>
+            <h2 class="btn-text">Kit Activation</h2>
         </div>
     </div>
 
-    <!-- Clinical Feedback Section -->
-    <div onclick="window.location.href='feedback.html'" id="chat-card" class="chat-card mt-8 p-5 rounded-[28px] flex justify-between items-center cursor-pointer active:scale-95 transition">
+    <!-- Feedback / Vault Section (El Puente con el Dr) -->
+    <div onclick="location.href='vault.html'" class="chat-card p-5 rounded-[28px] flex justify-between items-center cursor-pointer active:scale-95 transition">
         <div class="flex items-center gap-4 text-white">
             <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/20">
                 <span class="text-2xl">💬</span>
             </div>
             <div>
-                <h2 id="m-feed" class="font-black uppercase italic text-sm tracking-tighter text-white">Clinical Feedback</h2>
-                <p id="feed-d" class="text-purple-300/60 text-[9px] font-bold uppercase italic">Direct Channel with your Dr.</p>
+                <h2 class="font-black uppercase italic text-sm tracking-tighter text-white">Clinical Vault</h2>
+                <p class="text-purple-300/60 text-[9px] font-bold uppercase italic">Messages from your Provider</p>
             </div>
         </div>
-        <div class="bg-purple-600 text-white px-4 py-1 rounded-full text-[8px] font-black uppercase italic">Message</div>
+        <div class="bg-purple-600 text-white px-4 py-1 rounded-full text-[8px] font-black uppercase italic">Open</div>
+    </div>
+
+    <!-- QR SCANNER LAYER -->
+    <div id="qr-layer">
+        <video id="video" class="w-full h-full object-cover absolute"></video>
+        <div class="relative z-10 flex flex-col items-center justify-center h-full bg-black/40 p-10">
+            <div class="w-64 h-64 border-2 border-blue-500 rounded-3xl mb-10 shadow-[0_0_30px_#2563eb]"></div>
+            <button onclick="stopQrScan()" class="bg-white text-black font-black uppercase text-xs px-10 py-4 rounded-full">Cancel</button>
+        </div>
     </div>
 
     <footer class="mt-16 opacity-30 text-center pb-10">
-        <p class="text-[7px] font-bold uppercase italic text-zinc-500">Disclaimer: Not based on official medical records. 2026 Edition.</p>
+        <p class="text-[7px] font-bold uppercase italic text-zinc-500">Not based on official medical records. 2026 Edition.</p>
     </footer>
 
     <script>
-        // EMERGENCY BYPASS INJECTION
-        // Si entramos aquí, forzamos que el sistema crea que está enrolado
-        if (!localStorage.getItem('montcode_onboarded')) {
-            localStorage.setItem('montcode_onboarded', 'true');
-            localStorage.setItem('mc_kit_id', 'ADMIN-TEST-2026');
-            localStorage.setItem('mc_patient_name', 'Admin User');
-        }
+        const codeReader = new ZXing.BrowserQRCodeReader();
+        let selectedDeviceId;
 
-        let currentLang = localStorage.getItem('montcode_lang') || 'EN';
-        
-        function updateUI() {
-            const isEN = currentLang === 'EN';
-            
-            // CARGA DE IDENTIDAD
+        function updateIdentity() {
             document.getElementById('display-name').innerText = localStorage.getItem('mc_patient_name') || "Admin User";
             document.getElementById('display-dob').innerText = `DOB: ${localStorage.getItem('mc_patient_dob') || "01/01/1980"}`;
-            document.getElementById('langBtn').innerText = isEN ? '🇺🇸 English' : '🇪🇸 Español';
             
-            // TEXTOS BILINGÜES
-            const texts = {
-                'm-bp': isEN ? 'BP Log' : 'Presión Art.',
-                'm-glu': isEN ? 'Glucose' : 'Glucosa',
-                'm-food': isEN ? 'Food Scan' : 'Escanear Comida',
-                'm-sync': isEN ? 'Full Sync' : 'Sincronizar',
-                'm-
+            const linkedDr = localStorage.getItem('mc_linked_dr_id');
+            if(linkedDr) {
+                document.getElementById('dr-status').innerText = "Linked: " + linkedDr;
+                document.getElementById('status-led').classList.replace('bg-zinc-700', 'bg-green-500');
+                document.getElementById('conn-icon').innerText = "✅";
+            }
+        }
+
+        async function startQrScan() {
+            document.getElementById('qr-layer').style.display = 'flex';
+            try {
+                const videoInputDevices = await codeReader.listVideoInputDevices();
+                selectedDeviceId = videoInputDevices[0].deviceId;
+                
+                codeReader.decodeFromVideoElement(document.getElementById('video'), (result, err) => {
+                    if (result) {
+                        // El QR debe contener el ID del Dr (ej: DR_LOPEZ_99)
+                        localStorage.setItem('mc_linked_dr_id', result.text);
+                        alert("LINKED SUCCESSFULLY TO: " + result.text);
+                        stopQrScan();
+                        updateIdentity();
+                    }
+                });
+            } catch (e) {
+                alert("Camera Error: " + e);
+                stopQrScan();
+            }
+        }
+
+        function stopQrScan() {
+            codeReader.reset();
+            document.getElementById('qr-layer').style.display = 'none';
+        }
+
+        window.onload = updateIdentity;
+    </script>
+</body>
+</html>
