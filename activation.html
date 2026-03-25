@@ -25,8 +25,10 @@
             z-index: 20;
         }
         @keyframes move { 0%, 100% { top: 25%; } 50% { top: 75%; } }
-        
         .disabled-btn { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
+        /* Estilo para el logo admin */
+        #admin-trigger { cursor: pointer; transition: 0.3s; }
+        #admin-trigger:active { transform: scale(0.9); opacity: 0.5; }
     </style>
 </head>
 <body class="p-6">
@@ -34,7 +36,10 @@
         <button onclick="location.href='index.html'" class="text-zinc-500 font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
             <span>←</span> Back
         </button>
-        <img src="logo.png.jpg" class="w-8 h-8 rounded-full border border-[#DAA520] object-cover">
+        <!-- RUTA ADMIN: Mantén presionado el logo para ir a admin.html -->
+        <div id="admin-trigger" oncontextmenu="return false;">
+            <img src="logo.png.jpg" class="w-8 h-8 rounded-full border border-[#DAA520] object-cover">
+        </div>
     </header>
     
     <h1 class="text-3xl font-black italic uppercase tracking-tighter leading-none mb-1 text-white">Kit Activation</h1>
@@ -59,6 +64,14 @@
 
     <script>
         let isDetected = false;
+        let adminTimer;
+
+        // Lógica de Ruta Admin Oculta (3 segundos presionado)
+        const trigger = document.getElementById('admin-trigger');
+        trigger.addEventListener('mousedown', () => { adminTimer = setTimeout(() => { location.href='admin.html' }, 3000); });
+        trigger.addEventListener('mouseup', () => { clearTimeout(adminTimer); });
+        trigger.addEventListener('touchstart', () => { adminTimer = setTimeout(() => { location.href='admin.html' }, 3000); });
+        trigger.addEventListener('touchend', () => { clearTimeout(adminTimer); });
 
         function startScanner() {
             Quagga.init({
@@ -82,6 +95,7 @@
 
             Quagga.onDetected((data) => {
                 const code = data.codeResult.code;
+                // Valida que empiece por 102
                 if (/^102/.test(code) && !isDetected) {
                     isDetected = true;
                     const kitInput = document.getElementById('kitID');
@@ -93,7 +107,7 @@
                     status.className = "text-green-500 font-black italic";
                     
                     btn.classList.remove('disabled-btn');
-                    btn.classList.replace('bg-blue-600', 'bg-blue-500');
+                    btn.style.background = "#3b82f6";
                     
                     if (navigator.vibrate) navigator.vibrate(200);
                     Quagga.stop();
@@ -105,52 +119,37 @@
             const code = document.getElementById('kitID').value;
             
             if (code) {
-                // CAPTURA DE PERFIL CLÍNICO
                 const patientName = prompt("Enter Patient Full Name:", "New Patient");
-                if (!patientName) {
-                    alert("Patient name is required for clinical records.");
-                    return;
-                }
+                if (!patientName) return alert("Patient name required.");
 
                 const patientDOB = prompt("Enter Date of Birth (MM/DD/YYYY):", "01/01/1980");
-                if (!patientDOB) {
-                    alert("Date of birth is required for dosage & triage logic.");
-                    return;
-                }
+                if (!patientDOB) return alert("DOB required.");
+
+                const now = Date.now();
+                const oneYearInMs = 365 * 24 * 60 * 60 * 1000;
 
                 const activation = {
                     kitID: code,
                     patientName: patientName,
                     patientDOB: patientDOB,
-                    startDate: Date.now(),
-                    expiryDate: Date.now() + (365 * 24 * 60 * 60 * 1000),
+                    startDate: now,
+                    expiryDate: now + oneYearInMs,
+                    daysLeft: 365,
                     isActive: true
                 };
 
-                // PERSISTENCIA DE DATOS MASTER
+                // GUARDADO MASTER
                 localStorage.setItem('montcode_activation', JSON.stringify(activation));
-                
-                // Llaves de acceso rápido para otros módulos
                 localStorage.setItem('mc_patient_name', patientName);
-                localStorage.setItem('mc_patient_dob', patientDOB);
                 localStorage.setItem('mc_kit_id', code);
                 
-                // Compatibilidad legacy
-                localStorage.setItem('kit_id', code);
-                localStorage.setItem('my_kit_id', code);
-                
                 const btn = document.getElementById('btn-activate');
-                btn.innerText = "SYSTEM ARMED";
+                btn.innerText = "SYSTEM ARMED (365 DAYS)";
                 btn.style.background = "#16a34a";
 
-                setTimeout(() => { location.href = 'index.html'; }, 1000);
+                setTimeout(() => { location.href = 'index.html'; }, 1500);
             }
         }
-
-        window.onload = startScanner;
-    </script>
-</body>
-</html>
 
         window.onload = startScanner;
     </script>
