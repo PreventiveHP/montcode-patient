@@ -3,93 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MontCode™ Full Sync</title>
+    <title>MontCode™ Tactical Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #000; color: white; font-family: sans-serif; }
-        .sync-loader {
-            border: 4px solid #111;
-            border-top: 4px solid #2563eb;
-            border-radius: 50%;
-            width: 80px; height: 80px;
-            animation: spin 1s linear infinite;
+        body { background: #000; color: white; font-family: sans-serif; overflow: hidden; height: 100vh; }
+        #video-preview { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
+        .scanner-overlay {
+            position: absolute; inset: 0; z-index: 10;
+            background: rgba(0,0,0,0.6);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .status-pill { font-size: 10px; font-weight: 900; padding: 4px 12px; border-radius: 50px; text-transform: uppercase; }
-        .success { background: #064e3b; color: #34d399; }
+        .scan-box {
+            width: 250px; height: 250px; border: 2px solid #2563eb;
+            border-radius: 40px; position: relative;
+            box-shadow: 0 0 20px rgba(37, 99, 235, 0.5);
+            background: rgba(37, 99, 235, 0.05);
+        }
+        .scan-line {
+            width: 100%; height: 2px; background: #2563eb;
+            position: absolute; top: 0; animation: scan 2s linear infinite;
+        }
+        @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
+        .btn-action { z-index: 20; position: absolute; bottom: 40px; width: 80%; }
+        .hidden { display: none !important; }
     </style>
 </head>
-<body class="p-6 flex flex-col items-center justify-center min-height-screen">
+<body>
 
-    <div class="w-full max-w-md text-center">
-        <h1 id="sync-title" class="text-2xl font-black italic uppercase tracking-tighter mb-2">System Sync</h1>
-        <p id="sync-sub" class="text-[10px] text-zinc-500 font-bold uppercase mb-10">Local Database Handshake</p>
+    <!-- Cámara de Fondo -->
+    <video id="video-preview" autoplay playsinline muted></video>
 
-        <div class="flex justify-center mb-10">
-            <div id="loader" class="sync-loader"></div>
-            <div id="check-icon" class="hidden text-6xl text-blue-500">✅</div>
+    <!-- Overlay de Escaneo -->
+    <div id="overlay" class="scanner-overlay">
+        <div class="mb-6 text-center">
+            <h1 class="text-xl font-black italic tracking-tighter uppercase">Tactical Sync</h1>
+            <p id="instruction" class="text-[9px] font-bold text-blue-400 uppercase tracking-widest">Aim at MontCode Logo or QR</p>
+        </div>
+        
+        <div class="scan-box">
+            <div class="scan-line"></div>
         </div>
 
-        <div id="sync-list" class="space-y-4 text-left mb-10">
-            <!-- Items de sincronización -->
-            <div class="flex justify-between items-center bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800">
-                <span class="text-[10px] font-black uppercase italic">Clinical Logs</span>
-                <span id="st-logs" class="status-pill bg-zinc-800 text-zinc-500">Waiting</span>
+        <div id="sync-progress" class="hidden mt-8 w-64 space-y-2">
+            <div class="flex justify-between text-[8px] font-black uppercase italic">
+                <span>Uploading Data...</span>
+                <span id="percent">0%</span>
             </div>
-            <div class="flex justify-between items-center bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800">
-                <span class="text-[10px] font-black uppercase italic">Identity Profile</span>
-                <span id="st-id" class="status-pill bg-zinc-800 text-zinc-500">Waiting</span>
-            </div>
-            <div class="flex justify-between items-center bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800">
-                <span class="text-[10px] font-black uppercase italic">Security Keys</span>
-                <span id="st-sec" class="status-pill bg-zinc-800 text-zinc-500">Waiting</span>
+            <div class="w-full bg-zinc-900 h-1 rounded-full overflow-hidden">
+                <div id="bar" class="bg-blue-600 h-full w-0 transition-all duration-300"></div>
             </div>
         </div>
-
-        <button onclick="goHome()" id="btn-back" class="hidden w-full bg-blue-600 text-white font-black py-4 rounded-2xl uppercase italic text-sm shadow-lg active:scale-95 transition">
-            Return to Dashboard
-        </button>
     </div>
 
+    <button onclick="window.location.href='index.html'" class="btn-action left-1/2 -translate-x-1/2 bg-white/10 border border-white/20 text-white font-black py-4 rounded-2xl uppercase italic text-[10px] backdrop-blur-md">
+        Cancel / Back
+    </button>
+
     <script>
-        const isEN = (localStorage.getItem('montcode_lang') || 'EN') === 'EN';
-        
-        // Traducción rápida
-        if(!isEN) {
-            document.getElementById('sync-title').innerText = "Sincronización";
-            document.getElementById('sync-sub').innerText = "Enlace de Base de Datos Local";
-            document.getElementById('btn-back').innerText = "Volver al Panel";
-        }
+        const video = document.getElementById('video-preview');
+        const RELAY_URL = "/api/hub"; // Conexión con tu Vercel
 
-        async function startSync() {
-            const steps = [
-                { id: 'st-logs', delay: 800 },
-                { id: 'st-id', delay: 1200 },
-                { id: 'st-sec', delay: 600 }
-            ];
-
-            for (let step of steps) {
-                await new Promise(r => setTimeout(r, step.delay));
-                const el = document.getElementById(step.id);
-                el.innerText = isEN ? "Synced" : "Sincronizado";
-                el.className = "status-pill success";
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment" } 
+                });
+                video.srcObject = stream;
+                // Iniciamos "simulación" de detección visual (Stage 1)
+                setTimeout(processSync, 2000); 
+            } catch (err) {
+                alert("Cámara bloqueada. Revisa permisos en Configuración > Safari/Chrome.");
             }
+        }
 
-            // Finalización
-            document.getElementById('loader').classList.add('hidden');
-            document.getElementById('check-icon').classList.remove('hidden');
-            document.getElementById('btn-back').classList.remove('hidden');
+        async function processSync() {
+            document.getElementById('instruction').innerText = "Logo Detected: SYNCING";
+            document.getElementById('instruction').classList.add('text-green-400');
+            document.getElementById('sync-progress').classList.remove('hidden');
+
+            // 1. Empaquetar datos locales (Triangulación)
+            const kitID = localStorage.getItem('mc_kit_id') || "DEMO-KIT";
+            const bpData = JSON.parse(localStorage.getItem('mc_bp_master_2026') || '[]');
+            const glData = JSON.parse(localStorage.getItem('mc_glucose_history') || '[]');
             
-            // Forzar actualización de timestamp de sincronización
-            localStorage.setItem('mc_last_sync', new Date().toISOString());
+            const payload = {
+                sys: bpData.length ? bpData[0].sys : 0,
+                dia: bpData.length ? bpData[0].dia : 0,
+                gl: glData.length ? glData[0].value : 0,
+                ts: new Date().toISOString()
+            };
+
+            // 2. Animación de carga y envío a Vercel
+            let p = 0;
+            const interval = setInterval(async () => {
+                p += 10;
+                document.getElementById('bar').style.width = p + '%';
+                document.getElementById('percent').innerText = p + '%';
+
+                if(p === 100) {
+                    clearInterval(interval);
+                    await sendToProvider(kitID, payload);
+                }
+            }, 200);
         }
 
-        function goHome() {
-            // Arreglo del error 404: Apuntar siempre al nombre exacto del archivo raíz
-            window.location.href = 'index.html'; 
+        async function sendToProvider(kit, data) {
+            try {
+                // Convertimos a Base64 para seguridad simple en el bridge
+                const encodedData = btoa(JSON.stringify(data));
+                
+                const response = await fetch(RELAY_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: kit, data: encodedData })
+                });
+
+                if(response.ok) {
+                    document.getElementById('instruction').innerText = "SYNC COMPLETE";
+                    setTimeout(() => window.location.href = 'index.html', 1500);
+                }
+            } catch (e) {
+                console.error("Sync fail", e);
+                alert("Cloud Sync Failed. Local Data Saved.");
+                window.location.href = 'index.html';
+            }
         }
 
-        window.onload = startSync;
+        window.onload = initCamera;
     </script>
 </body>
 </html>
