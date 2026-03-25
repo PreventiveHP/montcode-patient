@@ -82,11 +82,9 @@
 
             Quagga.onDetected((data) => {
                 const code = data.codeResult.code;
-                // Validamos que empiece con 102 (tu serie validada)
                 if (/^102/.test(code) && !isDetected) {
                     isDetected = true;
                     
-                    // UI Updates
                     const kitInput = document.getElementById('kitID');
                     const status = document.getElementById('scan-status');
                     const btn = document.getElementById('btn-activate');
@@ -95,13 +93,10 @@
                     status.innerText = "KIT VALIDATED ✓";
                     status.className = "text-green-500 font-black italic";
                     
-                    // Habilitar botón
                     btn.classList.remove('disabled-btn');
                     btn.classList.replace('bg-blue-600', 'bg-blue-500');
                     
                     if (navigator.vibrate) navigator.vibrate(200);
-                    
-                    // Detener cámara tras detección exitosa para ahorrar batería
                     Quagga.stop();
                 }
             });
@@ -109,28 +104,39 @@
 
         function activateSystem() {
             const code = document.getElementById('kitID').value;
+            
             if (code) {
-                // ESTRUCTURA COMPATIBLE CON TU INDEX.HTML
+                // CAPTURA DE IDENTIDAD PROFESIONAL
+                const patientName = prompt("Enter Patient Full Name:", "New Patient");
+                
+                if (!patientName) {
+                    alert("Patient name is required for clinical records.");
+                    return;
+                }
+
                 const activation = {
                     kitID: code,
+                    patientName: patientName,
                     startDate: Date.now(),
-                    expiryDate: Date.now() + (365 * 24 * 60 * 60 * 1000), // 1 Año
+                    expiryDate: Date.now() + (365 * 24 * 60 * 60 * 1000),
                     isActive: true
                 };
 
-                // Persistencia local
+                // PERSISTENCIA DE IDENTIDAD UNIFICADA
                 localStorage.setItem('montcode_activation', JSON.stringify(activation));
                 
-                // Llaves de respaldo para el sistema de sincronización y feedback
+                // Estas llaves alimentan automáticamente a Glucosa.html y BP.html
+                localStorage.setItem('mc_patient_name', patientName);
+                localStorage.setItem('mc_kit_id', code);
+                
+                // Llaves legacy para compatibilidad
                 localStorage.setItem('kit_id', code);
                 localStorage.setItem('my_kit_id', code);
                 
-                // Feedback visual final
                 const btn = document.getElementById('btn-activate');
                 btn.innerText = "SYSTEM ARMED";
                 btn.style.background = "#16a34a";
 
-                // Redirección suave al Dashboard
                 setTimeout(() => { location.href = 'index.html'; }, 1000);
             }
         }
