@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MontCode™ | Clinical Auditor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background: #000; color: #ccff00; font-family: 'Inter', sans-serif; padding: 20px; }
+        .audit-card { border: 1px solid #ccff00; border-radius: 20px; padding: 20px; background: #050505; }
+        .log-row { border-bottom: 1px solid #111; padding: 10px 0; display: flex; justify-content: space-between; font-size: 11px; }
+    </style>
+</head>
+<body>
+    <div class="max-w-md mx-auto">
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-black italic uppercase tracking-tighter">Clinical Audit</h1>
+            <p class="text-[8px] text-zinc-500 uppercase font-bold">Protocol v2.6 | Local Payload Decoded</p>
+        </div>
+
+        <div id="data-container" class="hidden">
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="audit-card text-center">
+                    <p class="text-[7px] uppercase font-black text-zinc-500">Avg Glucose</p>
+                    <p id="avg" class="text-3xl font-black">--</p>
+                </div>
+                <div class="audit-card text-center">
+                    <p class="text-[7px] uppercase font-black text-zinc-500">Est. HbA1c</p>
+                    <p id="a1c" class="text-3xl font-black">--</p>
+                </div>
+            </div>
+
+            <div class="audit-card mb-6">
+                <canvas id="auditChart" height="200"></canvas>
+            </div>
+
+            <div class="audit-card">
+                <p class="text-[8px] uppercase font-black mb-4 border-b border-zinc-800 pb-2 text-zinc-400">Tactical Logs (Last 15)</p>
+                <div id="logs-list"></div>
+            </div>
+        </div>
+
+        <div id="error-box" class="text-center p-10">
+            <p class="text-red-500 font-bold">Waiting for Secure Payload...</p>
+        </div>
+    </div>
+
+    <script>
+        window.onload = () => {
+            const hash = window.location.hash.substring(1);
+            if (!hash) return;
+
+            try {
+                // Decodificar Base64 Safe
+                const jsonStr = decodeURIComponent(escape(atob(hash.replace(/-/g, '+').replace(/_/g, '/'))));
+                const data = JSON.parse(jsonStr);
+                renderAudit(data);
+            } catch (e) {
+                console.error(e);
+                document.getElementById('error-box').innerText = "INVALID OR EXPIRED PAYLOAD";
+            }
+        };
+
+        function renderAudit(data) {
+            document.getElementById('error-box').classList.add('hidden');
+            document.getElementById('data-container').classList.remove('hidden');
+            
+            document.getElementById('avg').innerText = data.a;
+            document.getElementById('a1c').innerText = data.h + "%";
+
+            // Render Chart
+            const ctx = document.getElementById('auditChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.l.map(x => new Date(x[2] * 1000).toLocaleDateString()),
+                    datasets: [{
+                        data: data.l.map(x => x[0]),
+                        borderColor: '#ccff00',
+                        tension: 0.4,
+                        pointBackgroundColor: '#ccff00'
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    plugins: { legend: { display: false } },
+                    scales: { y: { grid: { color: '#111' } }, x: { display: false } }
+                }
+            });
+
+            // Render Logs
+            const list = document.getElementById('logs-list');
+            data.l.reverse().forEach(log => {
+                const date = new Date(log[2] * 1000).toLocaleString();
+                const type = log[1] === 0 ? "FASTING" : "POST-MEAL";
+                list.innerHTML += `
+                    <div class="log-row">
+                        <span>${date}</span>
+                        <span class="font-black text-white">${log[0]} mg/dL</span>
+                        <span class="text-[8px] italic">${type}</span>
+                    </div>`;
+            });
+        }
+    </script>
+</body>
+</html>
