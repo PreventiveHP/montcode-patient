@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -94,13 +94,19 @@
         .locked { opacity: 0.15; filter: grayscale(1); pointer-events: none; transition: 0.5s; }
         .btn-text { font-size: 10px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-top: 4px; }
         .active-status { background: #10b981 !important; border-color: #059669 !important; }
+        
+        /* Estilos para los promedios dinámicos */
+        .live-val { font-size: 14px; font-weight: 900; color: white; display: block; margin-top: 2px; }
     </style>
 </head>
 <body class="p-6 pb-24"> 
 
     <div class="flex justify-between items-start mb-8">
         <button onclick="toggleLang()" id="langBtn" class="bg-white text-black text-[10px] font-black px-4 py-2 rounded-full uppercase flex items-center gap-2">🇺🇸 English</button>
-        <p class="text-[7px] text-[#ccff00] font-black uppercase tracking-[0.3em]">MontCode™ Rescue System</p>
+        <div class="text-right">
+            <p id="display-name" class="text-[10px] font-black text-blue-500 uppercase italic tracking-tighter">New Patient</p>
+            <p id="display-dob" class="text-[7px] text-zinc-500 font-bold uppercase tracking-widest">DOB: --/--/----</p>
+        </div>
     </div>
 
     <div class="flex flex-col items-center justify-center mb-10 w-full" onclick="adminTrigger()">
@@ -116,18 +122,20 @@
             <span id="reg-icon">🔑</span>
             <span id="reg-txt" class="text-[10px] font-black uppercase text-white italic">Activation Required</span>
         </div>
-        <span id="days-display" class="text-[9px] font-bold text-blue-100 italic uppercase">CHECK KIT ></span>
+        <span id="kit-label" class="text-[9px] font-bold text-blue-100 italic uppercase">CHECK KIT ></span>
     </div>
 
     <div id="main-grid" class="grid grid-cols-2 gap-5 mb-8">
         <div onclick="window.location.href='bp.html'" class="dash-card neon-red locked">
             <div class="icon-box bg-red-600">🫀</div>
             <h2 id="m-bp" class="btn-text">BP Log</h2>
+            <span id="live-bp" class="live-val">--/--</span>
         </div>
 
         <div onclick="window.location.href='glucose.html'" class="dash-card neon-green locked">
             <div class="icon-box bg-green-600">🩸</div>
             <h2 id="m-glu" class="btn-text">Glucose</h2>
+            <span id="live-glu" class="live-val">---</span>
         </div>
 
         <div onclick="window.location.href='food.html'" class="dash-card neon-yellow locked">
@@ -135,7 +143,6 @@
             <h2 id="m-food" class="btn-text">Food Scan</h2>
         </div>
 
-        <!-- INTEGRACIÓN SYNC.HTML -->
         <div onclick="window.location.href='sync.html'" class="dash-card neon-blue locked">
             <div class="icon-box bg-blue-600">🔄</div>
             <h2 id="m-sync" class="btn-text">Full Sync</h2>
@@ -163,20 +170,18 @@
     <audio id="notification-sound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_1334914177.mp3" preload="auto"></audio>
 
     <script>
-        // REGISTRO DEL SERVICE WORKER PARA PWA
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
-                .then(reg => console.log('MontCode PWA: Ready'))
-                .catch(err => console.log('PWA Registry Fail:', err));
-            });
-        }
-
         let currentLang = localStorage.getItem('montcode_lang') || 'EN';
         
         function updateUI() {
             const isEN = currentLang === 'EN';
             const license = JSON.parse(localStorage.getItem('montcode_activation'));
+            
+            // CARGA DE IDENTIDAD
+            const pName = localStorage.getItem('mc_patient_name') || "New Patient";
+            const pDob = localStorage.getItem('mc_patient_dob') || "--/--/----";
+            document.getElementById('display-name').innerText = pName;
+            document.getElementById('display-dob').innerText = `DOB: ${pDob}`;
+
             document.getElementById('langBtn').innerText = isEN ? '🇺🇸 English' : '🇪🇸 Español';
             
             const texts = {
@@ -190,15 +195,35 @@
             };
             for (let id in texts) { if(document.getElementById(id)) document.getElementById(id).innerText = texts[id]; }
 
+            // LÓGICA DE ACTIVACIÓN Y BLOQUEO
             const cards = document.querySelectorAll('.dash-card, #chat-card');
             if (license && license.isActive) {
                 cards.forEach(c => c.classList.remove('locked'));
                 document.getElementById('activation-banner').className = "mb-8 p-4 active-status rounded-[22px] flex justify-between items-center shadow-lg";
                 document.getElementById('reg-txt').innerText = isEN ? "SYSTEM ACTIVE" : "SISTEMA ACTIVO";
                 document.getElementById('reg-icon').innerText = "✅";
-                document.getElementById('days-display').innerText = ""; 
+                document.getElementById('kit-label').innerText = localStorage.getItem('mc_kit_id') || "ACTIVE";
+
+                // CARGA DE PROMEDIOS EN TIEMPO REAL
+                loadClinicalAverages();
             } else {
                 cards.forEach(c => c.classList.add('locked'));
+            }
+        }
+
+        function loadClinicalAverages() {
+            // BP Avg
+            const bpDb = JSON.parse(localStorage.getItem('mc_bp_master_2026')) || [];
+            if(bpDb.length > 0) {
+                const s = Math.round(bpDb.reduce((a,b)=>a+b.sys,0)/bpDb.length);
+                const d = Math.round(bpDb.reduce((a,b)=>a+b.dia,0)/bpDb.length);
+                document.getElementById('live-bp').innerText = `${s}/${d}`;
+            }
+
+            // Glucose Last (Utilizando la misma lógica de almacenamiento que BP)
+            const gluDb = JSON.parse(localStorage.getItem('mc_glucose_history')) || [];
+            if(gluDb.length > 0) {
+                document.getElementById('live-glu').innerText = `${gluDb[0].value} mg/dL`;
             }
         }
 
@@ -233,7 +258,6 @@
 
         window.onload = () => {
             updateUI();
-            // Simulación de mensaje entrante a los 4 segundos
             setTimeout(incomingMessage, 4000);
         };
     </script>
