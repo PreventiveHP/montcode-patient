@@ -12,6 +12,7 @@
         <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-10">Emergency Enrollment Bypass v2.6</p>
         
         <div class="space-y-4 mb-10 text-left bg-zinc-950 p-6 rounded-2xl border border-zinc-900">
+            <p class="text-[9px] font-black uppercase tracking-widest text-[#ccff00]">● Purging old session data...</p>
             <p class="text-[9px] font-black uppercase tracking-widest text-[#ccff00]">● Injecting Admin Profile...</p>
             <p class="text-[9px] font-black uppercase tracking-widest text-[#ccff00]">● Setting Kit-ID: MC-ADMIN-TRIAL</p>
             <p class="text-[9px] font-black uppercase tracking-widest text-[#ccff00]">● Unlocking Main Dashboard...</p>
@@ -24,18 +25,33 @@
 
     <script>
         function injectAndLaunch() {
-            // INYECCIÓN DE DATOS CRÍTICOS (Simula un enrolamiento exitoso)
-            localStorage.setItem('mc_kit_id', 'MC-ADMIN-TRIAL');
-            localStorage.setItem('mc_patient_name', 'Admin Tester');
-            localStorage.setItem('mc_patient_dob', '01/01/1980');
-            localStorage.setItem('montcode_onboarded', 'true'); // Bandera mágica para saltar intro
-            
-            // Opcional: Inyectar datos de prueba para ver el Dashboard con vida
-            localStorage.setItem('mc_bp_master_2026', JSON.stringify([{ sys: 120, dia: 80, date: new Date().toLocaleDateString() }]));
+            try {
+                // 1. LIMPIEZA TOTAL (Para evitar conflictos con registros fallidos anteriores)
+                localStorage.clear();
 
-            // Redirección inmediata al Dashboard principal
-            // IMPORTANTE: Asegúrate de que tu archivo principal se llame 'index.html' o 'dashboard.html'
-            window.location.href = 'index.html'; 
+                // 2. INYECCIÓN DE IDENTIDAD
+                localStorage.setItem('mc_kit_id', 'MC-ADMIN-TRIAL');
+                localStorage.setItem('mc_patient_name', 'Admin Tester');
+                localStorage.setItem('mc_patient_dob', '01/01/1980');
+                
+                // 3. LA LLAVE MAESTRA
+                // Esta es la bandera que tus otros archivos buscan para saber si dejarte pasar
+                localStorage.setItem('montcode_onboarded', 'true'); 
+                
+                // 4. DATOS DE RELLENO (Para que el Dashboard no se vea vacío)
+                const mockBP = [{ sys: 118, dia: 76, date: new Date().toLocaleDateString() }];
+                localStorage.setItem('mc_bp_master_2026', JSON.stringify(mockBP));
+
+                console.log("Admin Data Injected. Redirecting...");
+
+                // 5. REDIRECCIÓN INTELIGENTE
+                // Primero intentamos ir a la raíz (Vercel suele servir index.html automáticamente ahí)
+                // Si esto falla, cámbialo manualmente a 'main.html' o el nombre exacto de tu dashboard.
+                window.location.href = '/'; 
+
+            } catch (e) {
+                alert("Error injecting data: " + e);
+            }
         }
     </script>
 </body>
