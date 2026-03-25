@@ -166,4 +166,32 @@
         // Al hacer clic, marcamos como leído y vamos al Vault
         function markAsReadAndOpen() {
             const activation = JSON.parse(localStorage.getItem('montcode_activation') || '{}');
-            if (activation.dr_notes && activation.dr_notes.length >
+            if (activation.dr_notes && activation.dr_notes.length > 0) {
+                const lastNote = activation.dr_notes[activation.dr_notes.length - 1];
+                // Guardamos el timestamp del último mensaje leído
+                localStorage.setItem('mc_last_note_read', lastNote.timestamp);
+            }
+            location.href = 'vault.html';
+        }
+
+        async function startQrScan() {
+            document.getElementById('qr-layer').style.display = 'flex';
+            try {
+                const devices = await codeReader.listVideoInputDevices();
+                codeReader.decodeFromVideoElement(document.getElementById('video'), (result) => {
+                    if (result) {
+                        localStorage.setItem('mc_linked_dr_id', result.text);
+                        alert("LINKED TO DOCTOR: " + result.text);
+                        stopQrScan();
+                        updateHub();
+                    }
+                });
+            } catch (e) { alert("Camera Error"); stopQrScan(); }
+        }
+
+        function stopQrScan() { codeReader.reset(); document.getElementById('qr-layer').style.display = 'none'; }
+
+        window.onload = updateHub;
+    </script>
+</body>
+</html>
