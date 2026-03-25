@@ -15,87 +15,46 @@
     
     <title>MontCode™ Patient Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Librería para el escáner de QR del Doctor -->
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 
     <style>
-        body { 
-            background: #000; 
-            color: white; 
-            font-family: sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
-            overflow-x: hidden;
-        }
-        
-        .dash-card { 
-            background: #111; 
-            border-radius: 20px; 
-            padding: 20px; 
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
-            cursor: pointer; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center;
-            text-align: center;
-            min-height: 130px; 
-            border-width: 2px;
-            border-style: solid;
-        }
+        body { background: #000; color: white; font-family: sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        .dash-card { background: #111; border-radius: 20px; padding: 20px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 130px; border-width: 2px; border-style: solid; }
         .dash-card:active { transform: scale(0.92); filter: brightness(1.3); }
-        
-        .icon-box { 
-            width: 50px; height: 50px; 
-            border-radius: 14px; 
-            display: flex; align-items: center; justify-content: center; 
-            margin-bottom: 12px; font-size: 1.6rem; 
-        }
-
+        .icon-box { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 1.6rem; }
         .neon-red { border-color: #dc2626; box-shadow: 0 0 15px rgba(220, 38, 38, 0.2); }
         .neon-green { border-color: #16a34a; box-shadow: 0 0 15px rgba(22, 163, 74, 0.2); }
         .neon-blue { border-color: #2563eb; box-shadow: 0 0 15px rgba(37, 99, 235, 0.2); }
         .neon-yellow { border-color: #eab308; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
 
         .chat-card {
-            background: linear-gradient(135deg, #3b0764 0%, #000000 100%);
+            background: linear-gradient(135deg, #1e1b4b 0%, #000000 100%);
             border: 2px solid #a855f7;
             animation: neon-heartbeat 2s infinite;
         }
-
-        @keyframes neon-heartbeat {
-            0%, 100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); }
-            50% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.5); }
-        }
+        @keyframes neon-heartbeat { 0%, 100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); } 50% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.5); } }
 
         .logo-glow { border: 2px solid #DAA520; box-shadow: 0 0 20px rgba(218, 165, 32, 0.3); }
         .btn-text { font-size: 10px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-top: 4px; }
-        
-        /* Modal del Escáner QR */
-        #qr-layer {
-            position: fixed; inset: 0; background: black; z-index: 100;
-            display: none; flex-direction: column;
-        }
+        #qr-layer { position: fixed; inset: 0; background: black; z-index: 100; display: none; flex-direction: column; }
     </style>
 </head>
 <body class="p-6 pb-24"> 
 
-    <!-- Header & Lang -->
     <div class="flex justify-between items-start mb-8">
-        <button onclick="toggleLang()" id="langBtn" class="bg-white text-black text-[9px] font-black px-4 py-2 rounded-full uppercase italic">🇺🇸 English</button>
+        <button id="langBtn" class="bg-white text-black text-[9px] font-black px-4 py-2 rounded-full uppercase italic">🇺🇸 English</button>
         <div class="text-right">
             <p id="display-name" class="text-[10px] font-black text-blue-500 uppercase italic">Admin User</p>
             <p id="display-dob" class="text-[7px] text-zinc-500 font-bold uppercase tracking-widest">DOB: --/--/----</p>
         </div>
     </div>
 
-    <!-- Main Identity -->
     <div class="flex flex-col items-center justify-center mb-10 w-full">
         <img src="logo.png.jpg" class="w-24 h-24 rounded-full logo-glow object-cover mb-4">
         <h1 class="text-3xl font-black tracking-tighter text-white uppercase italic">MONTCODE™</h1>
         <p class="text-[8px] font-bold text-blue-500 uppercase tracking-widest mt-2 italic">Remote Patient Terminal</p>
     </div>
 
-    <!-- Connection Status / QR Scan -->
     <div id="conn-banner" onclick="startQrScan()" class="mb-8 p-4 bg-zinc-900 border border-zinc-800 rounded-[22px] flex justify-between items-center cursor-pointer active:scale-95 transition">
         <div class="flex items-center gap-3">
             <span id="conn-icon" class="text-lg">🔗</span>
@@ -107,44 +66,37 @@
         <div id="status-led" class="w-2 h-2 rounded-full bg-zinc-700"></div>
     </div>
 
-    <!-- Feature Grid (Rutas exactas según tu imagen) -->
     <div class="grid grid-cols-2 gap-5 mb-8">
-        <div onclick="location.href='bp.html'" class="dash-card neon-red">
-            <div class="icon-box bg-red-600">🫀</div>
-            <h2 class="btn-text">BP Log</h2>
-        </div>
+        <div onclick="location.href='bp.html'" class="dash-card neon-red"><div class="icon-box bg-red-600">🫀</div><h2 class="btn-text">BP Log</h2></div>
+        <div onclick="location.href='glucose.html'" class="dash-card neon-green"><div class="icon-box bg-green-600">🩸</div><h2 class="btn-text">Glucose</h2></div>
+        <div onclick="location.href='food.html'" class="dash-card neon-yellow"><div class="icon-box bg-yellow-600">🥗</div><h2 class="btn-text">Food Scan</h2></div>
+        <div onclick="location.href='activation.html'" class="dash-card neon-blue"><div class="icon-box bg-blue-600">🆔</div><h2 class="btn-text">Kit Activation</h2></div>
+    </div>
 
-        <div onclick="location.href='glucose.html'" class="dash-card neon-green">
-            <div class="icon-box bg-green-600">🩸</div>
-            <h2 class="btn-text">Glucose</h2>
-        </div>
-
-        <div onclick="location.href='food.html'" class="dash-card neon-yellow">
-            <div class="icon-box bg-yellow-600">🥗</div>
-            <h2 class="btn-text">Food Scan</h2>
-        </div>
-
-        <div onclick="location.href='activation.html'" class="dash-card neon-blue">
-            <div class="icon-box bg-blue-600">🆔</div>
-            <h2 class="btn-text">Kit Activation</h2>
+    <!-- FEEDBACK / VAULT (Integrado con Notas del Dr) -->
+    <div onclick="location.href='vault.html'" class="chat-card p-5 rounded-[28px] border-l-4 border-l-purple-500 cursor-pointer active:scale-95 transition">
+        <div class="flex flex-col w-full">
+            <div class="flex justify-between items-center mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">💬</span>
+                    <h2 class="font-black uppercase italic text-[10px] tracking-widest text-purple-400">Clinical Vault</h2>
+                </div>
+                <span id="note-date" class="text-[8px] font-bold text-zinc-500 uppercase italic">No messages</span>
+            </div>
+            
+            <div class="bg-black/40 p-4 rounded-2xl border border-white/5">
+                <p id="dr-note-text" class="text-xs font-medium text-zinc-300 italic leading-snug">
+                    Link your account to receive clinical feedback from your provider.
+                </p>
+            </div>
+            
+            <div class="mt-4 flex justify-between items-center">
+                <p class="text-[7px] font-black text-purple-500 uppercase tracking-widest italic">Encrypted Connection</p>
+                <div class="bg-purple-600 text-white px-4 py-1 rounded-full text-[8px] font-black uppercase italic">View History</div>
+            </div>
         </div>
     </div>
 
-    <!-- Feedback / Vault Section (El Puente con el Dr) -->
-    <div onclick="location.href='vault.html'" class="chat-card p-5 rounded-[28px] flex justify-between items-center cursor-pointer active:scale-95 transition">
-        <div class="flex items-center gap-4 text-white">
-            <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/20">
-                <span class="text-2xl">💬</span>
-            </div>
-            <div>
-                <h2 class="font-black uppercase italic text-sm tracking-tighter text-white">Clinical Vault</h2>
-                <p class="text-purple-300/60 text-[9px] font-bold uppercase italic">Messages from your Provider</p>
-            </div>
-        </div>
-        <div class="bg-purple-600 text-white px-4 py-1 rounded-full text-[8px] font-black uppercase italic">Open</div>
-    </div>
-
-    <!-- QR SCANNER LAYER -->
     <div id="qr-layer">
         <video id="video" class="w-full h-full object-cover absolute"></video>
         <div class="relative z-10 flex flex-col items-center justify-center h-full bg-black/40 p-10">
@@ -159,47 +111,52 @@
 
     <script>
         const codeReader = new ZXing.BrowserQRCodeReader();
-        let selectedDeviceId;
 
-        function updateIdentity() {
+        function updateHub() {
+            // Cargar Identidad
             document.getElementById('display-name').innerText = localStorage.getItem('mc_patient_name') || "Admin User";
-            document.getElementById('display-dob').innerText = `DOB: ${localStorage.getItem('mc_patient_dob') || "01/01/1980"}`;
+            document.getElementById('display-dob').innerText = `DOB: ${localStorage.getItem('mc_patient_dob') || "--/--/----"}`;
             
+            // Cargar Estado de Enlace Dr.
             const linkedDr = localStorage.getItem('mc_linked_dr_id');
             if(linkedDr) {
                 document.getElementById('dr-status').innerText = "Linked: " + linkedDr;
                 document.getElementById('status-led').classList.replace('bg-zinc-700', 'bg-green-500');
                 document.getElementById('conn-icon').innerText = "✅";
             }
+
+            // CARGAR NOTAS DEL DR
+            const activation = JSON.parse(localStorage.getItem('montcode_activation') || '{}');
+            if (activation.dr_notes && activation.dr_notes.length > 0) {
+                const lastNote = activation.dr_notes[activation.dr_notes.length - 1];
+                document.getElementById('dr-note-text').innerText = `"${lastNote.message}"`;
+                
+                // Formatear Fecha
+                const d = new Date(lastNote.timestamp);
+                const dateStr = d.toLocaleDateString([], {day:'2-digit', month:'2-digit'});
+                const timeStr = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                document.getElementById('note-date').innerText = `${dateStr} @ ${timeStr}`;
+            }
         }
 
         async function startQrScan() {
             document.getElementById('qr-layer').style.display = 'flex';
             try {
-                const videoInputDevices = await codeReader.listVideoInputDevices();
-                selectedDeviceId = videoInputDevices[0].deviceId;
-                
-                codeReader.decodeFromVideoElement(document.getElementById('video'), (result, err) => {
+                const devices = await codeReader.listVideoInputDevices();
+                codeReader.decodeFromVideoElement(document.getElementById('video'), (result) => {
                     if (result) {
-                        // El QR debe contener el ID del Dr (ej: DR_LOPEZ_99)
                         localStorage.setItem('mc_linked_dr_id', result.text);
-                        alert("LINKED SUCCESSFULLY TO: " + result.text);
+                        alert("LINKED TO DOCTOR: " + result.text);
                         stopQrScan();
-                        updateIdentity();
+                        updateHub();
                     }
                 });
-            } catch (e) {
-                alert("Camera Error: " + e);
-                stopQrScan();
-            }
+            } catch (e) { alert("Camera Error"); stopQrScan(); }
         }
 
-        function stopQrScan() {
-            codeReader.reset();
-            document.getElementById('qr-layer').style.display = 'none';
-        }
+        function stopQrScan() { codeReader.reset(); document.getElementById('qr-layer').style.display = 'none'; }
 
-        window.onload = updateIdentity;
+        window.onload = updateHub;
     </script>
 </body>
 </html>
