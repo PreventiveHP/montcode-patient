@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -8,10 +8,25 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
     <style>
         body { background: #000; color: white; font-family: sans-serif; overflow: hidden; }
-        .scanner-view { width: 100%; height: 300px; background: #111; border-radius: 32px; overflow: hidden; position: relative; border: 2px solid #2563eb; }
+        .scanner-view { 
+            width: 100%; height: 280px; 
+            background: #111; border-radius: 32px; 
+            overflow: hidden; position: relative; 
+            border: 2px solid #2563eb; 
+            box-shadow: 0 0 20px rgba(37, 99, 235, 0.2);
+        }
         #interactive.viewport video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-        .scan-line { position: absolute; top: 50%; left: 10%; width: 80%; height: 2px; background: #3b82f6; box-shadow: 0 0 15px #3b82f6; animation: move 2s infinite ease-in-out; }
+        .scan-line { 
+            position: absolute; top: 50%; left: 10%; 
+            width: 80%; height: 2px; 
+            background: #3b82f6; 
+            box-shadow: 0 0 15px #3b82f6; 
+            animation: move 2s infinite ease-in-out; 
+            z-index: 20;
+        }
         @keyframes move { 0%, 100% { top: 25%; } 50% { top: 75%; } }
+        
+        .disabled-btn { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
     </style>
 </head>
 <body class="p-6">
@@ -31,12 +46,14 @@
     </div>
 
     <div class="bg-zinc-900/80 p-6 rounded-[28px] border border-zinc-800 mb-8">
-        <p class="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2 italic">System Status: <span id="scan-status" class="text-zinc-400">Waiting...</span></p>
+        <p class="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2 italic">
+            System Status: <span id="scan-status" class="text-zinc-400">Searching for Code...</span>
+        </p>
         <input type="text" id="kitID" placeholder="POINT AT KIT" readonly
                class="w-full bg-transparent font-black text-4xl text-white outline-none italic uppercase placeholder:text-zinc-800 tracking-tight">
     </div>
 
-    <button onclick="activateSystem()" id="btn-activate" class="w-full bg-blue-600 py-6 rounded-[26px] font-black uppercase italic text-lg shadow-2xl transition-all">
+    <button onclick="activateSystem()" id="btn-activate" class="w-full bg-blue-600 py-6 rounded-[26px] font-black uppercase italic text-lg shadow-2xl transition-all disabled-btn">
         Confirm Activation
     </button>
 
@@ -45,18 +62,47 @@
 
         function startScanner() {
             Quagga.init({
-                inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#interactive'), constraints: { facingMode: "environment" } },
-                decoder: { readers: ["code_128_reader", "ean_reader", "code_39_reader"] }
-            }, (err) => { if (!err) Quagga.start(); });
+                inputStream: { 
+                    name: "Live", 
+                    type: "LiveStream", 
+                    target: document.querySelector('#interactive'), 
+                    constraints: { facingMode: "environment", focusMode: "continuous" } 
+                },
+                decoder: { 
+                    readers: ["code_128_reader", "ean_reader", "code_39_reader"] 
+                },
+                locate: true
+            }, (err) => { 
+                if (err) {
+                    document.getElementById('scan-status').innerText = "CAMERA ERROR";
+                    return;
+                }
+                Quagga.start(); 
+            });
 
             Quagga.onDetected((data) => {
                 const code = data.codeResult.code;
+                // Validamos que empiece con 102 (tu serie validada)
                 if (/^102/.test(code) && !isDetected) {
                     isDetected = true;
-                    document.getElementById('kitID').value = code;
-                    document.getElementById('scan-status').innerText = "KIT VALIDATED ✓";
-                    document.getElementById('scan-status').className = "text-green-500 font-black italic";
+                    
+                    // UI Updates
+                    const kitInput = document.getElementById('kitID');
+                    const status = document.getElementById('scan-status');
+                    const btn = document.getElementById('btn-activate');
+                    
+                    kitInput.value = code;
+                    status.innerText = "KIT VALIDATED ✓";
+                    status.className = "text-green-500 font-black italic";
+                    
+                    // Habilitar botón
+                    btn.classList.remove('disabled-btn');
+                    btn.classList.replace('bg-blue-600', 'bg-blue-500');
+                    
                     if (navigator.vibrate) navigator.vibrate(200);
+                    
+                    // Detener cámara tras detección exitosa para ahorrar batería
+                    Quagga.stop();
                 }
             });
         }
@@ -64,30 +110,31 @@
         function activateSystem() {
             const code = document.getElementById('kitID').value;
             if (code) {
-                // ESTRUCTURA EXACTA QUE PIDE TU INDEX:
+                // ESTRUCTURA COMPATIBLE CON TU INDEX.HTML
                 const activation = {
                     kitID: code,
-                    startDate: new Date().getTime(),
-                    expiryDate: new Date().getTime() + (365 * 24 * 60 * 60 * 1000),
+                    startDate: Date.now(),
+                    expiryDate: Date.now() + (365 * 24 * 60 * 60 * 1000), // 1 Año
                     isActive: true
                 };
 
-                // Guardamos la activación principal
+                // Persistencia local
                 localStorage.setItem('montcode_activation', JSON.stringify(activation));
                 
-                // Guardamos el ID por separado para el Clinical Feedback
+                // Llaves de respaldo para el sistema de sincronización y feedback
+                localStorage.setItem('kit_id', code);
                 localStorage.setItem('my_kit_id', code);
-                localStorage.setItem('target_kit_id', code);
+                
+                // Feedback visual final
+                const btn = document.getElementById('btn-activate');
+                btn.innerText = "SYSTEM ARMED";
+                btn.style.background = "#16a34a";
 
-                document.getElementById('btn-activate').innerText = "SYSTEM ARMED";
-                document.getElementById('btn-activate').style.background = "#16a34a";
-
-                Quagga.stop();
-
-                // Redirección a la raíz (donde está tu index.html)
-                setTimeout(() => { location.href = 'index.html'; }, 1200);
+                // Redirección suave al Dashboard
+                setTimeout(() => { location.href = 'index.html'; }, 1000);
             }
         }
+
         window.onload = startScanner;
     </script>
 </body>
