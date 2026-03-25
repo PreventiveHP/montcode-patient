@@ -67,31 +67,8 @@
             50% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.6); border-color: #c084fc; }
         }
 
-        .critical-msg {
-            background: linear-gradient(135deg, #7f1d1d 0%, #000000 100%) !important;
-            border-color: #ef4444 !important;
-            animation: pulse-red 1.5s infinite !important;
-        }
-
-        @keyframes pulse-red {
-            0% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.4); }
-            50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.8); }
-            100% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.4); }
-        }
-
-        .badge-new {
-            position: absolute;
-            top: -5px; right: -5px;
-            background: #ff0000; color: white;
-            font-size: 8px; font-weight: 900;
-            padding: 4px 8px; border-radius: 50px;
-            text-transform: uppercase;
-            box-shadow: 0 0 10px rgba(255,0,0,0.5);
-            display: none;
-        }
-
         .logo-glow { box-shadow: 0 0 30px rgba(218, 165, 32, 0.2); border: 2px solid #DAA520; }
-        .locked { opacity: 0.15; filter: grayscale(1); pointer-events: none; transition: 0.5s; }
+        .locked { opacity: 0.15; filter: grayscale(1); pointer-events: none; }
         .btn-text { font-size: 10px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-top: 4px; }
         .active-status { background: #10b981 !important; border-color: #059669 !important; }
         .live-val { font-size: 14px; font-weight: 900; color: white; display: block; margin-top: 2px; }
@@ -99,9 +76,9 @@
 </head>
 <body class="p-6 pb-24"> 
 
-    <!-- Header & Language -->
+    <!-- Header -->
     <div class="flex justify-between items-start mb-8">
-        <button onclick="toggleLang()" id="langBtn" class="bg-white text-black text-[10px] font-black px-4 py-2 rounded-full uppercase flex items-center gap-2">🇺🇸 English</button>
+        <button onclick="toggleLang()" id="langBtn" class="bg-white text-black text-[10px] font-black px-4 py-2 rounded-full uppercase">🇺🇸 English</button>
         <div class="text-right">
             <p id="display-name" class="text-[10px] font-black text-blue-500 uppercase italic tracking-tighter">New Patient</p>
             <p id="display-dob" class="text-[7px] text-zinc-500 font-bold uppercase tracking-widest">DOB: --/--/----</p>
@@ -118,42 +95,41 @@
     </div>
 
     <!-- Activation Banner -->
-    <div id="activation-banner" onclick="location.href='activation.html'" class="mb-8 p-4 bg-blue-600 rounded-[22px] flex justify-between items-center shadow-lg active:scale-95 transition">
+    <div id="activation-banner" class="mb-8 p-4 bg-blue-600 rounded-[22px] flex justify-between items-center shadow-lg">
         <div class="flex items-center gap-3">
-            <span id="reg-icon">🔑</span>
-            <span id="reg-txt" class="text-[10px] font-black uppercase text-white italic">Activation Required</span>
+            <span id="reg-icon">✅</span>
+            <span id="reg-txt" class="text-[10px] font-black uppercase text-white italic">SYSTEM ACTIVE</span>
         </div>
-        <span id="kit-label" class="text-[9px] font-bold text-blue-100 italic uppercase">CHECK KIT ></span>
+        <span id="kit-label" class="text-[9px] font-bold text-blue-100 italic uppercase italic">ADMIN MODE</span>
     </div>
 
     <!-- Feature Grid -->
     <div id="main-grid" class="grid grid-cols-2 gap-5 mb-8">
-        <div onclick="window.location.href='bp.html'" class="dash-card neon-red locked">
+        <div onclick="window.location.href='bp.html'" class="dash-card neon-red" id="card-bp">
             <div class="icon-box bg-red-600">🫀</div>
             <h2 id="m-bp" class="btn-text">BP Log</h2>
             <span id="live-bp" class="live-val">--/--</span>
         </div>
 
-        <div onclick="window.location.href='glucose.html'" class="dash-card neon-green locked">
+        <div onclick="window.location.href='glucose.html'" class="dash-card neon-green" id="card-glu">
             <div class="icon-box bg-green-600">🩸</div>
             <h2 id="m-glu" class="btn-text">Glucose</h2>
             <span id="live-glu" class="live-val">---</span>
         </div>
 
-        <div onclick="window.location.href='food.html'" class="dash-card neon-yellow locked">
+        <div onclick="window.location.href='food.html'" class="dash-card neon-yellow" id="card-food">
             <div class="icon-box bg-yellow-600">🥗</div>
             <h2 id="m-food" class="btn-text">Food Scan</h2>
         </div>
 
-        <div onclick="window.location.href='sync.html'" class="dash-card neon-blue locked">
+        <div onclick="window.location.href='sync.html'" class="dash-card neon-blue" id="card-sync">
             <div class="icon-box bg-blue-600">🔄</div>
             <h2 id="m-sync" class="btn-text">Full Sync</h2>
         </div>
     </div>
 
     <!-- Clinical Feedback Section -->
-    <div onclick="readMessage()" id="chat-card" class="chat-card mt-8 p-5 rounded-[28px] flex justify-between items-center cursor-pointer active:scale-95 transition locked">
-        <div id="msg-badge" class="badge-new">New Message</div>
+    <div onclick="window.location.href='feedback.html'" id="chat-card" class="chat-card mt-8 p-5 rounded-[28px] flex justify-between items-center cursor-pointer active:scale-95 transition">
         <div class="flex items-center gap-4 text-white">
             <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/20">
                 <span class="text-2xl">💬</span>
@@ -163,106 +139,36 @@
                 <p id="feed-d" class="text-purple-300/60 text-[9px] font-bold uppercase italic">Direct Channel with your Dr.</p>
             </div>
         </div>
-        <div id="msg-btn-label" class="bg-purple-600 text-white px-4 py-1 rounded-full text-[8px] font-black uppercase italic shadow-lg">Message</div>
+        <div class="bg-purple-600 text-white px-4 py-1 rounded-full text-[8px] font-black uppercase italic">Message</div>
     </div>
 
     <footer class="mt-16 opacity-30 text-center pb-10">
         <p class="text-[7px] font-bold uppercase italic text-zinc-500">Disclaimer: Not based on official medical records. 2026 Edition.</p>
     </footer>
 
-    <audio id="notification-sound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_1334914177.mp3" preload="auto"></audio>
-
     <script>
+        // EMERGENCY BYPASS INJECTION
+        // Si entramos aquí, forzamos que el sistema crea que está enrolado
+        if (!localStorage.getItem('montcode_onboarded')) {
+            localStorage.setItem('montcode_onboarded', 'true');
+            localStorage.setItem('mc_kit_id', 'ADMIN-TEST-2026');
+            localStorage.setItem('mc_patient_name', 'Admin User');
+        }
+
         let currentLang = localStorage.getItem('montcode_lang') || 'EN';
         
         function updateUI() {
             const isEN = currentLang === 'EN';
-            const license = JSON.parse(localStorage.getItem('montcode_activation'));
             
             // CARGA DE IDENTIDAD
-            const pName = localStorage.getItem('mc_patient_name') || "New Patient";
-            const pDob = localStorage.getItem('mc_patient_dob') || "--/--/----";
-            document.getElementById('display-name').innerText = pName;
-            document.getElementById('display-dob').innerText = `DOB: ${pDob}`;
-
+            document.getElementById('display-name').innerText = localStorage.getItem('mc_patient_name') || "Admin User";
+            document.getElementById('display-dob').innerText = `DOB: ${localStorage.getItem('mc_patient_dob') || "01/01/1980"}`;
             document.getElementById('langBtn').innerText = isEN ? '🇺🇸 English' : '🇪🇸 Español';
             
+            // TEXTOS BILINGÜES
             const texts = {
                 'm-bp': isEN ? 'BP Log' : 'Presión Art.',
                 'm-glu': isEN ? 'Glucose' : 'Glucosa',
                 'm-food': isEN ? 'Food Scan' : 'Escanear Comida',
                 'm-sync': isEN ? 'Full Sync' : 'Sincronizar',
-                'm-feed': isEN ? 'Clinical Feedback' : 'Mensajes Clínicos',
-                'feed-d': isEN ? 'Direct Channel with your Dr.' : 'Canal Directo con tu Dr.',
-                'msg-badge': isEN ? 'New Message' : 'Mensaje Nuevo',
-                'reg-txt': isEN ? (license?.isActive ? "SYSTEM ACTIVE" : "Activation Required") : (license?.isActive ? "SISTEMA ACTIVO" : "Activación Requerida"),
-                'kit-label': isEN ? (license?.isActive ? (localStorage.getItem('mc_kit_id') || "ACTIVE") : "CHECK KIT >") : (license?.isActive ? (localStorage.getItem('mc_kit_id') || "ACTIVO") : "VER KIT >")
-            };
-
-            for (let id in texts) { if(document.getElementById(id)) document.getElementById(id).innerText = texts[id]; }
-
-            const cards = document.querySelectorAll('.dash-card, #chat-card');
-            if (license && license.isActive) {
-                cards.forEach(c => c.classList.remove('locked'));
-                document.getElementById('activation-banner').className = "mb-8 p-4 active-status rounded-[22px] flex justify-between items-center shadow-lg";
-                document.getElementById('reg-icon').innerText = "✅";
-                loadClinicalAverages();
-            } else {
-                cards.forEach(c => c.classList.add('locked'));
-            }
-        }
-
-        function loadClinicalAverages() {
-            // Carga de Presión Arterial
-            const bpDb = JSON.parse(localStorage.getItem('mc_bp_master_2026')) || [];
-            if(bpDb.length > 0) {
-                const s = Math.round(bpDb.reduce((a,b)=>a+b.sys,0)/bpDb.length);
-                const d = Math.round(bpDb.reduce((a,b)=>a+b.dia,0)/bpDb.length);
-                document.getElementById('live-bp').innerText = `${s}/${d}`;
-            }
-
-            // Carga de Glucosa (Último valor)
-            const gluDb = JSON.parse(localStorage.getItem('mc_glucose_history')) || [];
-            if(gluDb.length > 0) {
-                document.getElementById('live-glu').innerText = `${gluDb[0].value} mg/dL`;
-            }
-        }
-
-        function incomingMessage() {
-            const chatCard = document.getElementById('chat-card');
-            if(chatCard.classList.contains('locked')) return;
-            const badge = document.getElementById('msg-badge');
-            const sound = document.getElementById('notification-sound');
-            chatCard.classList.add('critical-msg');
-            badge.style.display = 'block';
-            if (sound) sound.play().catch(() => {});
-        }
-
-        function readMessage() {
-            const chatCard = document.getElementById('chat-card');
-            const badge = document.getElementById('msg-badge');
-            chatCard.classList.remove('critical-msg');
-            badge.style.display = 'none';
-            window.location.href = 'feedback.html'; 
-        }
-
-        function toggleLang() {
-            currentLang = (currentLang === 'EN') ? 'ES' : 'EN';
-            localStorage.setItem('montcode_lang', currentLang);
-            updateUI();
-        }
-
-        function adminTrigger() {
-            window.adminTaps = (window.adminTaps || 0) + 1;
-            if (window.adminTaps === 5) window.location.href = 'admin-kit.html';
-            setTimeout(() => { window.adminTaps = 0; }, 3000);
-        }
-
-        window.onload = () => {
-            updateUI();
-            // Simulación de mensaje clínico tras 4 segundos
-            setTimeout(incomingMessage, 4000);
-        };
-    </script>
-</body>
-</html>
+                'm-
