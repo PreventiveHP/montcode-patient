@@ -1,81 +1,89 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MontCode™ | Sync Node</title>
+    <title>MontCode™ | Link to Station</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js"></script>
+    <!-- Lector QR -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap');
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
+        .scanner-box { border: 2px solid #ccff00; box-shadow: 0 0 20px rgba(204, 255, 0, 0.2); }
+        #reader { width: 100% !important; border: none !important; }
+        #reader video { border-radius: 20px; object-fit: cover; }
+    </style>
 </head>
-<body class="bg-black text-white flex flex-col items-center justify-center min-h-screen p-6 overflow-hidden">
+<body class="flex flex-col h-screen p-6">
 
-    <div class="text-center space-y-8 animate-in fade-in duration-700">
-        <div class="space-y-1">
-            <h1 class="text-3xl font-black italic uppercase tracking-tighter text-[#ccff00]">Sync Node</h1>
-            <p class="text-[8px] font-bold text-zinc-500 uppercase tracking-[0.4em]">P2P Clinical Bridge v2.6</p>
+    <header class="mb-8">
+        <h1 class="text-2xl font-black italic uppercase tracking-tighter">Link to Station</h1>
+        <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Scan Provider QR to sync profile</p>
+    </header>
+
+    <main class="flex-1 flex flex-col justify-center">
+        <div class="scanner-box rounded-[30px] overflow-hidden bg-zinc-900">
+            <div id="reader"></div>
         </div>
         
-        <div class="relative group">
-            <div class="absolute -inset-1 bg-[#ccff00]/20 rounded-[40px] blur-xl group-hover:opacity-100 transition"></div>
-            <div class="relative bg-white p-6 rounded-[32px] shadow-2xl">
-                <div id="qrcode"></div>
-            </div>
+        <div id="status-msg" class="mt-6 text-center text-[10px] font-black uppercase italic text-zinc-600">
+            Waiting for camera...
         </div>
+    </main>
 
-        <div class="space-y-3">
-            <div class="inline-block px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-full">
-                <p id="node-id" class="text-[10px] font-black uppercase tracking-widest text-[#ccff00]">Initializing...</p>
-            </div>
-            <p class="text-[9px] text-zinc-600 uppercase font-bold italic max-w-[200px] mx-auto leading-relaxed">
-                Point Provider Camera here to link this device
-            </p>
-        </div>
-    </div>
+    <footer class="mt-auto pb-6">
+        <button onclick="location.href='index.htm'" class="w-full py-4 rounded-2xl bg-zinc-900 text-zinc-400 font-black uppercase text-[10px] tracking-widest italic">
+            Cancel
+        </button>
+    </footer>
 
     <script>
-        function generateSyncQR() {
-            const container = document.getElementById("qrcode");
-            if (!container) return;
+        // 1. Obtener datos locales del paciente (encriptados/locales)
+        const patientData = {
+            kit: localStorage.getItem('kit_id') || 'ST-999',
+            name: localStorage.getItem('user_name') || 'Guest Patient',
+            dob: localStorage.getItem('user_dob') || '00/00/0000'
+        };
 
-            container.innerHTML = ""; // Limpiar rastro
+        const html5QrCode = new Html5Qrcode("reader");
 
-            // 1. Recuperar o Generar ID Único
-            let kitID = localStorage.getItem('my_kit_id');
-            if (!kitID) {
-                kitID = "MC-" + Math.random().toString(36).substring(2, 7).toUpperCase();
-                localStorage.setItem('my_kit_id', kitID);
-            }
+        const qrConfig = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-            // 2. Datos del Protocolo
-            const syncData = {
-                k: kitID,
-                n: "Active Patient",
-                v: "2.6-P2P",
-                r: "https://montcode-patient.vercel.app/api/relay"
-            };
+        html5QrCode.start({ facingMode: "environment" }, qrConfig, onScanSuccess);
 
-            document.getElementById('node-id').innerText = `ID: ${kitID}`;
+        async function onScanSuccess(decodedText) {
+            // Detenemos la cámara al detectar éxito
+            html5QrCode.stop();
+            document.getElementById('status-msg').innerText = "STATION DETECTED. ENROLLING...";
+            document.getElementById('status-msg').classList.add('text-[#ccff00]');
 
-            // 3. Renderizado con Reintento (Anti-Blanco)
-            if (typeof QRCode !== "undefined") {
-                new QRCode(container, {
-                    text: JSON.stringify(syncData),
-                    width: 220,
-                    height: 220,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.M
+            try {
+                // El QR del Dr tendrá una URL de tu Vercel: https://.../api/hub?station=STATION01
+                const targetUrl = decodedText; 
+
+                // Enviamos el "paquete de inscripción" (Sin nube, directo al hub de relevo)
+                const payload = {
+                    from: "PATIENT",
+                    type: "ENROLLMENT",
+                    data: btoa(JSON.stringify(patientData)) // Base64 para evitar errores de red
+                };
+
+                const response = await fetch(targetUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
-                console.log("QR Sync Ready");
-            } else {
-                console.warn("Library missing... retrying");
-                setTimeout(generateSyncQR, 500);
+
+                if (response.ok) {
+                    alert("✅ LINK SUCCESSFUL\nProfile sent to Station.");
+                    location.href = 'index.htm';
+                }
+            } catch (err) {
+                alert("❌ SYNC ERROR: Check Connection");
+                console.error(err);
             }
         }
-
-        // Forzar ejecución al cargar
-        window.onload = generateSyncQR;
-        document.addEventListener('DOMContentLoaded', generateSyncQR);
     </script>
 </body>
 </html>
