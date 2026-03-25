@@ -135,6 +135,7 @@
             <h2 id="m-food" class="btn-text">Food Scan</h2>
         </div>
 
+        <!-- INTEGRACIÓN SYNC.HTML -->
         <div onclick="window.location.href='sync.html'" class="dash-card neon-blue locked">
             <div class="icon-box bg-blue-600">🔄</div>
             <h2 id="m-sync" class="btn-text">Full Sync</h2>
@@ -232,9 +233,9 @@
 
         window.onload = () => {
             updateUI();
+            // Simulación de mensaje entrante a los 4 segundos
             setTimeout(incomingMessage, 4000);
         };
     </script>
 </body>
 </html>
- 
