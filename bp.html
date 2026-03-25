@@ -122,6 +122,36 @@
         document.getElementById('main-pad').classList.add('active');
     }
 
+    // --- INTEGRACIÓN HUB VERCEL ---
+    async function sendToHub(sys, dia, med) {
+        const kitID = localStorage.getItem('mc_kit_id') || "MC-BP-001";
+        const patientName = localStorage.getItem('mc_patient_name') || "User-Rescue";
+        
+        const payload = {
+            type: 'BP',
+            kit: kitID,
+            patient: patientName,
+            data: { 
+                sys: sys, 
+                dia: dia, 
+                med: med,
+                map: Math.round((sys + (2 * dia)) / 3)
+            },
+            timestamp: new Date().toLocaleString()
+        };
+
+        try {
+            await fetch('https://montcode-provider.vercel.app/api/hub', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            console.log("✈️ Sync Success");
+        } catch (e) {
+            console.warn("📡 Sync failed, local only.");
+        }
+    }
+
     async function saveBP() {
         if(currentInput.length < 5) return;
         const s = parseInt(currentInput.slice(0,3));
@@ -132,32 +162,8 @@
         db.push({ sys: s, dia: d, med: medTaken, d: new Date().toISOString() });
         localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
 
-        // --- LÓGICA CLÍNICA: FEEDBACK AL HUB DEL DR ---
-        const kitID = localStorage.getItem('mc_kit_id') || "MC-BP-001";
-        const patientName = localStorage.getItem('mc_patient_name') || "User-Rescue";
-
-        try {
-            const clinicalData = {
-                k: kitID,
-                n: patientName,
-                gl: 0, // Glucose no aplica aquí
-                sys: s,
-                dia: d,
-                ts: Date.now()
-            };
-
-            // Envío táctico al Hub (Sin esperar respuesta/No-Cors para velocidad)
-            fetch('https://montcode-provider.vercel.app/api/hub', {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({
-                    type: "CLINICAL_UPDATE",
-                    station: "BP-STATION",
-                    data: btoa(JSON.stringify(clinicalData))
-                })
-            });
-        } catch (e) { console.warn("Sync failed, saved locally."); }
-        // --- FIN LÓGICA HUB ---
+        // Envío automático al Dr.
+        await sendToHub(s, d, medTaken);
 
         runTriageSpeak(s, d);
         currentInput = ""; 
