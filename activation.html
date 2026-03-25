@@ -31,7 +31,7 @@
 </head>
 <body class="p-6">
     <header class="flex justify-between items-center mb-6">
-        <button onclick="location.href='index.html'" class="text-zinc-500 font-black text-[10px] uppercase tracking-widest flex items-center gap-2"><span>←</span> Back</button>
+        <button onclick="window.location.replace('index.html')" class="text-zinc-500 font-black text-[10px] uppercase tracking-widest flex items-center gap-2"><span>←</span> Cancel</button>
         <div><img src="logo.png.jpg" class="w-8 h-8 rounded-full border border-[#DAA520] object-cover"></div>
     </header>
     
@@ -46,7 +46,7 @@
 
     <div class="bg-zinc-900/80 p-6 rounded-[28px] border border-zinc-800 mb-8">
         <p class="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2 italic">
-            System Status: <span id="scan-status" class="text-zinc-400">Searching for Code...</span>
+            System Status: <span id="scan-status" class="text-zinc-400">Searching...</span>
         </p>
         <input type="text" id="masterID" placeholder="POINT AT KIT" readonly
                class="w-full bg-transparent font-black text-4xl text-white outline-none italic uppercase placeholder:text-zinc-800 tracking-tight">
@@ -58,7 +58,8 @@
 
     <script>
         let isKitDetected = false;
-        let doctorID = null;
+        let doctorID = "NONE";
+        let kitCode = "PENDING";
         let step = 1; 
 
         function startBarcodeScanner() {
@@ -72,6 +73,7 @@
                 const code = data.codeResult.code;
                 if (/^102/.test(code) && !isKitDetected) {
                     isKitDetected = true;
+                    kitCode = code;
                     document.getElementById('masterID').value = code;
                     document.getElementById('scan-status').innerText = "KIT VALIDATED ✓";
                     document.getElementById('scan-status').className = "text-green-500 font-black italic";
@@ -86,13 +88,11 @@
             if (step === 1) {
                 step = 2;
                 document.getElementById('step-title').innerText = "Doctor Link";
-                document.getElementById('step-desc').innerText = "Scan Doctor's Master QR Code";
+                document.getElementById('step-desc').innerText = "Scan Doctor QR";
                 document.getElementById('masterID').value = "";
                 document.getElementById('masterID').placeholder = "SCAN DR QR";
-                document.getElementById('scan-status').innerText = "Awaiting Doctor Scan...";
                 document.getElementById('btn-main').classList.add('disabled-btn');
-                document.getElementById('btn-main').innerText = "Scan Provider QR";
-                
+                document.getElementById('btn-main').innerText = "Waiting for QR...";
                 document.getElementById('interactive').style.display = "none";
                 document.getElementById('qr-reader').style.display = "block";
                 startQRScanner();
@@ -107,65 +107,49 @@
                 { facingMode: "environment" }, 
                 { fps: 10, qrbox: { width: 250, height: 250 } },
                 (decodedText) => {
-                    // El QR del Dr puede venir como "MC-DR-2026" o "DR_ID|PT_ID"
-                    doctorID = decodedText.includes('|') ? decodedText.split('|')[0] : decodedText;
-                    
+                    doctorID = decodedText;
                     document.getElementById('masterID').value = "DR-LINKED";
                     document.getElementById('scan-status').innerText = "DOCTOR IDENTIFIED ✓";
-                    document.getElementById('scan-status').className = "text-blue-400 font-black italic";
                     document.getElementById('btn-main').classList.remove('disabled-btn');
-                    document.getElementById('btn-main').innerText = "Complete Activation";
+                    document.getElementById('btn-main').innerText = "Complete Setup";
                     html5QrCode.stop();
                 }
             ).catch(err => console.error(err));
         }
 
         function finalizeActivation() {
-            const patientName = prompt("Patient Full Name:");
-            const patientDOB = prompt("Date of Birth (MM/DD/YYYY):");
+            const patientName = prompt("Patient Name:");
+            const patientDOB = prompt("DOB (MM/DD/YYYY):");
             
             if (patientName && patientDOB) {
-                // Obtenemos el ID del Kit que escaneamos en el paso 1 (guardado temporalmente)
-                // Nota: En un flujo real, deberías persistir el kitID del paso 1 en una variable global
-                const kitID = isKitDetected ? document.getElementById('masterID').dataset.kit : "MC-PENDING";
-
-                const activation = {
-                    id: kitID, 
+                // GUARDADO CRÍTICO PARA EL NUEVO INDEX.HTML
+                localStorage.setItem('mc_patient_name', patientName);
+                localStorage.setItem('mc_patient_dob', patientDOB);
+                localStorage.setItem('mc_linked_dr_id', doctorID);
+                localStorage.setItem('mc_kit_id', kitCode);
+                
+                // DATA OBJECT PARA EL VAULT
+                const activationData = {
+                    id: kitCode,
                     name: patientName,
                     dob: patientDOB,
                     provider_id: doctorID,
-                    setup_date: new Date().toLocaleDateString(),
-                    risk: 'stable',
                     status: 'Active',
-                    last_sync: 'Just now',
-                    isActive: true
+                    setup_date: new Date().toISOString()
                 };
-
-                // 1. Guardar la configuración maestra del paciente
-                localStorage.setItem('mc_config', JSON.stringify(activation));
+                localStorage.setItem('montcode_activation', JSON.stringify(activationData));
                 
-                // 2. Guardar el ID del Dr por separado para acceso rápido
-                localStorage.setItem('mc_dr_id', doctorID);
-                
-                document.getElementById('btn-main').innerText = "VINCULACIÓN EXITOSA";
+                document.getElementById('btn-main').innerText = "SUCCESSFUL LINK";
                 document.getElementById('btn-main').style.background = "#16a34a";
                 
                 if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
                 
+                // REDIRECCIÓN LIMPIA A INDEX.HTML (SIN .HTM)
                 setTimeout(() => { 
-                    location.href = 'index-patient.html'; 
-                }, 1500);
+                    window.location.replace('index.html'); 
+                }, 1000);
             }
         }
-
-        // Pequeño fix para guardar el kitID del paso 1
-        Quagga.onDetected((data) => {
-            const code = data.codeResult.code;
-            if (/^102/.test(code) && !isKitDetected) {
-                document.getElementById('masterID').dataset.kit = code; // Guardamos el código en un data-attribute
-                // ... resto del código Quagga igual que arriba
-            }
-        });
 
         window.onload = startBarcodeScanner;
     </script>
