@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MontCode™ Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Librería para el QR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { background: #000; color: white; font-family: sans-serif; visibility: hidden; overflow-x: hidden; }
         .dash-card { background: #111; border-radius: 20px; padding: 20px; transition: 0.2s; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 130px; border: 2px solid transparent; }
@@ -16,12 +18,31 @@
         .icon-box { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 1.6rem; }
         .logo-glow { border: 2px solid #DAA520; box-shadow: 0 0 20px rgba(218, 165, 32, 0.3); }
         .btn-text { font-size: 10px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-top: 4px; }
-        #sync-indicator { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); font-size: 8px; font-weight: 900; text-transform: uppercase; background: #16a34a; color: white; padding: 2px 10px; border-radius: 50px; display: none; z-index: 1000; }
+        
+        #dr-mailbox { display: none; background: #2563eb; color: white; padding: 12px; border-radius: 15px; margin-bottom: 20px; border: 2px solid #60a5fa; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
+        /* Estilos Modal QR */
+        #qr-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
     </style>
 </head>
 <body class="p-6 pb-24">
 
-    <div id="sync-indicator">Vault Synced ✓</div>
+    <!-- MODAL GENERADOR DE QR PARA EL DR -->
+    <div id="qr-modal" onclick="this.style.display='none'">
+        <div class="bg-white p-8 rounded-[40px] text-center max-w-xs w-full" onclick="event.stopPropagation()">
+            <p class="text-black font-black text-[12px] uppercase mb-4 tracking-tighter italic">Doctor Access Key</p>
+            <div id="qrcode-box" class="flex justify-center mb-6"></div>
+            <p class="text-[8px] text-zinc-400 font-bold uppercase mb-2">Show this to your provider</p>
+            <button onclick="document.getElementById('qr-modal').style.display='none'" class="w-full bg-red-600 text-white font-black py-4 rounded-2xl uppercase italic text-[10px]">Close</button>
+        </div>
+    </div>
+
+    <!-- BUZÓN DE NOTAS DEL DOCTOR -->
+    <div id="dr-mailbox">
+        <p class="text-[8px] font-black uppercase opacity-80 italic">📩 Message from Dr. Montalvan:</p>
+        <p id="dr-note-text" class="text-[11px] font-bold italic mt-1 uppercase"></p>
+    </div>
 
     <div class="flex justify-between items-start mb-8">
         <button id="langBtn" class="bg-white text-black text-[9px] font-black px-4 py-2 rounded-full uppercase italic">🇺🇸 English</button>
@@ -36,16 +57,20 @@
         <h1 class="text-3xl font-black tracking-tighter text-white uppercase italic">MONTCODE™</h1>
     </div>
 
-    <!-- PROVIDER STATUS BAR (ACTÚA COMO BOTÓN SI NO HAY LINK) -->
-    <div id="conn-banner" onclick="handleBannerClick()" class="mb-8 p-4 bg-zinc-900 border border-zinc-800 rounded-[22px] flex justify-between items-center transition active:scale-95">
-        <div class="flex items-center gap-3">
-            <span id="conn-icon" class="text-lg">🔗</span>
+    <!-- BOTÓN SHARE QR (Sustituye al banner de conexión) -->
+    <div onclick="openShareQR()" class="mb-8 p-5 bg-blue-600/10 border-2 border-blue-500/50 rounded-[28px] flex justify-between items-center active:scale-95 transition">
+        <div class="flex items-center gap-4">
+            <span class="text-2xl">📱</span>
             <div>
-                <span id="conn-txt" class="text-[9px] font-black uppercase text-white italic">Provider Connection</span>
-                <p id="dr-status" class="text-[7px] text-zinc-500 font-bold uppercase tracking-tighter italic">Tap to link provider</p>
+                <span class="text-[10px] font-black uppercase text-blue-400 italic">Share with Doctor</span>
+                <p class="text-[7px] text-blue-300/60 font-bold uppercase italic">Generate connection QR</p>
             </div>
         </div>
-        <div id="status-led" class="w-2 h-2 rounded-full bg-zinc-700"></div>
+        <div class="bg-blue-500 p-2 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" />
+            </svg>
+        </div>
     </div>
 
     <div class="grid grid-cols-2 gap-5 mb-8">
@@ -70,69 +95,44 @@
     <script>
         function checkEnrolment() {
             const profileName = localStorage.getItem('mc_patient_name');
-            // Si no tiene nombre, forzamos activación inicial
             if (!profileName) {
                 window.location.replace('activation.html');
             } else {
                 document.body.style.visibility = 'visible';
-                updateHub();
-                pushDataToDoctor();
+                loadProfile();
+                checkForDoctorNotes();
             }
         }
 
-        function updateHub() {
+        function loadProfile() {
             document.getElementById('display-name').innerText = localStorage.getItem('mc_patient_name') || "User";
             document.getElementById('display-dob').innerText = `DOB: ${localStorage.getItem('mc_patient_dob') || "--/--/----"}`;
-            
-            const linkedDr = localStorage.getItem('mc_linked_dr_id');
-            const providerName = localStorage.getItem('mc_provider_name');
-            
-            if(linkedDr) {
-                document.getElementById('dr-status').innerText = (providerName || "Doctor Console") + " | ACTIVE";
-                document.getElementById('status-led').className = "w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#16a34a]";
-                document.getElementById('conn-icon').innerText = "🛡️";
-            }
         }
 
-        function handleBannerClick() {
-            const linkedDr = localStorage.getItem('mc_linked_dr_id');
-            if (!linkedDr) {
-                window.location.href = 'activation.html';
-            } else {
-                // Opcional: Ir a una página de detalles del proveedor o historial de sync
-                console.log("Already linked to provider.");
-            }
+        // GENERAR QR DE LA URL ACTUAL
+        function openShareQR() {
+            const qrBox = document.getElementById('qrcode-box');
+            qrBox.innerHTML = "";
+            // Genera el QR con la URL real de Vercel del paciente
+            new QRCode(qrBox, {
+                text: window.location.href, 
+                width: 200,
+                height: 200,
+                colorDark : "#000000",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+            document.getElementById('qr-modal').style.display = 'flex';
         }
 
-        async function pushDataToDoctor() {
-            const drId = localStorage.getItem('mc_linked_dr_id');
-            const kitId = localStorage.getItem('mc_kit_id');
-            if (!drId || !kitId) return;
-
-            const patientPayload = {
-                id: kitId,
-                dr_target: drId,
-                name: localStorage.getItem('mc_patient_name'),
-                dob: localStorage.getItem('mc_patient_dob'),
-                last_bp: localStorage.getItem('last_bp_value') || "--/--",
-                last_glu: localStorage.getItem('last_glucose_value') || "--",
-                risk: localStorage.getItem('current_risk_level') || "stable",
-                last_sync: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
-
-            try {
-                // Simulación de persistencia local para la consola del Dr
-                let sharedVault = JSON.parse(localStorage.getItem('mc_patients') || '[]');
-                const index = sharedVault.findIndex(p => p.id === kitId);
-                if(index > -1) sharedVault[index] = patientPayload;
-                else sharedVault.push(patientPayload);
-                
-                localStorage.setItem('mc_patients', JSON.stringify(sharedVault));
-
-                const indicator = document.getElementById('sync-indicator');
-                indicator.style.display = 'block';
-                setTimeout(() => indicator.style.display = 'none', 1500);
-            } catch (e) { console.warn("Local sync failed."); }
+        function checkForDoctorNotes() {
+            const params = new URLSearchParams(window.location.search);
+            const nota = params.get('nota');
+            if (nota) {
+                const mailbox = document.getElementById('dr-mailbox');
+                const noteText = document.getElementById('dr-note-text');
+                mailbox.style.display = 'block';
+                noteText.innerText = decodeURIComponent(nota).replace(/_/g, ' ');
+            }
         }
 
         window.onload = checkEnrolment;
