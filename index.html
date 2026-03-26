@@ -5,184 +5,114 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MontCode™ Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Solo para pintar el QR que el Dr. va a escanear -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700;900&display=swap');
-        
-        body { background: #000; color: white; font-family: 'Inter', sans-serif; visibility: hidden; overflow-x: hidden; }
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .tech-font { font-family: 'Orbitron', sans-serif; }
-        
         .dash-card { background: #111; border-radius: 24px; padding: 20px; transition: 0.2s; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 140px; border: 2px solid transparent; }
-        .dash-card:active { transform: scale(0.92); filter: brightness(1.3); }
-        
-        .neon-red { border-color: #dc2626; box-shadow: 0 0 15px rgba(220, 38, 38, 0.1); }
-        .neon-green { border-color: #16a34a; box-shadow: 0 0 15px rgba(22, 163, 74, 0.1); }
-        .neon-blue { border-color: #2563eb; box-shadow: 0 0 15px rgba(37, 99, 235, 0.1); }
-        .neon-yellow { border-color: #eab308; box-shadow: 0 0 15px rgba(234, 179, 8, 0.1); }
-        
+        .dash-card:active { transform: scale(0.92); }
+        .neon-red { border-color: #dc2626; }
+        .neon-green { border-color: #16a34a; }
+        .neon-blue { border-color: #2563eb; }
+        .neon-yellow { border-color: #eab308; }
         .icon-box { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 1.5rem; }
-        .logo-glow { border: 2px solid #DAA520; box-shadow: 0 0 20px rgba(218, 165, 32, 0.3); }
-        .btn-text { font-size: 10px; font-weight: 900; text-transform: uppercase; font-style: italic; tracking: tight; }
-        
-        #dr-mailbox { display: none; background: #2563eb; color: white; padding: 16px; border-radius: 20px; margin-bottom: 24px; border: 2px solid #60a5fa; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.98); } }
-
-        #qr-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 2000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(10px); }
+        #qr-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(10px); }
+        #dr-mailbox { display: none; background: #2563eb; color: white; padding: 16px; border-radius: 20px; margin-bottom: 24px; border: 2px solid #60a5fa; }
     </style>
 </head>
 <body class="p-6 pb-24">
 
-    <!-- QR MODAL (SOLO GENERA IMAGEN, NO USA CÁMARA) -->
+    <!-- MODAL QR (ESTÁTICO) -->
     <div id="qr-modal" onclick="this.style.display='none'">
         <div class="bg-white p-8 rounded-[40px] text-center max-w-xs w-full" onclick="event.stopPropagation()">
-            <p class="text-black font-black text-[12px] uppercase mb-4 tracking-tighter italic tech-font">Doctor Access Key</p>
+            <p class="text-black font-black text-[12px] uppercase mb-4 tech-font italic">Doctor Access Key</p>
             <div id="qrcode-box" class="flex justify-center mb-6"></div>
-            <p id="qr-footer-msg" class="text-[8px] text-zinc-400 font-bold uppercase mb-4">Show this to your provider</p>
             <button onclick="document.getElementById('qr-modal').style.display='none'" class="w-full bg-red-600 text-white font-black py-4 rounded-2xl uppercase italic text-[10px]">Close</button>
         </div>
     </div>
 
-    <!-- NOTAS DEL DOCTOR -->
-    <div id="dr-mailbox">
-        <p class="text-[8px] font-black uppercase opacity-80 italic">📩 <span id="msg-header">Message from Dr. Montalvan:</span></p>
-        <p id="dr-note-text" class="text-[12px] font-bold italic mt-1 uppercase tracking-tight"></p>
+    <!-- NOTA DEL DOCTOR -->
+    <div id="dr-mailbox" id="mailbox-container">
+        <p class="text-[8px] font-black uppercase opacity-80 italic">📩 Message from Dr. Montalvan:</p>
+        <p id="dr-note-text" class="text-[12px] font-bold italic mt-1 uppercase"></p>
     </div>
 
-    <!-- CABECERA -->
+    <!-- HEADER -->
     <div class="flex justify-between items-start mb-8">
-        <button id="langBtn" onclick="toggleLanguage()" class="bg-white text-black text-[9px] font-black px-4 py-2 rounded-full uppercase italic">🇺🇸 English</button>
+        <button onclick="toggleLang()" id="langBtn" class="bg-white text-black text-[9px] font-black px-4 py-2 rounded-full uppercase italic">🇺🇸 English</button>
         <div class="text-right">
-            <p id="display-name" class="text-[11px] font-black text-blue-500 uppercase italic tech-font">User</p>
-            <p id="display-dob" class="text-[7px] text-zinc-500 font-bold uppercase tracking-widest italic">DOB: --/--/----</p>
+            <p id="p-name" class="text-[11px] font-black text-blue-500 uppercase italic tech-font">User</p>
+            <p id="p-dob" class="text-[7px] text-zinc-500 font-bold uppercase italic">DOB: --/--/----</p>
         </div>
     </div>
 
-    <!-- LOGO PRINCIPAL -->
-    <div class="flex flex-col items-center justify-center mb-10 w-full">
-        <img src="logo.png.jpg" class="w-24 h-24 rounded-full logo-glow object-cover mb-4">
-        <h1 class="text-3xl font-black tracking-tighter text-white uppercase italic tech-font">MONTCODE™</h1>
+    <!-- LOGO -->
+    <div class="flex flex-col items-center mb-10">
+        <img src="logo.png.jpg" class="w-20 h-20 rounded-full border-2 border-[#DAA520] mb-4 object-cover">
+        <h1 class="text-2xl font-black tech-font italic uppercase">MONTCODE™</h1>
     </div>
 
-    <!-- BANNER DE CONEXIÓN (Muestra el QR Modal anterior) -->
-    <div onclick="openShareQR()" class="mb-8 p-5 bg-blue-600/10 border-2 border-blue-500/50 rounded-[30px] flex justify-between items-center active:scale-95 transition">
+    <!-- SHARE BANNER -->
+    <div onclick="showQR()" class="mb-8 p-5 bg-blue-900/20 border-2 border-blue-500/30 rounded-[30px] flex justify-between items-center active:scale-95 transition">
         <div class="flex items-center gap-4">
             <span class="text-2xl">📱</span>
             <div>
-                <span id="link-title" class="text-[10px] font-black uppercase text-blue-400 italic">Share Dashboard</span>
-                <p id="link-subtitle" class="text-[7px] text-blue-300/60 font-bold uppercase italic">Link live data with Provider</p>
+                <p class="text-[10px] font-black uppercase text-blue-400 italic">Share Dashboard</p>
+                <p class="text-[7px] text-blue-300/50 font-bold uppercase italic">Link with Provider</p>
             </div>
         </div>
-        <div class="bg-blue-500 p-1.5 rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-            </svg>
+        <div class="bg-blue-600 p-2 rounded-full">
+            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"></path></svg>
         </div>
     </div>
 
-    <!-- GRID DE OPCIONES -->
+    <!-- GRID -->
     <div class="grid grid-cols-2 gap-5 mb-8">
         <div onclick="location.href='bp.html'" class="dash-card neon-red">
             <div class="icon-box bg-red-600">🫀</div>
-            <h2 id="btn-bp" class="btn-text">BP Log</h2>
+            <p class="text-[10px] font-black uppercase italic">BP Log</p>
         </div>
         <div onclick="location.href='glucose.html'" class="dash-card neon-green">
             <div class="icon-box bg-green-600">🩸</div>
-            <h2 id="btn-glucose" class="btn-text">Glucose</h2>
+            <p class="text-[10px] font-black uppercase italic">Glucose</p>
         </div>
         <div onclick="location.href='food.html'" class="dash-card neon-yellow">
             <div class="icon-box bg-yellow-600">🥗</div>
-            <h2 id="btn-food" class="btn-text">Food Scan</h2>
+            <p class="text-[10px] font-black uppercase italic">Food Scan</p>
         </div>
         <div onclick="location.href='activation.html'" class="dash-card neon-blue">
             <div class="icon-box bg-blue-600">🆔</div>
-            <h2 id="btn-kit" class="btn-text">Kit Activation</h2>
+            <p class="text-[10px] font-black uppercase italic">Activation</p>
         </div>
     </div>
 
     <script>
-        let currentLang = 'en';
-
-        const TRANSLATIONS = {
-            en: {
-                bp: "BP Log", glucose: "Glucose", food: "Food Scan", kit: "Kit Activation",
-                linkT: "Share Dashboard", linkS: "Link live data with Provider",
-                msgH: "Message from Dr. Montalvan:", qrF: "Show this to your provider",
-                langLabel: "🇺🇸 English"
-            },
-            es: {
-                bp: "Presión Art.", glucose: "Glucosa", food: "Escanear Comida", kit: "Activar Kit",
-                linkT: "Compartir Panel", linkS: "Vincular datos con el Médico",
-                msgH: "Mensaje del Dr. Montalvan:", qrF: "Muestre esto a su médico",
-                langLabel: "🇪🇸 Español"
+        // Cargar Datos
+        window.onload = () => {
+            document.getElementById('p-name').innerText = localStorage.getItem('mc_patient_name') || "User";
+            document.getElementById('p-dob').innerText = "DOB: " + (localStorage.getItem('mc_patient_dob') || "--/--/----");
+            
+            // Ver si hay nota del Dr
+            const n = new URLSearchParams(window.location.search).get('nota');
+            if(n) {
+                document.getElementById('dr-mailbox').style.display = 'block';
+                document.getElementById('dr-note-text').innerText = decodeURIComponent(n).replace(/_/g,' ');
             }
         };
 
-        function toggleLanguage() {
-            currentLang = currentLang === 'en' ? 'es' : 'en';
-            updateUI();
-        }
-
-        function updateUI() {
-            const t = TRANSLATIONS[currentLang];
-            document.getElementById('langBtn').innerText = t.langLabel;
-            document.getElementById('btn-bp').innerText = t.bp;
-            document.getElementById('btn-glucose').innerText = t.glucose;
-            document.getElementById('btn-food').innerText = t.food;
-            document.getElementById('btn-kit').innerText = t.kit;
-            document.getElementById('link-title').innerText = t.linkT;
-            document.getElementById('link-subtitle').innerText = t.linkS;
-            document.getElementById('msg-header').innerText = t.msgH;
-            document.getElementById('qr-footer-msg').innerText = t.qrF;
-        }
-
-        // CONTROL DE ENROLAMIENTO (REDIRECCIÓN)
-        function checkEnrolment() {
-            const profileName = localStorage.getItem('mc_patient_name');
-            if (!profileName) {
-                // Si no hay nombre, el usuario NO está enrolado -> Mandar a activación
-                window.location.replace('activation.html');
-            } else {
-                // Usuario enrolado -> Mostrar Dashboard
-                document.body.style.visibility = 'visible';
-                loadProfile();
-                checkForDoctorNotes();
-                updateUI();
-            }
-        }
-
-        function loadProfile() {
-            document.getElementById('display-name').innerText = localStorage.getItem('mc_patient_name') || "User";
-            document.getElementById('display-dob').innerText = `DOB: ${localStorage.getItem('mc_patient_dob') || "--/--/----"}`;
-        }
-
-        function openShareQR() {
-            const qrBox = document.getElementById('qrcode-box');
-            qrBox.innerHTML = "";
-            // Genera el QR del link actual sin parámetros extra
-            const link = window.location.href.split('?')[0];
-            new QRCode(qrBox, {
-                text: link,
-                width: 200,
-                height: 200,
-                colorDark : "#000000",
-                correctLevel : QRCode.CorrectLevel.H
-            });
+        function showQR() {
+            const box = document.getElementById('qrcode-box');
+            box.innerHTML = "";
+            new QRCode(box, { text: window.location.href.split('?')[0], width: 200, height: 200 });
             document.getElementById('qr-modal').style.display = 'flex';
         }
 
-        function checkForDoctorNotes() {
-            const params = new URLSearchParams(window.location.search);
-            const nota = params.get('nota');
-            if (nota) {
-                const mailbox = document.getElementById('dr-mailbox');
-                const noteText = document.getElementById('dr-note-text');
-                mailbox.style.display = 'block';
-                noteText.innerText = decodeURIComponent(nota).replace(/_/g, ' ');
-            }
+        function toggleLang() {
+            const b = document.getElementById('langBtn');
+            b.innerText = b.innerText.includes('USA') ? '🇪🇸 Spanish' : '🇺🇸 English';
         }
-
-        // Ejecutar al cargar
-        window.onload = checkEnrolment;
     </script>
 </body>
 </html>
