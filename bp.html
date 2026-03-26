@@ -41,15 +41,15 @@
     <div class="status-banner" id="status-box">
         <div class="flex items-center gap-3">
             <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-            <p class="text-blue-500 font-black uppercase text-[10px] tracking-widest" id="status-text">READY FOR INPUT</p>
+            <p class="text-blue-500 font-black uppercase text-[10px] tracking-widest" id="status-text">CONNECTING HUB...</p>
         </div>
     </div>
 
     <div class="flex flex-wrap gap-2 mb-4 justify-center">
-        <div class="cond-chip" id="chip-HTN" onclick="this.classList.toggle('active'); updateUI();">HTN</div>
-        <div class="cond-chip" id="chip-DM" onclick="this.classList.toggle('active'); updateUI();">DM</div>
-        <div class="cond-chip" id="chip-STROKE" onclick="this.classList.toggle('active'); updateUI();">HX STROKE</div>
-        <div class="cond-chip" id="chip-CKD" onclick="this.classList.toggle('active'); updateUI();">CKD</div>
+        <div class="cond-chip" id="chip-HTN" onclick="toggleChip(this)">HTN</div>
+        <div class="cond-chip" id="chip-DM" onclick="toggleChip(this)">DM</div>
+        <div class="cond-chip" id="chip-STROKE" onclick="toggleChip(this)">HX STROKE</div>
+        <div class="cond-chip" id="chip-CKD" onclick="toggleChip(this)">CKD</div>
     </div>
 
     <div class="grid grid-cols-4 gap-1 mb-4">
@@ -66,8 +66,8 @@
         </div>
     </div>
 
-    <div id="display" class="display-bp">---/--</div>
-    <p class="text-center text-[7px] font-bold text-zinc-500 uppercase mb-4 italic">Enter numbers manually</p>
+    <div id="display" class="display-bp">---/---</div>
+    <p class="text-center text-[7px] font-bold text-zinc-500 uppercase mb-4 italic">Format: 120080</p>
 
     <div class="num-pad" id="main-pad">
         <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div><div class="key" onclick="press('3')">3</div>
@@ -88,7 +88,7 @@
         <button onclick="clearAll()" class="w-full p-2 text-zinc-800 text-[8px] font-black uppercase lang-clear">Clear History 🗑️</button>
     </div>
 
-    <footer class="mt-8 text-[6px] text-zinc-700 text-center uppercase font-bold px-8 pb-10 leading-relaxed">
+    <footer class="mt-8 text-[6px] text-zinc-700 text-center uppercase font-bold px-8 pb-10 leading-relaxed italic">
         *Disclaimer: All information provided by the patient using the app is not based on official medical records. 2026 Edition.*
     </footer>
 
@@ -97,7 +97,7 @@
         <div class="bg-white rounded-3xl p-8 w-full max-w-xs text-center">
             <p class="text-blue-900 font-black text-[10px] uppercase mb-4 tracking-tighter">MontCode™ Tactical Bridge</p>
             <div id="qrcode" class="bg-white p-2 inline-block rounded-lg mb-4 mx-auto"></div>
-            <p class="text-[7px] text-gray-400 uppercase font-bold mb-6">Point-to-Point Payload.</p>
+            <p class="text-[7px] text-gray-400 uppercase font-bold mb-6 italic">Point-to-Point Payload.</p>
             <button onclick="document.getElementById('qrModal').classList.add('hidden')" class="bg-red-600 text-white w-full py-3 rounded-xl font-bold text-[10px] uppercase">Close Bridge</button>
         </div>
     </div>
@@ -123,39 +123,56 @@
 
     function unlockHardware() {
         const box = document.getElementById('status-box');
-        if(box) {
-            box.classList.add('bg-blue-900/10', 'border-blue-500/30');
-            box.classList.remove('border-dashed');
-            document.getElementById('status-text').innerText = "BP DEVICE SYNCED ✅";
-        }
+        box.classList.add('bg-blue-900/10', 'border-blue-500/30');
+        box.classList.remove('border-dashed');
+        document.getElementById('status-text').innerText = DR_LINK ? "HUB CONNECTED 📡" : "LOCAL MODE ACTIVE 📱";
         document.getElementById('main-pad').classList.add('active');
+    }
+
+    function toggleChip(el) {
+        el.classList.toggle('active');
+        updateUI();
+    }
+
+    function announceBP(sys, dia) {
+        const msg = new SpeechSynthesisUtterance(`Presión registrada: ${sys} sobre ${dia}. Guardando.`);
+        msg.lang = 'es-US';
+        msg.rate = 0.9;
+        window.speechSynthesis.speak(msg);
     }
 
     async function sendToHub(sys, dia, med) {
         if(!DR_LINK) return; 
-        
         const payload = {
             id: KIT_ID,
             dr_id: DR_LINK,
             type: 'BP_UPDATE',
             name: PATIENT_NAME,
-            data: { sys, dia, med, map: Math.round((sys + (2 * dia)) / 3), timestamp: new Date().toISOString() }
+            data: { sys, dia, med, timestamp: new Date().toISOString() }
         };
 
         try {
-            await fetch('https://montcode-provider.vercel.app/api/hub', {
+            const res = await fetch('https://montcode-provider.vercel.app/api/hub', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-        } catch (e) { console.warn("Offline Sync Saved."); }
+            if(res.ok) console.log("Cloud Sync OK");
+        } catch (e) { 
+            console.warn("Offline: Data stored locally for QR Sync."); 
+        }
     }
 
     async function saveBP() {
-        if(currentInput.length < 6) return alert("Enter complete reading (e.g., 120080)");
+        if(currentInput.length < 6) {
+            alert("Error: Enter 6 digits (Ex: 120080)");
+            return;
+        }
         const s = parseInt(currentInput.slice(0,3));
         const d = parseInt(currentInput.slice(3,6));
         const medTaken = document.getElementById('med-toggle').classList.contains('active');
+        
+        announceBP(s, d);
         
         db.push({ sys: s, dia: d, med: medTaken, d: new Date().toISOString() });
         localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
@@ -166,7 +183,7 @@
         updateDisplay(); 
         updateUI();
         document.getElementById('med-toggle').classList.remove('active');
-        if(navigator.vibrate) navigator.vibrate(100);
+        if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
     }
 
     function press(n) {
@@ -178,7 +195,18 @@
 
     function updateDisplay() {
         let s = currentInput.padEnd(6, '-');
+        // El visualizador ahora muestra el "/" correctamente
         document.getElementById('display').innerText = s.slice(0,3) + "/" + s.slice(3,6);
+        
+        // Efecto visual de "Listo para guardar"
+        const displayEl = document.getElementById('display');
+        if(currentInput.length === 6) {
+            displayEl.classList.add('text-green-500');
+            displayEl.classList.remove('text-blue-500');
+        } else {
+            displayEl.classList.remove('text-green-500');
+            displayEl.classList.add('text-blue-500');
+        }
     }
 
     function updateUI() {
@@ -199,11 +227,11 @@
         chart = new Chart(ctx, {
             type: 'line',
             data: { labels: [], datasets: [
-                { label: 'SYS', data: [], borderColor: '#fff', borderWidth: 3, tension: 0.3, pointRadius: 4 },
-                { label: 'DIA', data: [], borderColor: '#3b82f6', borderWidth: 3, tension: 0.3, pointRadius: 4 }
+                { label: 'SYS', data: [], borderColor: '#fff', borderWidth: 2, tension: 0.4, pointRadius: 2 },
+                { label: 'DIA', data: [], borderColor: '#3b82f6', borderWidth: 2, tension: 0.4, pointRadius: 2 }
             ]},
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-                scales: { y: { grid: { color: '#111' }, ticks: { color: '#444' } }, x: { ticks: { color: '#444', font: { size: 8 } } } }
+                scales: { y: { grid: { color: '#111' }, ticks: { color: '#444', font: { size: 8 } } }, x: { ticks: { color: '#444', font: { size: 8 } } } }
             }
         });
     }
@@ -217,13 +245,13 @@
     }
 
     function getAHAClass(sys, dia) {
-        const isCKD_DM = document.getElementById('chip-DM').classList.contains('active') || document.getElementById('chip-CKD').classList.contains('active');
+        const isDM = document.getElementById('chip-DM').classList.contains('active');
         if (sys >= 180 || dia >= 120) return { l: "CRISIS", c: "#ff0000", r: "Seek emergency care immediately." };
-        if (sys >= 140 || dia >= 90) return { l: "STAGE 2", c: "#f97316", r: "Consult Dr. regarding medication adjustment." };
-        if (sys >= 130 || dia >= 80) return { l: "STAGE 1", c: "#fbbf24", r: "Lifestyle changes & follow-up required." };
-        if (isCKD_DM && (sys >= 120 || dia >= 80)) return { l: "ELEVATED (Risk)", c: "#facc15", r: "For DM/CKD, target is below 130/80." };
-        if (sys >= 120 && dia < 80) return { l: "ELEVATED", c: "#facc15", r: "Monitor closely for trend progression." };
-        return { l: "NORMAL", c: "#22c55e", r: "Continue maintaining healthy control." };
+        if (sys >= 140 || dia >= 90) return { l: "STAGE 2", c: "#f97316", r: "Consult Dr. regarding meds." };
+        if (sys >= 130 || dia >= 80) return { l: "STAGE 1", c: "#fbbf24", r: "Lifestyle changes & follow-up." };
+        if (isDM && (sys >= 120 || dia >= 80)) return { l: "RISK (DM)", c: "#facc15", r: "Diabetes requires <130/80." };
+        if (sys >= 120 && dia < 80) return { l: "ELEVATED", c: "#facc15", r: "Monitor closely." };
+        return { l: "NORMAL", c: "#22c55e", r: "Maintain current control." };
     }
 
     function setLang(lang) {
@@ -247,7 +275,9 @@
         const qrContainer = document.getElementById('qrcode');
         qrContainer.innerHTML = "";
         modal.classList.remove('hidden');
-        new QRCode(qrContainer, { text: JSON.stringify({id: KIT_ID, name: PATIENT_NAME, data: db.slice(-5)}), width: 200, height: 200 });
+        // Transmisión asíncrona vía QR (Fail-safe)
+        const payload = { kit: KIT_ID, name: PATIENT_NAME, latest: db.slice(-10), conditions: Array.from(document.querySelectorAll('.cond-chip.active')).map(c => c.innerText) };
+        new QRCode(qrContainer, { text: JSON.stringify(payload), width: 200, height: 200 });
     }
 
     function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_bp_master_2026'); location.reload(); } }
@@ -257,30 +287,9 @@
         const doc = new jsPDF();
         const avgSys = document.getElementById('sys-val').innerText;
         const avgDia = document.getElementById('dia-val').innerText;
-        const cls = getAHAClass(parseInt(avgSys), parseInt(avgDia));
-        const activeConds = Array.from(document.querySelectorAll('.cond-chip.active')).map(c => c.innerText).join(', ');
-
-        doc.setFillColor(0, 51, 102); doc.rect(0, 0, 210, 45, 'F');
-        doc.setTextColor(255, 255, 255); doc.setFontSize(20); doc.text("MontCode™ Clinical BP Report", 15, 20);
-        doc.setFontSize(10); doc.text(`PATIENT: ${PATIENT_NAME} | DOB: ${PATIENT_DOB} | KIT: ${KIT_ID}`, 15, 30);
-        doc.text(`AVG: ${avgSys}/${avgDia} mmHg | STATUS: ${cls.l}`, 15, 38);
-
-        doc.setTextColor(0); doc.setFontSize(12); doc.text("Hemodynamic Analysis", 15, 60);
-        const chartData = document.getElementById('bpChart').toDataURL('image/png');
-        doc.addImage(chartData, 'PNG', 15, 65, 180, 75);
-        
-        doc.setFont("helvetica", "bold"); doc.text("Clinical Recommendation:", 15, 170);
-        doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text(cls.r, 15, 178);
-
-        let y = 200;
-        doc.setFont("helvetica", "bold"); doc.text("Recent Historical Logs (Last 12):", 15, 195);
-        db.slice(-12).reverse().forEach(log => {
-            if (y < 280) {
-                doc.text(`${new Date(log.d).toLocaleString()} | ${log.sys}/${log.dia} mmHg | Med: ${log.med?'YES':'NO'}`, 15, y);
-                y += 7;
-            }
-        });
-        doc.save(`BP_Report_${PATIENT_NAME.replace(/\s/g, '_')}.pdf`);
+        doc.text(`Patient: ${PATIENT_NAME}`, 10, 10);
+        doc.text(`BP Average: ${avgSys}/${avgDia}`, 10, 20);
+        doc.save(`BP_Report_${PATIENT_NAME}.pdf`);
     }
 </script>
 </body>
