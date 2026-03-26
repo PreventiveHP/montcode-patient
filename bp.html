@@ -29,7 +29,6 @@
 
     <div class="flex justify-between items-center mb-4">
         <div class="flex flex-col">
-            <!-- RUTA INDEX MANTENIDA -->
             <button onclick="window.location.href='index.html'" class="w-fit bg-zinc-900 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase italic border border-zinc-800 mb-2 active:scale-90 transition">← Dashboard</button>
             <p id="patient-display" class="text-[10px] font-black text-blue-500 uppercase italic tracking-tighter">Loading Patient...</p>
         </div>
@@ -133,20 +132,14 @@
     }
 
     async function sendToHub(sys, dia, med) {
-        if(!DR_LINK) return; // Si no hay doctor, no enviamos nada
+        if(!DR_LINK) return; 
         
         const payload = {
             id: KIT_ID,
             dr_id: DR_LINK,
             type: 'BP_UPDATE',
             name: PATIENT_NAME,
-            data: { 
-                sys: sys, 
-                dia: dia, 
-                med: med, 
-                map: Math.round((sys + (2 * dia)) / 3),
-                timestamp: new Date().toISOString()
-            }
+            data: { sys, dia, med, map: Math.round((sys + (2 * dia)) / 3), timestamp: new Date().toISOString() }
         };
 
         try {
@@ -155,11 +148,11 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-        } catch (e) { console.warn("Offline Sync. Data kept locally."); }
+        } catch (e) { console.warn("Offline Sync Saved."); }
     }
 
     async function saveBP() {
-        if(currentInput.length < 5) return alert("Enter complete reading (e.g., 120080)");
+        if(currentInput.length < 6) return alert("Enter complete reading (e.g., 120080)");
         const s = parseInt(currentInput.slice(0,3));
         const d = parseInt(currentInput.slice(3,6));
         const medTaken = document.getElementById('med-toggle').classList.contains('active');
@@ -167,14 +160,13 @@
         db.push({ sys: s, dia: d, med: medTaken, d: new Date().toISOString() });
         localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
 
-        // ENVÍO AL HUB
         await sendToHub(s, d, medTaken);
         
         currentInput = ""; 
         updateDisplay(); 
         updateUI();
         document.getElementById('med-toggle').classList.remove('active');
-        alert("Reading Saved!");
+        if(navigator.vibrate) navigator.vibrate(100);
     }
 
     function press(n) {
@@ -255,10 +247,7 @@
         const qrContainer = document.getElementById('qrcode');
         qrContainer.innerHTML = "";
         modal.classList.remove('hidden');
-        new QRCode(qrContainer, {
-            text: JSON.stringify({id: KIT_ID, name: PATIENT_NAME, data: db.slice(-5)}),
-            width: 200, height: 200
-        });
+        new QRCode(qrContainer, { text: JSON.stringify({id: KIT_ID, name: PATIENT_NAME, data: db.slice(-5)}), width: 200, height: 200 });
     }
 
     function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_bp_master_2026'); location.reload(); } }
@@ -272,28 +261,25 @@
         const activeConds = Array.from(document.querySelectorAll('.cond-chip.active')).map(c => c.innerText).join(', ');
 
         doc.setFillColor(0, 51, 102); doc.rect(0, 0, 210, 45, 'F');
-        doc.setTextColor(255, 255, 255); doc.setFontSize(22); doc.text("MontCode™ Clinical BP Report", 15, 20);
-        doc.setFontSize(10); 
-        doc.text(`PATIENT: ${PATIENT_NAME} | DOB: ${PATIENT_DOB} | KIT: ${KIT_ID}`, 15, 30);
+        doc.setTextColor(255, 255, 255); doc.setFontSize(20); doc.text("MontCode™ Clinical BP Report", 15, 20);
+        doc.setFontSize(10); doc.text(`PATIENT: ${PATIENT_NAME} | DOB: ${PATIENT_DOB} | KIT: ${KIT_ID}`, 15, 30);
         doc.text(`AVG: ${avgSys}/${avgDia} mmHg | STATUS: ${cls.l}`, 15, 38);
 
         doc.setTextColor(0); doc.setFontSize(12); doc.text("Hemodynamic Analysis", 15, 60);
-        doc.addImage(document.getElementById('bpChart').toDataURL('image/png'), 'PNG', 15, 65, 180, 75);
+        const chartData = document.getElementById('bpChart').toDataURL('image/png');
+        doc.addImage(chartData, 'PNG', 15, 65, 180, 75);
         
-        doc.setFont("helvetica", "bold"); doc.text("Medical Conditions / Profile:", 15, 150);
-        doc.setFont("helvetica", "normal"); doc.text(activeConds || "None specified.", 15, 158);
-
         doc.setFont("helvetica", "bold"); doc.text("Clinical Recommendation:", 15, 170);
-        doc.setFont("helvetica", "normal"); doc.text(cls.r, 15, 178);
+        doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text(cls.r, 15, 178);
 
         let y = 200;
         doc.setFont("helvetica", "bold"); doc.text("Recent Historical Logs (Last 12):", 15, 195);
-        doc.setFontSize(9); doc.setFont("helvetica", "normal");
         db.slice(-12).reverse().forEach(log => {
-            doc.text(`${new Date(log.d).toLocaleString()} | ${log.sys}/${log.dia} mmHg | Med: ${log.med?'YES':'NO'}`, 15, y);
-            y += 7;
+            if (y < 280) {
+                doc.text(`${new Date(log.d).toLocaleString()} | ${log.sys}/${log.dia} mmHg | Med: ${log.med?'YES':'NO'}`, 15, y);
+                y += 7;
+            }
         });
-
         doc.save(`BP_Report_${PATIENT_NAME.replace(/\s/g, '_')}.pdf`);
     }
 </script>
