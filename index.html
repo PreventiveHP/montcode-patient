@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -20,13 +20,12 @@
         .card-blue { border-bottom: 4px solid #2563eb; box-shadow: 0 8px 20px -10px rgba(37, 99, 235, 0.4); }
         .card-yellow { border-bottom: 4px solid #eab308; box-shadow: 0 8px 20px -10px rgba(234, 179, 8, 0.4); }
 
-        /* Dr. QR Overlay */
         #qr-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
     </style>
 </head>
 <body class="p-6 pb-20">
 
-    <!-- DOCTOR ACCESS QR (NO CAMERA NEEDED) -->
+    <!-- DOCTOR ACCESS QR -->
     <div id="qr-overlay" onclick="this.style.display='none'">
         <div class="bg-white p-8 rounded-[45px] w-[320px] flex flex-col items-center shadow-2xl shadow-blue-500/20" onclick="event.stopPropagation()">
             <div id="qrcode" class="mb-4 border-2 border-zinc-100 p-2 rounded-2xl"></div>
@@ -36,7 +35,7 @@
         </div>
     </div>
 
-    <!-- HEADER: LOGO & DYNAMIC ENGLISH GREETING -->
+    <!-- HEADER -->
     <header class="flex justify-between items-center mb-8 mt-4">
         <div class="flex items-center gap-4">
             <img src="logo.png.jpg" class="w-14 h-14 rounded-full border-2 border-[#DAA520] object-cover shadow-lg shadow-yellow-500/20">
@@ -50,7 +49,7 @@
         </div>
     </header>
 
-    <!-- SYNC BANNER (PROVIDER LINK) -->
+    <!-- SYNC BANNER -->
     <div onclick="generateDoctorQR()" class="bg-blue-600/10 border border-blue-500/30 p-5 rounded-[30px] mb-6 flex items-center justify-between active:scale-95 transition">
         <div class="flex items-center gap-3">
             <span class="text-2xl">⚡</span>
@@ -64,7 +63,7 @@
         </div>
     </div>
 
-    <!-- DR. ORDERS AREA (LISTENS TO: mc_dr_note) -->
+    <!-- DR. ORDERS AREA (BLUE BOX) -->
     <div id="dr-message-area" class="mb-8 hidden">
         <div class="bg-zinc-900/80 border-2 border-blue-500/30 rounded-[35px] overflow-hidden">
             <div class="bg-blue-600/20 px-6 py-3 border-b border-blue-500/10 flex justify-between items-center">
@@ -103,19 +102,24 @@
     </div>
 
     <script>
-        // ON LOAD: SETUP IDENTITY AND MESSAGES
         window.addEventListener('load', () => {
-            const name = localStorage.getItem('mc_patient_name');
+            // --- 1. CAPTURADOR DE NOTAS DESDE LA URL (Ruta del Provider) ---
+            const urlParams = new URLSearchParams(window.location.search);
+            const noteFromUrl = urlParams.get('note');
             
+            if (noteFromUrl) {
+                // Guardamos la nota que viene del Dr. en el storage local
+                localStorage.setItem('mc_dr_note', decodeURIComponent(noteFromUrl));
+                // Limpiamos la URL para una estética limpia
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            const name = localStorage.getItem('mc_patient_name');
             if (!name) {
-                // Redirect to Setup if not enrolled
                 window.location.replace('activation.html');
             } else {
-                // 1. Dynamic Greeting (English)
                 setEnglishGreeting(name);
                 document.getElementById('p-dob').innerText = "DOB: " + (localStorage.getItem('mc_patient_dob') || "--/--/----");
-                
-                // 2. Check for Dr. Messages (Target variable: mc_dr_note)
                 checkDrNotes();
             }
         });
@@ -125,13 +129,11 @@
             let greet = "Good Morning,";
             if (hour >= 12 && hour < 17) greet = "Good Afternoon,";
             if (hour >= 17 || hour < 5) greet = "Good Evening,";
-            
             document.getElementById('greeting-msg').innerText = greet;
             document.getElementById('p-name').innerText = name;
         }
 
         function checkDrNotes() {
-            // This is where the Dr. app should write the message
             const note = localStorage.getItem('mc_dr_note');
             if (note) {
                 document.getElementById('dr-note-text').innerText = `"${note}"`;
@@ -140,11 +142,11 @@
         }
 
         function acknowledgeNote() {
-            // Patient confirms they read it
             localStorage.removeItem('mc_dr_note');
             document.getElementById('dr-message-area').style.opacity = '0.5';
             setTimeout(() => {
                 document.getElementById('dr-message-area').classList.add('hidden');
+                document.getElementById('dr-message-area').style.opacity = '1';
             }, 300);
         }
 
@@ -152,7 +154,7 @@
             const qrContainer = document.getElementById('qrcode');
             qrContainer.innerHTML = "";
             new QRCode(qrContainer, {
-                text: window.location.href, // This URL is what the Dr. scans
+                text: window.location.href,
                 width: 220,
                 height: 220,
                 colorDark: "#000000",
@@ -162,4 +164,4 @@
         }
     </script>
 </body>
-</html>
+</html> 
