@@ -38,7 +38,6 @@
 <body class="pb-10" id="body-bg">
     <div class="flex justify-between items-center mb-6">
         <div class="flex gap-2 items-center">
-            <!-- RUTA CORREGIDA A index.html -->
             <button onclick="window.location.href='index.html'" class="bg-zinc-900 text-[#ccff00] px-4 py-2 rounded-full text-[10px] font-black uppercase italic border border-zinc-800 mr-2 active:scale-90 transition">← Back</button>
             <button onclick="setLang('en')" class="w-8 h-8 rounded-full border border-zinc-800 flex items-center justify-center bg-zinc-900" id="btn-en">🇺🇸</button>
             <button onclick="setLang('es')" class="w-8 h-8 rounded-full border border-zinc-800 flex items-center justify-center bg-zinc-900" id="btn-es">🇪🇸</button>
@@ -161,22 +160,15 @@
     }
 
     async function sendToHub(val, time) {
-        const kitID = localStorage.getItem('mc_kit_id') || "MC-GLU-001";
-        const patientName = localStorage.getItem('mc_patient_name') || "User-Rescue";
         const drLink = localStorage.getItem('mc_linked_dr_id');
-        
         if(!drLink) return;
 
         const payload = {
-            id: kitID,
+            id: localStorage.getItem('mc_kit_id') || "MC-GLU-001",
             dr_id: drLink,
             type: 'GLUCOSE_UPDATE',
-            name: patientName,
-            data: { 
-                val: val, 
-                period: time,
-                timestamp: new Date().toISOString()
-            }
+            name: localStorage.getItem('mc_patient_name') || "User-Rescue",
+            data: { val, period: time, timestamp: new Date().toISOString() }
         };
 
         try {
@@ -185,7 +177,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-        } catch (e) { console.warn("Sync delayed."); }
+        } catch (e) { console.warn("Sync queued."); }
     }
 
     async function saveGlu() {
@@ -195,7 +187,7 @@
 
         body.classList.remove('flash-red', 'flash-orange');
         if (val < 70) {
-            void body.offsetWidth;
+            void body.offsetWidth; 
             body.classList.add('flash-red');
         } else if (val > 180) {
             void body.offsetWidth;
@@ -207,7 +199,6 @@
         
         await sendToHub(val, selectedTime);
 
-        // Feedback de voz mantenido
         const msg = currentLang === 'es' ? `${val} miligramos.` : `${val} milligrams.`;
         const u = new SpeechSynthesisUtterance(msg);
         u.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
@@ -216,13 +207,13 @@
         currentInput = ""; 
         document.getElementById('display').innerText = "---";
         updateUI();
-        alert("Glucose Logged");
+        if(navigator.vibrate) navigator.vibrate(100);
     }
 
-    function getClinicalStatus(val) {
-        if (val < 70) return { hex: '#ef4444' };
-        if (val > 180) return { hex: '#f97316' };
-        return { hex: '#ccff00' };
+    function getStatusHex(val) {
+        if (val < 70) return '#ef4444';
+        if (val > 180) return '#f97316';
+        return '#ccff00';
     }
 
     function updateUI() {
@@ -253,19 +244,12 @@
         const ctx = document.getElementById('gluChart').getContext('2d');
         chart = new Chart(ctx, {
             type: 'line',
-            data: { 
-                labels: [], 
-                datasets: [{ 
-                    data: [], 
-                    borderWidth: 3, 
-                    tension: 0.4, 
-                    pointRadius: 4, 
-                    segment: { borderColor: ctx => ctx.p1 ? getClinicalStatus(ctx.p1.parsed.y).hex : '#ccff00' },
-                    pointBackgroundColor: ctx => getClinicalStatus(ctx.raw).hex,
-                    fill: true, 
-                    backgroundColor: 'rgba(204, 255, 0, 0.02)' 
-                }] 
-            },
+            data: { labels: [], datasets: [{ 
+                data: [], borderWidth: 3, tension: 0.4, pointRadius: 4,
+                segment: { borderColor: ctx => ctx.p1 ? getStatusHex(ctx.p1.parsed.y) : '#ccff00' },
+                pointBackgroundColor: ctx => getStatusHex(ctx.raw),
+                fill: true, backgroundColor: 'rgba(204, 255, 0, 0.05)' 
+            }]},
             options: { 
                 responsive: true, maintainAspectRatio: false, 
                 plugins: { legend: { display: false } },
@@ -284,12 +268,14 @@
         chart.update();
     }
 
-    async function generatePDF() {
+    function generatePDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         doc.setFillColor(0, 0, 0); doc.rect(0, 0, 210, 45, 'F');
-        doc.setTextColor(204, 255, 0); doc.text("MontCode™ Glucose Audit", 15, 20);
-        doc.addImage(document.getElementById('gluChart').toDataURL('image/png'), 'PNG', 15, 60, 180, 70);
+        doc.setTextColor(204, 255, 0); doc.setFontSize(22); doc.text("MontCode™ Glucose Audit", 15, 20);
+        doc.setFontSize(10); doc.text(`PATIENT: ${localStorage.getItem('mc_patient_name') || 'N/A'}`, 15, 30);
+        const chartData = document.getElementById('gluChart').toDataURL('image/png');
+        doc.addImage(chartData, 'PNG', 15, 60, 180, 70);
         doc.save(`Glucose_Report.pdf`);
     }
 
@@ -311,19 +297,16 @@
 
     function startMic() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) return alert("Mic not supported in this browser.");
-        
+        if (!SpeechRecognition) return;
         const rec = new SpeechRecognition();
         rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
         rec.onresult = (e) => {
             const v = e.results[0][0].transcript.replace(/\D/g,'');
-            if(v) { 
-                currentInput = v.slice(0,3); 
-                document.getElementById('display').innerText = currentInput; 
-            }
+            if(v) { currentInput = v.slice(0,3); document.getElementById('display').innerText = currentInput; }
         };
         rec.start();
     }
 </script>
 </body>
 </html>
+
