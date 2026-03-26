@@ -5,65 +5,73 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MontCode™ Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Librería para el QR -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { background: #000; color: white; font-family: sans-serif; visibility: hidden; overflow-x: hidden; }
-        .dash-card { background: #111; border-radius: 20px; padding: 20px; transition: 0.2s; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 130px; border: 2px solid transparent; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700;900&display=swap');
+        
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; visibility: hidden; overflow-x: hidden; }
+        .tech-font { font-family: 'Orbitron', sans-serif; }
+        
+        .dash-card { background: #111; border-radius: 24px; padding: 20px; transition: 0.2s; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 140px; border: 2px solid transparent; }
         .dash-card:active { transform: scale(0.92); filter: brightness(1.3); }
+        
         .neon-red { border-color: #dc2626; box-shadow: 0 0 15px rgba(220, 38, 38, 0.1); }
         .neon-green { border-color: #16a34a; box-shadow: 0 0 15px rgba(22, 163, 74, 0.1); }
         .neon-blue { border-color: #2563eb; box-shadow: 0 0 15px rgba(37, 99, 235, 0.1); }
         .neon-yellow { border-color: #eab308; box-shadow: 0 0 15px rgba(234, 179, 8, 0.1); }
-        .icon-box { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 1.6rem; }
-        .logo-glow { border: 2px solid #DAA520; box-shadow: 0 0 20px rgba(218, 165, 32, 0.3); }
-        .btn-text { font-size: 10px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-top: 4px; }
         
-        #dr-mailbox { display: none; background: #2563eb; color: white; padding: 12px; border-radius: 15px; margin-bottom: 20px; border: 2px solid #60a5fa; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        .icon-box { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 1.5rem; }
+        .logo-glow { border: 2px solid #DAA520; box-shadow: 0 0 20px rgba(218, 165, 32, 0.3); }
+        .btn-text { font-size: 10px; font-weight: 900; text-transform: uppercase; font-style: italic; tracking: tight; }
+        
+        #dr-mailbox { display: none; background: #2563eb; color: white; padding: 16px; border-radius: 20px; margin-bottom: 24px; border: 2px solid #60a5fa; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.98); } }
 
-        /* Estilos Modal QR */
-        #qr-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
+        #qr-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 2000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(10px); }
     </style>
 </head>
 <body class="p-6 pb-24">
 
-    <!-- MODAL GENERADOR DE QR PARA EL DR -->
+    <!-- QR MODAL FOR DOCTOR LINK -->
     <div id="qr-modal" onclick="this.style.display='none'">
         <div class="bg-white p-8 rounded-[40px] text-center max-w-xs w-full" onclick="event.stopPropagation()">
-            <p class="text-black font-black text-[12px] uppercase mb-4 tracking-tighter italic">Doctor Access Key</p>
+            <p class="text-black font-black text-[12px] uppercase mb-4 tracking-tighter italic tech-font">Doctor Access Key</p>
             <div id="qrcode-box" class="flex justify-center mb-6"></div>
-            <p class="text-[8px] text-zinc-400 font-bold uppercase mb-2">Show this to your provider</p>
+            <p id="qr-footer-msg" class="text-[8px] text-zinc-400 font-bold uppercase mb-4">Show this to your provider for live linking</p>
             <button onclick="document.getElementById('qr-modal').style.display='none'" class="w-full bg-red-600 text-white font-black py-4 rounded-2xl uppercase italic text-[10px]">Close</button>
         </div>
     </div>
 
-    <!-- BUZÓN DE NOTAS DEL DOCTOR -->
+    <!-- DR NOTES BOX -->
     <div id="dr-mailbox">
-        <p class="text-[8px] font-black uppercase opacity-80 italic">📩 Message from Dr. Montalvan:</p>
-        <p id="dr-note-text" class="text-[11px] font-bold italic mt-1 uppercase"></p>
+        <p class="text-[8px] font-black uppercase opacity-80 italic">📩 <span id="msg-header">Message from Dr. Montalvan:</span></p>
+        <p id="dr-note-text" class="text-[12px] font-bold italic mt-1 uppercase tracking-tight"></p>
     </div>
 
+    <!-- TOP BAR -->
     <div class="flex justify-between items-start mb-8">
-        <button id="langBtn" class="bg-white text-black text-[9px] font-black px-4 py-2 rounded-full uppercase italic">🇺🇸 English</button>
+        <button id="langBtn" onclick="toggleLanguage()" class="bg-white text-black text-[9px] font-black px-4 py-2 rounded-full uppercase italic">🇺🇸 English</button>
         <div class="text-right">
-            <p id="display-name" class="text-[10px] font-black text-blue-500 uppercase italic">Loading...</p>
+            <p id="display-name" class="text-[11px] font-black text-blue-500 uppercase italic tech-font">Loading...</p>
             <p id="display-dob" class="text-[7px] text-zinc-500 font-bold uppercase tracking-widest italic">DOB: --/--/----</p>
         </div>
     </div>
 
+    <!-- MAIN LOGO -->
     <div class="flex flex-col items-center justify-center mb-10 w-full">
-        <img src="logo.png.jpg" class="w-24 h-24 rounded-full logo-glow object-cover mb-4">
-        <h1 class="text-3xl font-black tracking-tighter text-white uppercase italic">MONTCODE™</h1>
+        <div class="relative">
+            <img src="logo.png.jpg" class="w-24 h-24 rounded-full logo-glow object-cover mb-4">
+        </div>
+        <h1 class="text-3xl font-black tracking-tighter text-white uppercase italic tech-font">MONTCODE™</h1>
     </div>
 
-    <!-- BOTÓN SHARE QR (Sustituye al banner de conexión) -->
-    <div onclick="openShareQR()" class="mb-8 p-5 bg-blue-600/10 border-2 border-blue-500/50 rounded-[28px] flex justify-between items-center active:scale-95 transition">
+    <!-- PROVIDER LINK BANNER -->
+    <div onclick="openShareQR()" class="mb-8 p-5 bg-blue-600/10 border-2 border-blue-500/50 rounded-[30px] flex justify-between items-center active:scale-95 transition">
         <div class="flex items-center gap-4">
             <span class="text-2xl">📱</span>
             <div>
-                <span class="text-[10px] font-black uppercase text-blue-400 italic">Share with Doctor</span>
-                <p class="text-[7px] text-blue-300/60 font-bold uppercase italic">Generate connection QR</p>
+                <span id="link-title" class="text-[10px] font-black uppercase text-blue-400 italic">Share with Doctor</span>
+                <p id="link-subtitle" class="text-[7px] text-blue-300/60 font-bold uppercase italic">Generate connection QR</p>
             </div>
         </div>
         <div class="bg-blue-500 p-2 rounded-full">
@@ -73,26 +81,62 @@
         </div>
     </div>
 
+    <!-- DASHBOARD GRID -->
     <div class="grid grid-cols-2 gap-5 mb-8">
         <div onclick="location.href='bp.html'" class="dash-card neon-red">
             <div class="icon-box bg-red-600">🫀</div>
-            <h2 class="btn-text">BP Log</h2>
+            <h2 id="btn-bp" class="btn-text">BP Log</h2>
         </div>
         <div onclick="location.href='glucose.html'" class="dash-card neon-green">
             <div class="icon-box bg-green-600">🩸</div>
-            <h2 class="btn-text">Glucose</h2>
+            <h2 id="btn-glucose" class="btn-text">Glucose</h2>
         </div>
         <div onclick="location.href='food.html'" class="dash-card neon-yellow">
             <div class="icon-box bg-yellow-600">🥗</div>
-            <h2 class="btn-text">Food Scan</h2>
+            <h2 id="btn-food" class="btn-text">Food Scan</h2>
         </div>
         <div onclick="location.href='activation.html'" class="dash-card neon-blue">
             <div class="icon-box bg-blue-600">🆔</div>
-            <h2 class="btn-text">Kit Activation</h2>
+            <h2 id="btn-kit" class="btn-text">Kit Activation</h2>
         </div>
     </div>
 
     <script>
+        let currentLang = 'en';
+
+        const TRANSLATIONS = {
+            en: {
+                bp: "BP Log", glucose: "Glucose", food: "Food Scan", kit: "Kit Activation",
+                linkT: "Share with Doctor", linkS: "Generate connection QR",
+                msgH: "Message from Dr. Montalvan:", qrF: "Show this to your provider for live linking",
+                langLabel: "🇺🇸 English"
+            },
+            es: {
+                bp: "Presión Art.", glucose: "Glucosa", food: "Escanear Comida", kit: "Activar Kit",
+                linkT: "Compartir con Dr.", linkS: "Generar QR de conexión",
+                msgH: "Mensaje del Dr. Montalvan:", qrF: "Muestre esto a su médico para vincular",
+                langLabel: "🇪🇸 Español"
+            }
+        };
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'es' : 'en';
+            updateUI();
+        }
+
+        function updateUI() {
+            const t = TRANSLATIONS[currentLang];
+            document.getElementById('langBtn').innerText = t.langLabel;
+            document.getElementById('btn-bp').innerText = t.bp;
+            document.getElementById('btn-glucose').innerText = t.glucose;
+            document.getElementById('btn-food').innerText = t.food;
+            document.getElementById('btn-kit').innerText = t.kit;
+            document.getElementById('link-title').innerText = t.linkT;
+            document.getElementById('link-subtitle').innerText = t.linkS;
+            document.getElementById('msg-header').innerText = t.msgH;
+            document.getElementById('qr-footer-msg').innerText = t.qrF;
+        }
+
         function checkEnrolment() {
             const profileName = localStorage.getItem('mc_patient_name');
             if (!profileName) {
@@ -101,6 +145,7 @@
                 document.body.style.visibility = 'visible';
                 loadProfile();
                 checkForDoctorNotes();
+                updateUI();
             }
         }
 
@@ -109,11 +154,9 @@
             document.getElementById('display-dob').innerText = `DOB: ${localStorage.getItem('mc_patient_dob') || "--/--/----"}`;
         }
 
-        // GENERAR QR DE LA URL ACTUAL
         function openShareQR() {
             const qrBox = document.getElementById('qrcode-box');
             qrBox.innerHTML = "";
-            // Genera el QR con la URL real de Vercel del paciente
             new QRCode(qrBox, {
                 text: window.location.href, 
                 width: 200,
