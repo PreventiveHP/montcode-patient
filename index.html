@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MontCode™ Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@zxing/library@latest"></script>
     <style>
         body { background: #000; color: white; font-family: sans-serif; visibility: hidden; overflow-x: hidden; }
         .dash-card { background: #111; border-radius: 20px; padding: 20px; transition: 0.2s; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 130px; border: 2px solid transparent; }
@@ -37,13 +36,13 @@
         <h1 class="text-3xl font-black tracking-tighter text-white uppercase italic">MONTCODE™</h1>
     </div>
 
-    <!-- PROVIDER STATUS BAR -->
-    <div id="conn-banner" class="mb-8 p-4 bg-zinc-900 border border-zinc-800 rounded-[22px] flex justify-between items-center transition">
+    <!-- PROVIDER STATUS BAR (ACTÚA COMO BOTÓN SI NO HAY LINK) -->
+    <div id="conn-banner" onclick="handleBannerClick()" class="mb-8 p-4 bg-zinc-900 border border-zinc-800 rounded-[22px] flex justify-between items-center transition active:scale-95">
         <div class="flex items-center gap-3">
             <span id="conn-icon" class="text-lg">🔗</span>
             <div>
                 <span id="conn-txt" class="text-[9px] font-black uppercase text-white italic">Provider Connection</span>
-                <p id="dr-status" class="text-[7px] text-zinc-500 font-bold uppercase tracking-tighter italic">Not Linked</p>
+                <p id="dr-status" class="text-[7px] text-zinc-500 font-bold uppercase tracking-tighter italic">Tap to link provider</p>
             </div>
         </div>
         <div id="status-led" class="w-2 h-2 rounded-full bg-zinc-700"></div>
@@ -71,12 +70,13 @@
     <script>
         function checkEnrolment() {
             const profileName = localStorage.getItem('mc_patient_name');
+            // Si no tiene nombre, forzamos activación inicial
             if (!profileName) {
                 window.location.replace('activation.html');
             } else {
                 document.body.style.visibility = 'visible';
                 updateHub();
-                pushDataToDoctor(); // ACTIVACIÓN DEL GRITO (PUSH)
+                pushDataToDoctor();
             }
         }
 
@@ -85,23 +85,30 @@
             document.getElementById('display-dob').innerText = `DOB: ${localStorage.getItem('mc_patient_dob') || "--/--/----"}`;
             
             const linkedDr = localStorage.getItem('mc_linked_dr_id');
-            const providerName = localStorage.getItem('mc_provider_name') || "Doctor Console";
+            const providerName = localStorage.getItem('mc_provider_name');
             
             if(linkedDr) {
-                document.getElementById('dr-status').innerText = providerName + " | ACTIVE";
-                document.getElementById('status-led').classList.replace('bg-zinc-700', 'bg-green-500');
+                document.getElementById('dr-status').innerText = (providerName || "Doctor Console") + " | ACTIVE";
+                document.getElementById('status-led').className = "w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#16a34a]";
                 document.getElementById('conn-icon').innerText = "🛡️";
             }
         }
 
-        // MOTOR DE SINCRONIZACIÓN TÁCTICA (PUSH)
+        function handleBannerClick() {
+            const linkedDr = localStorage.getItem('mc_linked_dr_id');
+            if (!linkedDr) {
+                window.location.href = 'activation.html';
+            } else {
+                // Opcional: Ir a una página de detalles del proveedor o historial de sync
+                console.log("Already linked to provider.");
+            }
+        }
+
         async function pushDataToDoctor() {
             const drId = localStorage.getItem('mc_linked_dr_id');
             const kitId = localStorage.getItem('mc_kit_id');
-            
             if (!drId || !kitId) return;
 
-            // Preparamos el paquete de datos cifrado (simulado)
             const patientPayload = {
                 id: kitId,
                 dr_target: drId,
@@ -110,32 +117,22 @@
                 last_bp: localStorage.getItem('last_bp_value') || "--/--",
                 last_glu: localStorage.getItem('last_glucose_value') || "--",
                 risk: localStorage.getItem('current_risk_level') || "stable",
-                last_sync: new Date().toLocaleTimeString()
+                last_sync: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             };
 
-            console.log("Tactical Push initiated for Dr:", drId);
-
-            // Simulación de envío al Relay
             try {
-                // En un entorno productivo, esto va a tu API Vercel
-                // fetch('https://tu-relay.vercel.app/api/push', { method: 'POST', body: JSON.stringify(patientPayload) });
-                
-                // Para tu prueba local: Guardamos en un "Buzón Compartido" simulado si es el mismo navegador
+                // Simulación de persistencia local para la consola del Dr
                 let sharedVault = JSON.parse(localStorage.getItem('mc_patients') || '[]');
-                
-                // Actualizar o agregar
                 const index = sharedVault.findIndex(p => p.id === kitId);
                 if(index > -1) sharedVault[index] = patientPayload;
                 else sharedVault.push(patientPayload);
                 
                 localStorage.setItem('mc_patients', JSON.stringify(sharedVault));
 
-                // Feedback visual de éxito
                 const indicator = document.getElementById('sync-indicator');
                 indicator.style.display = 'block';
-                setTimeout(() => indicator.style.display = 'none', 2000);
-
-            } catch (e) { console.warn("Push failed: Offline mode."); }
+                setTimeout(() => indicator.style.display = 'none', 1500);
+            } catch (e) { console.warn("Local sync failed."); }
         }
 
         window.onload = checkEnrolment;
