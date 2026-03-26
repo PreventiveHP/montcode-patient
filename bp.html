@@ -54,12 +54,13 @@
             renderHistory();
         };
 
-        // FIX: Formateo Elástico (Acepta 5 o 6 dígitos)
+        // FIX: Formateo Elástico (Acepta 5 o 6 dígitos sin romper la lógica)
         function formatBP(input) {
             let val = input.value.replace(/\D/g, ''); 
-            if (val.length >= 5) {
-                // Si empieza con 1 (ej 12080) corta en 3. Si no (ej 9560) corta en 2.
-                let splitAt = val.startsWith('1') || val.length === 6 ? 3 : 2;
+            if (val.length >= 4) {
+                // Si el primer dígito es '1' y hay al menos 5 dígitos, asume SYS de 3 cifras
+                // Si no, asume SYS de 2 cifras (ej. 90/60)
+                let splitAt = (val.startsWith('1') && val.length >= 5) || val.length === 6 ? 3 : 2;
                 input.value = val.slice(0, splitAt) + '/' + val.slice(splitAt, splitAt + 3);
             } else {
                 input.value = val;
@@ -67,9 +68,10 @@
         }
 
         function speakReport(sys, dia) {
+            const name = localStorage.getItem('mc_patient_name') || "";
             const msg = lang === 'es' 
-                ? `Registro guardado. ${sys} sobre ${dia}.`
-                : `Reading saved. ${sys} over ${dia}.`;
+                ? `Buen día ${name}, presión registrada ${sys} sobre ${dia}.`
+                : `Good day ${name}, blood pressure recorded ${sys} over ${dia}.`;
             
             const utterance = new SpeechSynthesisUtterance(msg);
             utterance.lang = lang === 'es' ? 'es-US' : 'en-US';
@@ -78,7 +80,7 @@
 
         async function saveReading() {
             const val = document.getElementById('bp-input').value;
-            if (!val.includes('/')) return alert("Invalid Format");
+            if (!val.includes('/')) return alert("Use format 120/80 or 90/60");
 
             const [sys, dia] = val.split('/');
             const entry = {
@@ -92,14 +94,14 @@
             history.unshift(entry);
             localStorage.setItem('mc_bp_history', JSON.stringify(history));
             
-            // Notificar al Dashboard
+            // Notificar al Dashboard Local
             localStorage.setItem('last_bp_value', `${sys}/${dia}`);
 
             speakReport(sys, dia);
             renderHistory();
             document.getElementById('bp-input').value = "";
             
-            // Sincronización al Vault del Dr
+            // DISPARO DE SINCRONIZACIÓN AL DR.
             syncWithProvider(entry);
         }
 
@@ -138,23 +140,38 @@
             y += 10;
 
             history.slice(0, 15).forEach(h => {
-                const status = h.sys >= 140 || h.dia >= 90 ? "STAGE 2" : h.sys >= 130 ? "STAGE 1" : "NORMAL";
+                const status = h.sys >= 140 || h.dia >= 90 ? "STAGE 2 HTN" : h.sys >= 130 ? "STAGE 1 HTN" : "NORMAL";
                 doc.text(`${h.date} | ${h.sys}/${h.dia} mmHg | Status: ${status}`, 20, y);
                 y += 8;
             });
 
+            doc.setFontSize(8);
+            doc.text("Disclaimer: Provided by patient via MontCode™ Rescue. Not an official record.", 20, 280);
             doc.save(`MontCode_BP_${patientName}.pdf`);
         }
 
-        function syncWithProvider(data) {
+        async function syncWithProvider(data) {
             const vaultUrl = localStorage.getItem('mc_vault_url');
             const kitId = localStorage.getItem('mc_kit_id');
+            const drId = localStorage.getItem('mc_linked_dr_id');
+
             if (vaultUrl && kitId) {
-                fetch(`${vaultUrl}/api/hub`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ kit_id: kitId, type: 'BP', value: `${data.sys}/${data.dia}` })
-                }).catch(e => console.log("Offline sync queued."));
+                try {
+                    await fetch(`${vaultUrl}/api/update`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            kit_id: kitId, 
+                            dr_id: drId,
+                            type: 'BP', 
+                            value: `${data.sys}/${data.dia}`,
+                            patient: patientName
+                        })
+                    });
+                    console.log("📡 Remote Sync Complete");
+                } catch (e) {
+                    console.log("📡 Sync Queued (Offline Mode)");
+                }
             }
         }
     </script>
