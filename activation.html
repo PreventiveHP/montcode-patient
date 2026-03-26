@@ -58,7 +58,7 @@
 
     <script>
         let isKitDetected = false;
-        let doctorID = "NONE";
+        let providerData = null; // Almacenará el objeto completo del Dr.
         let kitCode = "PENDING";
         let step = 1; 
 
@@ -71,7 +71,6 @@
 
             Quagga.onDetected((data) => {
                 const code = data.codeResult.code;
-                // Validación de serie 102
                 if (/^102/.test(code) && !isKitDetected) {
                     isKitDetected = true;
                     kitCode = code;
@@ -79,6 +78,7 @@
                     document.getElementById('scan-status').innerText = "KIT VALIDATED ✓";
                     document.getElementById('scan-status').className = "text-green-500 font-black italic";
                     document.getElementById('btn-main').classList.remove('disabled-btn');
+                    document.getElementById('btn-main').innerText = "Next: Link Provider";
                     if (navigator.vibrate) navigator.vibrate(200);
                     Quagga.stop();
                 }
@@ -88,12 +88,12 @@
         function nextStep() {
             if (step === 1) {
                 step = 2;
-                document.getElementById('step-title').innerText = "Doctor Link";
-                document.getElementById('step-desc').innerText = "Step 2: Scan Provider QR Code";
+                document.getElementById('step-title').innerText = "Provider Link";
+                document.getElementById('step-desc').innerText = "Step 2: Scan Dr. Console QR";
                 document.getElementById('masterID').value = "";
                 document.getElementById('masterID').placeholder = "SCAN DR QR";
                 document.getElementById('btn-main').classList.add('disabled-btn');
-                document.getElementById('btn-main').innerText = "Awaiting QR Scan...";
+                document.getElementById('btn-main').innerText = "Awaiting QR...";
                 document.getElementById('interactive').style.display = "none";
                 document.getElementById('qr-reader').style.display = "block";
                 startQRScanner();
@@ -106,26 +106,30 @@
             const html5QrCode = new Html5Qrcode("qr-reader");
             html5QrCode.start(
                 { facingMode: "environment" }, 
-                { fps: 10, qrbox: { width: 250, height: 250 } },
+                { fps: 15, qrbox: { width: 250, height: 250 } },
                 (decodedText) => {
-                    let cleanedId = decodedText;
-                    
-                    // AUDITORÍA: Si el QR es un JSON del Dr, extraemos el ID remoto
                     try {
                         const parsed = JSON.parse(decodedText);
-                        cleanedId = parsed.dr_id || parsed.id || decodedText;
+                        // Verificamos que sea un QR de MontCode válido
+                        if (parsed.dr_id) {
+                            providerData = parsed;
+                            document.getElementById('masterID').value = "LINK READY";
+                            document.getElementById('scan-status').innerText = (parsed.name || "PROVIDER") + " IDENTIFIED ✓";
+                            document.getElementById('scan-status').className = "text-green-500 font-black italic";
+                            document.getElementById('btn-main').classList.remove('disabled-btn');
+                            document.getElementById('btn-main').innerText = "Complete Setup";
+                            if (navigator.vibrate) navigator.vibrate(200);
+                            html5QrCode.stop();
+                        }
                     } catch(e) {
-                        console.log("Plain text ID detected");
+                        console.log("Not a JSON QR, checking for ID string...");
+                        if (decodedText.startsWith("MC-DR-")) {
+                            providerData = { dr_id: decodedText, name: "MontCode Provider" };
+                            document.getElementById('masterID').value = "ID LINKED";
+                            document.getElementById('btn-main').classList.remove('disabled-btn');
+                            html5QrCode.stop();
+                        }
                     }
-
-                    doctorID = cleanedId;
-                    document.getElementById('masterID').value = "DR-LINKED";
-                    document.getElementById('scan-status').innerText = "PROVIDER IDENTIFIED ✓";
-                    document.getElementById('scan-status').className = "text-green-500 font-black italic";
-                    document.getElementById('btn-main').classList.remove('disabled-btn');
-                    document.getElementById('btn-main').innerText = "Complete Setup";
-                    if (navigator.vibrate) navigator.vibrate(200);
-                    html5QrCode.stop();
                 }
             ).catch(err => console.error(err));
         }
@@ -135,34 +139,37 @@
             const patientDOB = prompt("DOB (MM/DD/YYYY):");
             
             if (patientName && patientDOB) {
-                // LLAVES CRÍTICAS PARA TRANSMISIÓN REMOTA
+                // GUARDADO DE SEGURIDAD (Individual)
                 localStorage.setItem('mc_patient_name', patientName);
                 localStorage.setItem('mc_patient_dob', patientDOB);
-                localStorage.setItem('mc_linked_dr_id', doctorID);
+                localStorage.setItem('mc_linked_dr_id', providerData.dr_id);
+                localStorage.setItem('mc_provider_name', providerData.name || "Provider");
                 localStorage.setItem('mc_kit_id', kitCode);
                 
-                // OBJETO DE ACTIVACIÓN (BASE PARA EL VAULT)
+                // OBJETO MAESTRO DE ACTIVACIÓN
                 const activationData = {
                     kit_id: kitCode,
                     name: patientName,
                     dob: patientDOB,
-                    dr_id: doctorID,
+                    dr_id: providerData.dr_id,
+                    clinic_name: providerData.name,
+                    vault_url: providerData.vault || "",
                     status: 'Active',
-                    dr_notes: [], // Inicializado para recibir mensajes remotos
                     setup_date: new Date().toISOString()
                 };
+                
                 localStorage.setItem('montcode_activation', JSON.stringify(activationData));
                 
-                document.getElementById('btn-main').innerText = "LINK SUCCESSFUL";
+                document.getElementById('btn-main').innerText = "ACTIVATION SUCCESSFUL";
                 document.getElementById('btn-main').style.background = "#16a34a";
                 
                 if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
                 
                 setTimeout(() => { 
                     window.location.replace('index.html'); 
-                }, 1000);
+                }, 1200);
             } else {
-                alert("Profile incomplete. Please enter name and DOB.");
+                alert("Please complete name and DOB to activate your kit.");
             }
         }
 
