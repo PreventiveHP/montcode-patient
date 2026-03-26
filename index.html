@@ -32,23 +32,23 @@
 </head>
 <body class="p-6 pb-24">
 
-    <!-- QR MODAL FOR DOCTOR LINK -->
+    <!-- QR MODAL PARA EL DOCTOR -->
     <div id="qr-modal" onclick="this.style.display='none'">
         <div class="bg-white p-8 rounded-[40px] text-center max-w-xs w-full" onclick="event.stopPropagation()">
             <p class="text-black font-black text-[12px] uppercase mb-4 tracking-tighter italic tech-font">Doctor Access Key</p>
             <div id="qrcode-box" class="flex justify-center mb-6"></div>
-            <p id="qr-footer-msg" class="text-[8px] text-zinc-400 font-bold uppercase mb-4">Show this to your provider for live linking</p>
+            <p id="qr-footer-msg" class="text-[8px] text-zinc-400 font-bold uppercase mb-4">Show this to your provider for live dashboard linking</p>
             <button onclick="document.getElementById('qr-modal').style.display='none'" class="w-full bg-red-600 text-white font-black py-4 rounded-2xl uppercase italic text-[10px]">Close</button>
         </div>
     </div>
 
-    <!-- DR NOTES BOX -->
+    <!-- BUZÓN DE NOTAS DEL DR -->
     <div id="dr-mailbox">
         <p class="text-[8px] font-black uppercase opacity-80 italic">📩 <span id="msg-header">Message from Dr. Montalvan:</span></p>
         <p id="dr-note-text" class="text-[12px] font-bold italic mt-1 uppercase tracking-tight"></p>
     </div>
 
-    <!-- TOP BAR -->
+    <!-- BARRA SUPERIOR -->
     <div class="flex justify-between items-start mb-8">
         <button id="langBtn" onclick="toggleLanguage()" class="bg-white text-black text-[9px] font-black px-4 py-2 rounded-full uppercase italic">🇺🇸 English</button>
         <div class="text-right">
@@ -57,7 +57,7 @@
         </div>
     </div>
 
-    <!-- MAIN LOGO -->
+    <!-- LOGO CENTRAL -->
     <div class="flex flex-col items-center justify-center mb-10 w-full">
         <div class="relative">
             <img src="logo.png.jpg" class="w-24 h-24 rounded-full logo-glow object-cover mb-4">
@@ -65,13 +65,13 @@
         <h1 class="text-3xl font-black tracking-tighter text-white uppercase italic tech-font">MONTCODE™</h1>
     </div>
 
-    <!-- PROVIDER LINK BANNER -->
+    <!-- BANNER DE CONEXIÓN QR -->
     <div onclick="openShareQR()" class="mb-8 p-5 bg-blue-600/10 border-2 border-blue-500/50 rounded-[30px] flex justify-between items-center active:scale-95 transition">
         <div class="flex items-center gap-4">
             <span class="text-2xl">📱</span>
             <div>
-                <span id="link-title" class="text-[10px] font-black uppercase text-blue-400 italic">Share with Doctor</span>
-                <p id="link-subtitle" class="text-[7px] text-blue-300/60 font-bold uppercase italic">Generate connection QR</p>
+                <span id="link-title" class="text-[10px] font-black uppercase text-blue-400 italic">Share Dashboard</span>
+                <p id="link-subtitle" class="text-[7px] text-blue-300/60 font-bold uppercase italic">Link live data with Provider</p>
             </div>
         </div>
         <div class="bg-blue-500 p-2 rounded-full">
@@ -81,7 +81,7 @@
         </div>
     </div>
 
-    <!-- DASHBOARD GRID -->
+    <!-- DASHBOARD -->
     <div class="grid grid-cols-2 gap-5 mb-8">
         <div onclick="location.href='bp.html'" class="dash-card neon-red">
             <div class="icon-box bg-red-600">🫀</div>
@@ -107,14 +107,14 @@
         const TRANSLATIONS = {
             en: {
                 bp: "BP Log", glucose: "Glucose", food: "Food Scan", kit: "Kit Activation",
-                linkT: "Share with Doctor", linkS: "Generate connection QR",
-                msgH: "Message from Dr. Montalvan:", qrF: "Show this to your provider for live linking",
+                linkT: "Share Dashboard", linkS: "Link live data with Provider",
+                msgH: "Message from Dr. Montalvan:", qrF: "Show this to your provider for live dashboard linking",
                 langLabel: "🇺🇸 English"
             },
             es: {
                 bp: "Presión Art.", glucose: "Glucosa", food: "Escanear Comida", kit: "Activar Kit",
-                linkT: "Compartir con Dr.", linkS: "Generar QR de conexión",
-                msgH: "Mensaje del Dr. Montalvan:", qrF: "Muestre esto a su médico para vincular",
+                linkT: "Compartir Panel", linkS: "Vincular datos con el Médico",
+                msgH: "Mensaje del Dr. Montalvan:", qrF: "Muestre esto a su médico para vincular panel",
                 langLabel: "🇪🇸 Español"
             }
         };
@@ -139,6 +139,7 @@
 
         function checkEnrolment() {
             const profileName = localStorage.getItem('mc_patient_name');
+            // Aquí se mantiene la lógica del código 102 (vía activation.html)
             if (!profileName) {
                 window.location.replace('activation.html');
             } else {
@@ -157,6 +158,7 @@
         function openShareQR() {
             const qrBox = document.getElementById('qrcode-box');
             qrBox.innerHTML = "";
+            // Genera QR de la URL completa actual para que el Dr. navegue dentro del Dashboard del paciente
             new QRCode(qrBox, {
                 text: window.location.href, 
                 width: 200,
