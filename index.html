@@ -108,25 +108,27 @@
     <script>
         window.addEventListener('load', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            const isProvider = urlParams.get('mode') === 'provider';
+            // Identificamos si es el Doctor entrando vía QR o Iframe
+            const isProvider = urlParams.get('mode') === 'provider' || urlParams.has('note');
             const name = localStorage.getItem('mc_patient_name');
             
-            // --- PARCHE PARA ELIMINAR EL BUCLE ---
-            // Si no hay nombre pero es el doctor (espejo), dejamos entrar.
-            // Si no hay nombre y es el paciente real, mandamos a activación.
+            // LA LÓGICA DE BYPASS (COMO TU APP1):
+            // Si NO hay nombre local PERO NO es un acceso de proveedor, entonces bloqueamos.
+            // Si es proveedor (isProvider), saltamos la redirección.
             if (!name && !isProvider) {
                 window.location.replace('activation.html');
                 return;
             }
 
-            // Configuración de interfaz
+            // Aplicar nombre (Si es Dr y no hay nombre local, mostramos "Remote View")
             setEnglishGreeting(name || "Remote Patient");
             document.getElementById('p-dob').innerText = "DOB: " + (localStorage.getItem('mc_patient_dob') || "VERIFIED");
 
-            // Gestión de notas (Prioridad URL para que el Dr vea lo que acaba de enviar)
+            // Gestión de notas
             const noteFromUrl = urlParams.get('note');
             if (noteFromUrl) {
                 const decoded = decodeURIComponent(noteFromUrl);
+                // Si el Dr manda nota, la guardamos para que el paciente la vea también
                 localStorage.setItem('mc_dr_note', decoded);
                 displayNote(decoded);
             } else {
@@ -146,6 +148,7 @@
             setTimeout(() => {
                 document.getElementById('dr-message-area').classList.add('hidden');
                 document.getElementById('dr-message-area').style.opacity = '1';
+                // Limpiamos la URL para que no re-aparezca al recargar
                 window.history.replaceState({}, document.title, window.location.pathname);
             }, 300);
         }
@@ -162,8 +165,10 @@
         function generateDoctorQR() {
             const qrContainer = document.getElementById('qrcode');
             qrContainer.innerHTML = "";
+            // IMPORTANTE: El link del QR lleva el parámetro 'mode=provider'
+            const currentURL = window.location.href.split('?')[0]; 
             new QRCode(qrContainer, {
-                text: window.location.href + "?mode=provider", // El QR ahora avisa que es modo doctor
+                text: currentURL + "?mode=provider", 
                 width: 220,
                 height: 220,
                 colorDark: "#000000",
