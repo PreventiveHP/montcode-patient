@@ -11,29 +11,75 @@
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700;900&display=swap');
-        body { background: #000; color: white; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .tech-font { font-family: 'Orbitron', sans-serif; }
-        .dash-card { background: #0a0a0a; border-radius: 28px; padding: 20px; border: 1px solid #1a1a1a; transition: 0.2s; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 130px; }
-        .dash-card:active { transform: scale(0.95); }
+        
+        body { 
+            background: #000; 
+            color: white; 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        .tech-font { 
+            font-family: 'Orbitron', sans-serif; 
+        }
+
+        .dash-card { 
+            background: #0a0a0a; 
+            border-radius: 28px; 
+            padding: 20px; 
+            border: 1px solid #1a1a1a; 
+            transition: 0.2s; 
+            cursor: pointer; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 130px; 
+        }
+
+        .dash-card:active { 
+            transform: scale(0.95); 
+        }
+
         .card-red { border-bottom: 4px solid #dc2626; }
         .card-green { border-bottom: 4px solid #16a34a; }
         .card-yellow { border-bottom: 4px solid #eab308; }
         .card-blue { border-bottom: 4px solid #2563eb; }
         .card-purple { border-bottom: 4px solid #a855f7; }
         
-        #qr-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
-        .logo-border { border: 2px solid #DAA520; box-shadow: 0 0 15px rgba(218, 165, 32, 0.2); }
-        
-        /* Estilo para el área de texto del Dr */
-        textarea { background: #111; border: 1px solid #333; color: #fff; width: 100%; border-radius: 15px; padding: 15px; font-size: 14px; outline: none; }
-        textarea:focus { border-color: #2563eb; }
+        #qr-overlay { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.98); 
+            z-index: 100; 
+            align-items: center; 
+            justify-content: center; 
+            backdrop-filter: blur(15px); 
+        }
+
+        .logo-border { 
+            border: 2px solid #DAA520; 
+            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2); 
+        }
+
+        textarea { 
+            background: #111; 
+            border: 1px solid #333; 
+            color: #fff; 
+            width: 100%; 
+            border-radius: 15px; 
+            padding: 15px; 
+            font-size: 14px; 
+            outline: none; 
+        }
+
+        textarea:focus { 
+            border-color: #2563eb; 
+        }
     </style>
 </head>
 <body class="p-6 pb-24">
-
-    <div class="flex justify-end mb-4">
-        <button onclick="toggleLanguage()" id="lang-btn" class="text-2xl grayscale hover:grayscale-0 transition">🇪🇸</button>
-    </div>
 
     <header class="flex justify-between items-center mb-8">
         <div class="flex items-center gap-4">
@@ -48,45 +94,52 @@
         </div>
     </header>
 
-    <!-- Medical Instruction Area (Abierto para que el Dr escriba si entra por link) -->
+    <!-- Medical Instruction Area -->
     <div id="dr-message-area" class="mb-8 hidden">
         <div class="bg-zinc-900 border-2 border-blue-500 rounded-[35px] overflow-hidden shadow-[0_0_20px_rgba(37,99,235,0.2)]">
-            <div class="bg-blue-600/20 px-6 py-2 border-b border-blue-500/10">
-                <p id="lbl-msg-title" class="text-[9px] font-black text-blue-400 tech-font uppercase italic text-center">Medical Instruction</p>
+            <div class="bg-blue-600/20 px-6 py-2 border-b border-blue-500/10 text-center">
+                <p class="text-[9px] font-black text-blue-400 tech-font uppercase italic">Medical Instruction</p>
             </div>
             <div class="p-6 text-center">
-                <!-- El Dr puede escribir aquí directamente -->
                 <textarea id="dr-note-input" placeholder="Enter clinical instruction..." rows="3" class="mb-4 hidden"></textarea>
                 <p id="dr-note-display" class="text-white text-[15px] font-black italic uppercase leading-tight mb-4"></p>
-                
                 <div class="flex gap-2 justify-center">
-                    <button id="btn-save-note" onclick="saveNote()" class="hidden text-[9px] bg-green-600 text-white px-8 py-3 rounded-full font-black uppercase italic">Save Note</button>
-                    <button id="btn-ack" onclick="acknowledgeNote()" class="text-[9px] bg-blue-600 text-white px-8 py-3 rounded-full font-black uppercase italic">Acknowledge</button>
+                    <button id="btn-save-note" onclick="saveNote()" class="hidden text-[10px] bg-green-600 text-white px-8 py-3 rounded-full font-black uppercase italic">Save Note</button>
+                    <button id="btn-ack" onclick="acknowledgeNote()" class="text-[10px] bg-blue-600 text-white px-8 py-3 rounded-full font-black uppercase italic">Acknowledge</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="grid grid-cols-2 gap-4">
+        <!-- BP LOG -->
         <div onclick="location.href='bp.html'" class="dash-card card-red">
             <span class="text-3xl mb-1">🫀</span>
-            <p id="lbl-bp" class="text-[10px] font-black uppercase italic tracking-tighter">BP Log</p>
+            <p class="text-[10px] font-black uppercase italic tracking-tighter">BP Log</p>
         </div>
+
+        <!-- GLUCOSE -->
         <div onclick="location.href='glucose.html'" class="dash-card card-green">
             <span class="text-3xl mb-1">🩸</span>
-            <p id="lbl-glu" class="text-[10px] font-black uppercase italic tracking-tighter">Glucose</p>
+            <p class="text-[10px] font-black uppercase italic tracking-tighter">Glucose</p>
         </div>
+
+        <!-- FOOD SCAN (AQUÍ ESTÁ) -->
         <div onclick="location.href='food.html'" class="dash-card card-yellow">
             <span class="text-3xl mb-1">🥗</span>
-            <p id="lbl-food" class="text-[10px] font-black uppercase italic tracking-tighter">Food Scan</p>
+            <p class="text-[10px] font-black uppercase italic tracking-tighter">Food Scan</p>
         </div>
+
+        <!-- SYNC LINK (LÓGICA RESCUE) -->
         <div onclick="initSync()" class="dash-card card-purple">
             <span class="text-3xl mb-1 animate-pulse">📡</span>
-            <p id="lbl-sync" class="text-[10px] font-black uppercase italic tracking-tighter">Sync Link</p>
+            <p class="text-[10px] font-black uppercase italic tracking-tighter">Sync Link</p>
         </div>
+
+        <!-- CLINICAL MODE -->
         <div onclick="location.href='provider-console.html'" class="dash-card card-blue col-span-2">
             <span class="text-3xl mb-1">🩺</span>
-            <p id="lbl-cli" class="text-[10px] font-black uppercase italic tracking-tighter text-blue-400">Clinical Mode</p>
+            <p class="text-[10px] font-black uppercase italic tracking-tighter text-blue-400">Clinical Mode</p>
         </div>
     </div>
 
@@ -94,7 +147,7 @@
         <div class="bg-white p-8 rounded-[45px] w-[320px] flex flex-col items-center">
             <div id="qrcode" class="p-2 bg-white"></div>
             <p class="text-black font-black text-[10px] uppercase mt-6 tracking-widest">Provider Sync QR</p>
-            <p class="text-zinc-400 text-[8px] mt-2 text-center px-4 italic">Scan to Sync Clinical Data</p>
+            <p class="text-zinc-400 text-[8px] mt-2 text-center px-4 italic">Scan to sync clinical data locally</p>
         </div>
     </div>
 
@@ -105,19 +158,20 @@
     </footer>
 
     <script>
-        let currentLang = 'en';
         let isDrMode = false;
 
         window.onload = () => {
             const params = new URLSearchParams(window.location.search);
             const d = params.get('d');
-            
-            // LÓGICA RESCUE: Si hay datos en la URL, los cargamos
+
+            // Si hay datos (viene de un QR/NFC del paciente), los cargamos en el local del Dr.
             if(d) {
                 try {
                     const rawData = decodeURIComponent(escape(atob(d)));
                     const data = JSON.parse(rawData);
                     localStorage.setItem('mc_patient_name', data.n);
+                    localStorage.setItem('mc_last_bp', data.bp);
+                    localStorage.setItem('mc_last_glu', data.gl);
                     isDrMode = true;
                     prepareDrView();
                 } catch(e) { console.error("Sync Error"); }
@@ -125,16 +179,13 @@
 
             const name = localStorage.getItem('mc_patient_name') || "Patient";
             document.getElementById('p-name').innerText = name;
+            
             setGreeting();
             checkDrNotes();
-
-            if (!localStorage.getItem('montcode_activation') && !isDrMode && !params.get('mode')) {
-                window.location.replace('activation.html');
-            }
         };
 
         function prepareDrView() {
-            document.body.style.borderTop = "6px solid #2563eb";
+            document.body.style.border = "4px solid #2563eb";
             document.getElementById('dr-message-area').classList.remove('hidden');
             document.getElementById('dr-note-input').classList.remove('hidden');
             document.getElementById('btn-save-note').classList.remove('hidden');
@@ -163,26 +214,29 @@
             const note = document.getElementById('dr-note-input').value;
             if(note) {
                 localStorage.setItem('mc_dr_note', note);
-                alert("Clinical Instruction Saved to Patient Hub");
+                alert("Clinical Instruction Saved");
                 location.reload();
             }
         }
 
         async function initSync() {
-            const name = localStorage.getItem('mc_patient_name') || "Patient";
             const baseUrl = window.location.origin + window.location.pathname;
+            const data = {
+                n: localStorage.getItem('mc_patient_name') || "Patient",
+                bp: localStorage.getItem('mc_last_bp') || "N/A",
+                gl: localStorage.getItem('mc_last_glu') || "N/A"
+            };
             
-            // LÓGICA RESCUE: Serializamos el nombre para el link del Dr.
-            const dataObj = { n: name, ts: Date.now() };
-            const dataEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(dataObj))));
-            const syncURL = `${baseUrl}?d=${dataEncoded}`;
+            // Lógica Rescue: Inyectamos los datos en la URL
+            const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+            const syncURL = `${baseUrl}?d=${encoded}`;
             
             if ('NDEFReader' in window) {
                 try {
                     const ndef = new NDEFReader();
                     await ndef.scan();
-                    await ndef.write(syncURL);
-                    alert("SHIP SYNCED");
+                    await ndef.write({ records: [{ recordType: "url", data: syncURL }] });
+                    alert("SHIP SYNCED TO NFC");
                 } catch (error) { showQR(syncURL); }
             } else { showQR(syncURL); }
         }
@@ -192,24 +246,6 @@
             qrContainer.innerHTML = "";
             new QRCode(qrContainer, { text: url, width: 200, height: 200 });
             document.getElementById('qr-overlay').style.display = 'flex';
-        }
-
-        function toggleLanguage() {
-            currentLang = currentLang === 'en' ? 'es' : 'en';
-            const btn = document.getElementById('lang-btn');
-            const content = {
-                en: { btn: "🇪🇸", bp: "BP Log", glu: "Glucose", food: "Food Scan", sync: "Sync Link", cli: "Clinical Mode", msg: "Medical Instruction", ack: "Acknowledge" },
-                es: { btn: "🇺🇸", bp: "Registro PA", glu: "Glucosa", food: "Escaneo Alimentos", sync: "Sincronizar", cli: "Modo Clínico", msg: "Instrucción Médica", ack: "Entendido" }
-            };
-            const lang = content[currentLang];
-            btn.innerText = lang.btn;
-            document.getElementById('lbl-bp').innerText = lang.bp;
-            document.getElementById('lbl-glu').innerText = lang.glu;
-            document.getElementById('lbl-food').innerText = lang.food;
-            document.getElementById('lbl-sync').innerText = lang.sync;
-            document.getElementById('lbl-cli').innerText = lang.cli;
-            document.getElementById('lbl-msg-title').innerText = lang.msg;
-            document.getElementById('btn-ack').innerText = lang.ack;
         }
 
         function acknowledgeNote() {
