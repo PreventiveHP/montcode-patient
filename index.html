@@ -126,7 +126,7 @@
         </div>
 
         <div onclick="document.getElementById('provider-overlay').style.display='flex'" class="dash-card card-blue">
-            <span class="text-3xl mb-1">🩺</span>
+            <span class="text-3xl mb-1"></span>
             <p class="text-[10px] font-black uppercase italic tracking-tighter text-blue-400">Clinical</p>
         </div>
 
@@ -149,21 +149,32 @@
     </footer>
 
     <script>
-        window.addEventListener('load', () => {
-            if (!localStorage.getItem('montcode_activation')) {
-                window.location.replace('activation.html');
-                return;
-            }
+        // 1. Verificación Inmediata (Antes de cargar el DOM)
+        if (!localStorage.getItem('montcode_activation')) {
+            window.location.replace('activation.html');
+        }
 
-            const name = localStorage.getItem('mc_patient_name') || "Patient";
-            const dob = localStorage.getItem('mc_patient_dob') || "VERIFIED";
+        window.addEventListener('load', () => {
+            // 2. Cargar Datos del Perfil con Fallbacks seguros
+            const name = localStorage.getItem('mc_patient_name') || "Guest Patient";
+            const dob = localStorage.getItem('mc_patient_dob') || "NOT SET";
+            
             document.getElementById('p-name').innerText = name;
             document.getElementById('p-dob').innerText = "DOB: " + dob;
 
+            // 3. Establecer saludo dinámico
             setEnglishGreeting();
 
+            // 4. Verificar si hay notas del Doctor
             const savedNote = localStorage.getItem('mc_dr_note');
-            if (savedNote) displayNote(savedNote);
+            if (savedNote && savedNote !== "undefined") {
+                displayNote(savedNote);
+            }
+
+            // 5. Limpiar URL de parámetros basura
+            if (window.location.search) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
         });
 
         function setEnglishGreeting() {
@@ -182,26 +193,32 @@
         function acknowledgeNote() {
             localStorage.removeItem('mc_dr_note');
             document.getElementById('dr-message-area').classList.add('hidden');
+            if (navigator.vibrate) navigator.vibrate(50);
         }
 
         function generateDoctorQR() {
             const qrContainer = document.getElementById('qrcode');
             qrContainer.innerHTML = "";
-            const currentURL = window.location.href.split('?')[0]; 
+            // Genera el link limpio al Hub actual
+            const currentURL = window.location.origin + window.location.pathname; 
+            
             new QRCode(qrContainer, {
                 text: currentURL, 
                 width: 220,
                 height: 220,
                 colorDark: "#000000",
+                colorLight: "#ffffff",
                 correctLevel: QRCode.CorrectLevel.H
             });
             document.getElementById('qr-overlay').style.display = 'flex';
         }
 
-        // Service Worker Registration for PWA
+        // Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+                navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('MontCode SW Active'))
+                .catch(err => console.error('SW Registration failed:', err));
             });
         }
     </script>
