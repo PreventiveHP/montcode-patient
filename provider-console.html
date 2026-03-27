@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MontCode™ Provider Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap');
+        body { background: #000; color: white; font-family: system-ui, sans-serif; padding-bottom: 40px; }
+        .tech-font { font-family: 'Orbitron', sans-serif; }
+        .dr-input { background: #0a0a0a; border: 1px solid #1e3a8a; border-radius: 20px; color: white; padding: 15px; width: 100%; outline: none; transition: 0.3s; }
+        .dr-input:focus { border-color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+        .note-card { background: #0a0a0a; border-left: 4px solid #3b82f6; border-radius: 12px; padding: 15px; margin-bottom: 12px; position: relative; }
+    </style>
+</head>
+<body class="p-6">
+
+    <header class="mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-blue-500 font-black italic tech-font uppercase text-xl tracking-tighter">Provider Console</h1>
+            <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">MontCode™ Clinical Link</p>
+        </div>
+        <div class="bg-blue-600/20 p-3 rounded-full">🩺</div>
+    </header>
+
+    <!-- ÁREA DE ESCRITURA -->
+    <div class="mb-8">
+        <label class="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-2 block">New Medical Instruction</label>
+        <textarea id="note-input" class="dr-input min-h-[120px] text-sm italic font-bold" placeholder="Escribe aquí las indicaciones para el paciente..."></textarea>
+        <button onclick="saveNote()" class="w-full mt-4 bg-blue-600 py-4 rounded-2xl font-black uppercase italic text-sm shadow-lg shadow-blue-500/20 active:scale-95 transition">
+            Send to Patient Dashboard
+        </button>
+    </div>
+
+    <!-- HISTORIAL DE NOTAS -->
+    <div class="mt-10">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Instruction History</h2>
+            <button onclick="clearAll()" class="text-[8px] text-red-500 font-bold uppercase underline">Clear All</button>
+        </div>
+        
+        <div id="history-container">
+            <!-- Las notas aparecerán aquí -->
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', loadNotes);
+
+        function saveNote() {
+            const input = document.getElementById('note-input');
+            const text = input.value.trim();
+            
+            if (!text) return alert("Please enter an instruction.");
+
+            const now = new Date();
+            const timestamp = `${now.toLocaleDateString()} | ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+            
+            const newNote = {
+                id: Date.now(),
+                text: text,
+                time: timestamp
+            };
+
+            // Guardar en LocalStorage
+            let history = JSON.parse(localStorage.getItem('mc_dr_history') || "[]");
+            history.unshift(newNote); // Añadir al inicio
+            localStorage.setItem('mc_dr_history', JSON.stringify(history));
+
+            // Actualizar la nota activa para el paciente
+            localStorage.setItem('mc_dr_note', text);
+
+            input.value = "";
+            loadNotes();
+            alert("Instruction sent and saved.");
+        }
+
+        function loadNotes() {
+            const container = document.getElementById('history-container');
+            const history = JSON.parse(localStorage.getItem('mc_dr_history') || "[]");
+            
+            if (history.length === 0) {
+                container.innerHTML = `<p class="text-[10px] text-zinc-700 font-bold uppercase text-center mt-10">No history found</p>`;
+                return;
+            }
+
+            container.innerHTML = history.map(note => `
+                <div class="note-card border-l-4 border-blue-600">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[8px] font-black text-blue-400 uppercase">${note.time}</span>
+                        <button onclick="deleteNote(${note.id})" class="text-zinc-600 hover:text-red-500">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </div>
+                    <p class="text-[13px] font-bold italic text-zinc-200 leading-tight uppercase">${note.text}</p>
+                </div>
+            `).join('');
+        }
+
+        function deleteNote(id) {
+            if (!confirm("Delete this instruction?")) return;
+            let history = JSON.parse(localStorage.getItem('mc_dr_history') || "[]");
+            history = history.filter(n => n.id !== id);
+            localStorage.setItem('mc_dr_history', JSON.stringify(history));
+            loadNotes();
+        }
+
+        function clearAll() {
+            if (!confirm("WIPE ALL HISTORY?")) return;
+            localStorage.removeItem('mc_dr_history');
+            localStorage.removeItem('mc_dr_note');
+            loadNotes();
+        }
+    </script>
+</body>
+</html>
