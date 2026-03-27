@@ -5,78 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MontCode™ Patient Hub</title>
     
-    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700;900&display=swap');
         
-        body { 
-            background: #000; 
-            color: white; 
-            font-family: 'Inter', sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
-        }
-
-        .tech-font { 
-            font-family: 'Orbitron', sans-serif; 
-        }
-
-        .dash-card { 
-            background: #0a0a0a; 
-            border-radius: 28px; 
-            padding: 20px; 
-            border: 1px solid #1a1a1a; 
-            transition: 0.2s; 
-            cursor: pointer; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            min-height: 130px; 
-        }
-
-        .dash-card:active { 
-            transform: scale(0.95); 
-        }
-
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .tech-font { font-family: 'Orbitron', sans-serif; }
+        .dash-card { background: #0a0a0a; border-radius: 28px; padding: 20px; border: 1px solid #1a1a1a; transition: 0.2s; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 130px; }
+        .dash-card:active { transform: scale(0.95); }
         .card-red { border-bottom: 4px solid #dc2626; }
         .card-green { border-bottom: 4px solid #16a34a; }
         .card-yellow { border-bottom: 4px solid #eab308; }
         .card-blue { border-bottom: 4px solid #2563eb; }
         .card-purple { border-bottom: 4px solid #a855f7; }
         
-        #qr-overlay { 
-            display: none; 
-            position: fixed; 
-            inset: 0; 
-            background: rgba(0,0,0,0.98); 
-            z-index: 100; 
-            align-items: center; 
-            justify-content: center; 
-            backdrop-filter: blur(15px); 
-        }
-
-        .logo-border { 
-            border: 2px solid #DAA520; 
-            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2); 
-        }
-
-        textarea { 
-            background: #111; 
-            border: 1px solid #333; 
-            color: #fff; 
-            width: 100%; 
-            border-radius: 15px; 
-            padding: 15px; 
-            font-size: 14px; 
-            outline: none; 
-        }
-
-        textarea:focus { 
-            border-color: #2563eb; 
-        }
+        #qr-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
+        .logo-border { border: 2px solid #DAA520; box-shadow: 0 0 15px rgba(218, 165, 32, 0.2); }
+        textarea { background: #111; border: 1px solid #333; color: #fff; width: 100%; border-radius: 15px; padding: 15px; font-size: 14px; outline: none; }
     </style>
 </head>
 <body class="p-6 pb-24">
@@ -94,7 +41,7 @@
         </div>
     </header>
 
-    <!-- Medical Instruction Area -->
+    <!-- Medical Instruction Area (EL TOOL DEL DR) -->
     <div id="dr-message-area" class="mb-8 hidden">
         <div class="bg-zinc-900 border-2 border-blue-500 rounded-[35px] overflow-hidden shadow-[0_0_20px_rgba(37,99,235,0.2)]">
             <div class="bg-blue-600/20 px-6 py-2 border-b border-blue-500/10 text-center">
@@ -112,32 +59,24 @@
     </div>
 
     <div class="grid grid-cols-2 gap-4">
-        <!-- BP LOG -->
         <div onclick="location.href='bp.html'" class="dash-card card-red">
             <span class="text-3xl mb-1">🫀</span>
             <p class="text-[10px] font-black uppercase italic tracking-tighter">BP Log</p>
         </div>
-
-        <!-- GLUCOSE -->
         <div onclick="location.href='glucose.html'" class="dash-card card-green">
             <span class="text-3xl mb-1">🩸</span>
             <p class="text-[10px] font-black uppercase italic tracking-tighter">Glucose</p>
         </div>
-
-        <!-- FOOD SCAN (AQUÍ ESTÁ) -->
         <div onclick="location.href='food.html'" class="dash-card card-yellow">
             <span class="text-3xl mb-1">🥗</span>
             <p class="text-[10px] font-black uppercase italic tracking-tighter">Food Scan</p>
         </div>
-
-        <!-- SYNC LINK (LÓGICA RESCUE) -->
         <div onclick="initSync()" class="dash-card card-purple">
             <span class="text-3xl mb-1 animate-pulse">📡</span>
             <p class="text-[10px] font-black uppercase italic tracking-tighter">Sync Link</p>
         </div>
-
-        <!-- CLINICAL MODE -->
-        <div onclick="location.href='provider-console.html'" class="dash-card card-blue col-span-2">
+        <!-- BOTÓN ESTETOSCOPIO: ACTIVA EL MODO MENSAJE -->
+        <div onclick="activateClinicalEntry()" class="dash-card card-blue col-span-2">
             <span class="text-3xl mb-1">🩺</span>
             <p class="text-[10px] font-black uppercase italic tracking-tighter text-blue-400">Clinical Mode</p>
         </div>
@@ -147,15 +86,9 @@
         <div class="bg-white p-8 rounded-[45px] w-[320px] flex flex-col items-center">
             <div id="qrcode" class="p-2 bg-white"></div>
             <p class="text-black font-black text-[10px] uppercase mt-6 tracking-widest">Provider Sync QR</p>
-            <p class="text-zinc-400 text-[8px] mt-2 text-center px-4 italic">Scan to sync clinical data locally</p>
+            <p class="text-zinc-400 text-[8px] mt-2 text-center px-4 italic tracking-widest uppercase">Scan to sync clinical data</p>
         </div>
     </div>
-
-    <footer class="mt-12 px-4 text-center">
-        <p class="text-[9px] text-zinc-600 font-bold uppercase italic leading-relaxed">
-            Wellness based data in Patient Registry. Not official medical records.
-        </p>
-    </footer>
 
     <script>
         let isDrMode = false;
@@ -164,17 +97,24 @@
             const params = new URLSearchParams(window.location.search);
             const d = params.get('d');
 
-            // Si hay datos (viene de un QR/NFC del paciente), los cargamos en el local del Dr.
+            // --- LÓGICA DE ENROLAMIENTO (Barcode Check) ---
+            // Solo pedimos activación si NO estamos en modo sincronización (d)
+            if (!localStorage.getItem('montcode_activation') && !d) {
+                window.location.href = 'activation.html'; 
+                return;
+            }
+
+            // --- LÓGICA DE SINCRONIZACIÓN (QR/NFC) ---
             if(d) {
                 try {
                     const rawData = decodeURIComponent(escape(atob(d)));
                     const data = JSON.parse(rawData);
                     localStorage.setItem('mc_patient_name', data.n);
                     localStorage.setItem('mc_last_bp', data.bp);
-                    localStorage.setItem('mc_last_glu', data.gl);
+                    localStorage.setItem('mc_last_gl', data.gl);
                     isDrMode = true;
                     prepareDrView();
-                } catch(e) { console.error("Sync Error"); }
+                } catch(e) { console.error("Data Sync Error"); }
             }
 
             const name = localStorage.getItem('mc_patient_name') || "Patient";
@@ -184,13 +124,20 @@
             checkDrNotes();
         };
 
+        function activateClinicalEntry() {
+            // Permite al Dr. abrir el panel de escritura manualmente
+            prepareDrView();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         function prepareDrView() {
-            document.body.style.border = "4px solid #2563eb";
             document.getElementById('dr-message-area').classList.remove('hidden');
             document.getElementById('dr-note-input').classList.remove('hidden');
             document.getElementById('btn-save-note').classList.remove('hidden');
             document.getElementById('btn-ack').classList.add('hidden');
             document.getElementById('dr-note-display').classList.add('hidden');
+            // Feedback visual de modo clínico
+            document.body.style.borderTop = "5px solid #2563eb";
         }
 
         function setGreeting() {
@@ -207,6 +154,9 @@
                 document.getElementById('dr-note-display').innerText = `"${note}"`;
                 document.getElementById('dr-message-area').classList.remove('hidden');
                 document.getElementById('dr-note-display').classList.remove('hidden');
+                document.getElementById('dr-note-input').classList.add('hidden');
+                document.getElementById('btn-save-note').classList.add('hidden');
+                document.getElementById('btn-ack').classList.remove('hidden');
             }
         }
 
@@ -220,37 +170,44 @@
         }
 
         async function initSync() {
-            const baseUrl = window.location.origin + window.location.pathname;
             const data = {
                 n: localStorage.getItem('mc_patient_name') || "Patient",
                 bp: localStorage.getItem('mc_last_bp') || "N/A",
-                gl: localStorage.getItem('mc_last_glu') || "N/A"
+                gl: localStorage.getItem('mc_last_gl') || "N/A"
             };
-            
-            // Lógica Rescue: Inyectamos los datos en la URL
+
+            const baseUrl = window.location.origin + window.location.pathname;
             const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
             const syncURL = `${baseUrl}?d=${encoded}`;
-            
+
             if ('NDEFReader' in window) {
                 try {
                     const ndef = new NDEFReader();
                     await ndef.scan();
                     await ndef.write({ records: [{ recordType: "url", data: syncURL }] });
                     alert("SHIP SYNCED TO NFC");
-                } catch (error) { showQR(syncURL); }
-            } else { showQR(syncURL); }
+                } catch (e) { showQR(syncURL); }
+            } else {
+                showQR(syncURL);
+            }
         }
 
         function showQR(url) {
-            const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = "";
-            new QRCode(qrContainer, { text: url, width: 200, height: 200 });
+            const container = document.getElementById('qrcode');
+            container.innerHTML = "";
+            new QRCode(container, {
+                text: url,
+                width: 200,
+                height: 200,
+                correctLevel : QRCode.CorrectLevel.L
+            });
             document.getElementById('qr-overlay').style.display = 'flex';
         }
 
         function acknowledgeNote() {
             localStorage.removeItem('mc_dr_note');
             document.getElementById('dr-message-area').classList.add('hidden');
+            document.body.style.borderTop = "none";
         }
     </script>
 </body>
