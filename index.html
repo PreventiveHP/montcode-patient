@@ -1,134 +1,43 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MontCode™ Patient Hub</title>
-    
-    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700;900&display=swap');
-        
-        body { 
-            background: #000; 
-            color: white; 
-            font-family: 'Inter', sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
-        }
-
-        .tech-font { 
-            font-family: 'Orbitron', sans-serif; 
-        }
-
-        .dash-card { 
-            background: #0a0a0a; 
-            border-radius: 28px; 
-            padding: 20px; 
-            border: 1px solid #1a1a1a; 
-            transition: 0.2s; 
-            cursor: pointer; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            min-height: 130px; 
-        }
-
-        .dash-card:active { 
-            transform: scale(0.95); 
-        }
-
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .tech-font { font-family: 'Orbitron', sans-serif; }
+        .dash-card { background: #0a0a0a; border-radius: 28px; padding: 20px; border: 1px solid #1a1a1a; transition: 0.2s; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 130px; }
         .card-red { border-bottom: 4px solid #dc2626; }
         .card-green { border-bottom: 4px solid #16a34a; }
         .card-yellow { border-bottom: 4px solid #eab308; }
         .card-blue { border-bottom: 4px solid #2563eb; }
         .card-purple { border-bottom: 4px solid #a855f7; }
-        
-        #qr-overlay { 
-            display: none; 
-            position: fixed; 
-            inset: 0; 
-            background: rgba(0,0,0,0.98); 
-            z-index: 100; 
-            align-items: center; 
-            justify-content: center; 
-            backdrop-filter: blur(15px); 
-        }
-
-        .logo-border { 
-            border: 2px solid #DAA520; 
-            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2); 
-        }
-
-        textarea { 
-            background: #111; 
-            border: 1px solid #333; 
-            color: #fff; 
-            width: 100%; 
-            border-radius: 15px; 
-            padding: 15px; 
-            font-size: 14px; 
-            outline: none; 
-        }
+        #qr-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
+        .logo-border { border: 2px solid #DAA520; box-shadow: 0 0 15px rgba(218, 165, 32, 0.2); }
+        textarea { background: #111; border: 1px solid #333; color: #fff; width: 100%; border-radius: 15px; padding: 15px; font-size: 14px; outline: none; }
     </style>
 </head>
 <body class="p-6 pb-24">
-
-    <script>
-        // 1. Ejecutar inmediatamente al cargar el script, antes de cargar el DOM
-        (function criticalInit() {
-            const params = new URLSearchParams(window.location.search);
-            const dataParam = params.get('d');
-
-            if (dataParam) {
-                try {
-                    // Decodificar Base64 de forma segura
-                    const rawData = atob(dataParam);
-                    // Decodificar caracteres especiales de forma segura
-                    const decodedData = decodeURIComponent(escape(rawData));
-                    const data = JSON.parse(decodedData);
-
-                    // Sincronizar datos EN ESTE DISPOSITIVO (Dr. o Receptor)
-                    localStorage.setItem('mc_patient_name', data.n);
-                    localStorage.setItem('mc_last_bp', data.bp);
-                    localStorage.setItem('mc_last_glu', data.gl);
-                    
-                    // Marcar este navegador como activado para saltar enrolamiento
-                    localStorage.setItem('montcode_activation', 'true');
-                    
-                    console.log("MontCode™ Triage Data Synced:", data.n);
-                } catch (e) {
-                    console.error("Critical Sync Error: Base64 or JSON invalid.");
-                }
-            } else {
-                // Protección de Enrolamiento (Barcode Check)
-                if (!localStorage.getItem('montcode_activation')) {
-                    window.location.replace('activation.html');
-                }
-            }
-        })();
-    </script>
 
     <header class="flex justify-between items-center mb-8">
         <div class="flex items-center gap-4">
             <img src="logo.png.jpg" class="w-14 h-14 rounded-full logo-border object-cover">
             <div>
-                <h2 id="greet" class="text-blue-400 font-black text-[12px] tech-font uppercase italic leading-none">Good Morning,</h2>
-                <p id="p-name" class="text-white font-bold text-[18px] uppercase italic">Patient</p>
+                <h2 id="greet" class="text-blue-400 font-black text-[12px] tech-font uppercase italic leading-none">GOOD MORNING,</h2>
+                <p id="p-name" class="text-white font-bold text-[18px] uppercase italic">PATIENT</p>
             </div>
         </div>
-        <div class="text-right">
-            <p class="text-[8px] text-zinc-600 font-black uppercase italic tracking-widest">MontCode™ Verified</p>
-        </div>
+        <p class="text-[8px] text-zinc-600 font-black uppercase italic tracking-widest">MONTCODE™ VERIFIED</p>
     </header>
 
     <div id="dr-message-area" class="mb-8 hidden">
         <div class="bg-zinc-900 border-2 border-blue-500 rounded-[35px] overflow-hidden shadow-[0_0_20px_rgba(37,99,235,0.2)]">
             <div class="bg-blue-600/20 px-6 py-2 border-b border-blue-500/10 text-center">
-                <p class="text-[9px] font-black text-blue-400 tech-font uppercase italic">Medical Instruction</p>
+                <p id="msg-title" class="text-[9px] font-black text-blue-400 tech-font uppercase italic">Medical Instruction</p>
             </div>
             <div class="p-6 text-center">
                 <textarea id="dr-note-input" placeholder="Enter clinical instruction..." rows="3" class="mb-4 hidden"></textarea>
@@ -158,7 +67,7 @@
             <span class="text-3xl mb-1 animate-pulse">📡</span>
             <p class="text-[10px] font-black uppercase italic tracking-tighter">Sync Link</p>
         </div>
-        <div onclick="initDrModeManually()" class="dash-card card-blue col-span-2">
+        <div onclick="showDrPanel()" class="dash-card card-blue col-span-2">
             <span class="text-3xl mb-1">🩺</span>
             <p class="text-[10px] font-black uppercase italic tracking-tighter text-blue-400">Clinical Mode</p>
         </div>
@@ -167,142 +76,97 @@
     <div id="qr-overlay" onclick="this.style.display='none'">
         <div class="bg-white p-8 rounded-[45px] w-[320px] flex flex-col items-center">
             <div id="qrcode" class="p-2 bg-white"></div>
-            <p class="text-black font-black text-[10px] uppercase mt-6 tracking-widest">Provider Sync QR</p>
-            <p class="text-zinc-400 text-[8px] mt-2 text-center px-4 italic tracking-widest uppercase">Scan to sync clinical data</p>
+            <p class="text-black font-black text-[10px] uppercase mt-6">Provider Sync QR</p>
         </div>
     </div>
 
-    <footer class="mt-12 px-4 text-center">
-        <p class="text-[9px] text-zinc-600 font-bold uppercase italic leading-relaxed">
-            Wellness based data in Patient Registry. Not official medical records.
-        </p>
-    </footer>
-
     <script>
-        let currentLang = 'en';
+        // LÓGICA DE DETECCIÓN INMEDIATA (TRIAGE)
+        const params = new URLSearchParams(window.location.search);
+        const dataKey = params.get('d');
 
-        window.addEventListener('load', () => {
-            // Cargar nombre sincronizado o por defecto
-            const name = localStorage.getItem('mc_patient_name') || "Patient";
-            document.getElementById('p-name').innerText = name;
-            
-            setGreeting();
-            checkDrNotes();
-
-            // Si hay datos en la URL, asumimos modo Dr. y preparamos la vista
-            const params = new URLSearchParams(window.location.search);
-            if(params.get('d')) {
-                prepareDrView();
-            }
-        });
-
-        function initDrModeManually() {
-            // Permite al Dr. abrir el panel de escritura manualmente en el dispositivo del paciente
-            prepareDrView();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (dataKey) {
+            try {
+                const decoded = JSON.parse(atob(dataKey));
+                localStorage.setItem('mc_patient_name', decoded.n);
+                localStorage.setItem('mc_last_bp', decoded.bp);
+                localStorage.setItem('mc_last_gl', decoded.gl);
+                localStorage.setItem('montcode_activation', 'true'); // Activa sesión Dr.
+                
+                // Limpiamos la URL para que no se quede el código ahí pegado
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } catch(e) { console.error("Sync Error"); }
         }
 
-        function prepareDrView() {
+        // Si no hay activación y no hay datos en URL, mandamos a activación
+        if (!localStorage.getItem('montcode_activation')) {
+            window.location.href = 'activation.html';
+        }
+
+        window.onload = () => {
+            document.getElementById('p-name').innerText = localStorage.getItem('mc_patient_name') || "JUAN PEREZ";
+            setGreeting();
+            
+            // Si acabamos de recibir datos de un QR, mostramos el panel del Dr. automáticamente
+            if (dataKey) {
+                showDrPanel();
+            } else {
+                checkSavedNotes();
+            }
+        };
+
+        function showDrPanel() {
             document.getElementById('dr-message-area').classList.remove('hidden');
             document.getElementById('dr-note-input').classList.remove('hidden');
             document.getElementById('btn-save-note').classList.remove('hidden');
-            document.getElementById('btn-ack').classList.add('hidden');
             document.getElementById('dr-note-display').classList.add('hidden');
-            // Feedback visual
+            document.getElementById('btn-ack').classList.add('hidden');
             document.body.style.borderTop = "5px solid #2563eb";
-        }
-
-        function setGreeting() {
-            const hour = new Date().getHours();
-            let g = "Good Morning,";
-            if(hour >= 12 && hour < 17) g = "Good Afternoon,";
-            if(hour >= 17 || hour < 5) g = "Good Evening,";
-            document.getElementById('greet').innerText = g;
-        }
-
-        function checkDrNotes() {
-            const note = localStorage.getItem('mc_dr_note');
-            const isDrActive = new URLSearchParams(window.location.search).get('d');
-
-            if (note && !isDrActive) {
-                document.getElementById('dr-note-display').innerText = `"${note}"`;
-                document.getElementById('dr-message-area').classList.remove('hidden');
-                document.getElementById('dr-note-display').classList.remove('hidden');
-                document.getElementById('dr-note-input').classList.add('hidden');
-                document.getElementById('btn-save-note').classList.add('hidden');
-                document.getElementById('btn-ack').classList.remove('hidden');
-            }
+            window.scrollTo(0,0);
         }
 
         function saveNote() {
             const note = document.getElementById('dr-note-input').value;
             if(note) {
                 localStorage.setItem('mc_dr_note', note);
-                alert("Clinical Instruction Saved");
-                // Recargar limpiando parámetros de URL para volver a vista paciente
-                window.location.href = window.location.pathname;
+                alert("Instruction Saved");
+                location.reload();
             }
         }
 
-        async function initSync() {
-            // Recolectamos la data actual (con fallbacks)
-            const data = {
-                n: localStorage.getItem('mc_patient_name') || "Juan Perez",
-                bp: localStorage.getItem('mc_last_bp') || "120/80",
-                gl: localStorage.getItem('mc_last_glu') || "98"
-            };
-
-            const baseUrl = window.location.origin + window.location.pathname;
-            // Codificación robusta Base64
-            const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-            const syncURL = `${baseUrl}?d=${encoded}`;
-
-            // NFC SYNC
-            if ('NDEFReader' in window) {
-                try {
-                    const ndef = new NDEFReader();
-                    await ndef.scan();
-                    await ndef.write({ records: [{ recordType: "url", data: syncURL }] });
-                    alert("SHIP SYNCED TO NFC tag");
-                } catch (e) { showQR(syncURL); }
-            } else {
-                showQR(syncURL);
+        function checkSavedNotes() {
+            const note = localStorage.getItem('mc_dr_note');
+            if (note) {
+                document.getElementById('dr-message-area').classList.remove('hidden');
+                document.getElementById('dr-note-display').innerText = `"${note}"`;
+                document.getElementById('dr-note-display').classList.remove('hidden');
+                document.getElementById('btn-ack').classList.remove('hidden');
             }
         }
 
-        function showQR(url) {
-            const container = document.getElementById('qrcode');
-            container.innerHTML = "";
-            new QRCode(container, {
-                text: url,
-                width: 200,
-                height: 200,
-                correctLevel : QRCode.CorrectLevel.L
-            });
+        function initSync() {
+            const name = document.getElementById('p-name').innerText;
+            const data = { n: name, bp: "120/80", gl: "98" };
+            const encoded = btoa(JSON.stringify(data));
+            const url = window.location.origin + window.location.pathname + "?d=" + encoded;
+
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = "";
+            new QRCode(qrContainer, { text: url, width: 200, height: 200 });
             document.getElementById('qr-overlay').style.display = 'flex';
         }
 
-        function toggleLanguage() {
-            currentLang = currentLang === 'en' ? 'es' : 'en';
-            const btn = document.getElementById('lang-btn');
-            const content = {
-                en: { btn: "🇪🇸", bp: "BP Log", glu: "Glucose", food: "Food Scan", sync: "Sync Link", cli: "Clinical Mode", msg: "Medical Instruction", ack: "Acknowledge" },
-                es: { btn: "🇺🇸", bp: "Registro PA", glu: "Glucosa", food: "Escaneo Alimentos", sync: "Sincronizar", cli: "Modo Clínico", msg: "Instrucción Médica", ack: "Entendido" }
-            };
-            const lang = content[currentLang];
-            btn.innerText = lang.btn;
-            document.getElementById('lbl-bp').innerText = lang.bp;
-            document.getElementById('lbl-glu').innerText = lang.glu;
-            document.getElementById('lbl-food').innerText = lang.food;
-            document.getElementById('lbl-sync').innerText = lang.sync;
-            document.getElementById('lbl-cli').innerText = lang.cli;
-            document.getElementById('lbl-msg-title').innerText = lang.msg;
-            document.getElementById('btn-ack').innerText = lang.ack;
+        function setGreeting() {
+            const hr = new Date().getHours();
+            let g = "GOOD MORNING,";
+            if(hr >= 12 && hr < 17) g = "GOOD AFTERNOON,";
+            if(hr >= 17 || hr < 5) g = "GOOD EVENING,";
+            document.getElementById('greet').innerText = g;
         }
 
         function acknowledgeNote() {
             localStorage.removeItem('mc_dr_note');
-            document.getElementById('dr-message-area').classList.add('hidden');
+            location.reload();
         }
     </script>
 </body>
