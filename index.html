@@ -5,28 +5,112 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MontCode™ Patient Hub</title>
     
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700;900&display=swap');
         
-        body { background: #000; color: white; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .tech-font { font-family: 'Orbitron', sans-serif; }
-        .dash-card { background: #0a0a0a; border-radius: 28px; padding: 20px; border: 1px solid #1a1a1a; transition: 0.2s; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 130px; }
-        .dash-card:active { transform: scale(0.95); }
+        body { 
+            background: #000; 
+            color: white; 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        .tech-font { 
+            font-family: 'Orbitron', sans-serif; 
+        }
+
+        .dash-card { 
+            background: #0a0a0a; 
+            border-radius: 28px; 
+            padding: 20px; 
+            border: 1px solid #1a1a1a; 
+            transition: 0.2s; 
+            cursor: pointer; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 130px; 
+        }
+
+        .dash-card:active { 
+            transform: scale(0.95); 
+        }
+
         .card-red { border-bottom: 4px solid #dc2626; }
         .card-green { border-bottom: 4px solid #16a34a; }
         .card-yellow { border-bottom: 4px solid #eab308; }
         .card-blue { border-bottom: 4px solid #2563eb; }
         .card-purple { border-bottom: 4px solid #a855f7; }
         
-        #qr-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
-        .logo-border { border: 2px solid #DAA520; box-shadow: 0 0 15px rgba(218, 165, 32, 0.2); }
-        textarea { background: #111; border: 1px solid #333; color: #fff; width: 100%; border-radius: 15px; padding: 15px; font-size: 14px; outline: none; }
+        #qr-overlay { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.98); 
+            z-index: 100; 
+            align-items: center; 
+            justify-content: center; 
+            backdrop-filter: blur(15px); 
+        }
+
+        .logo-border { 
+            border: 2px solid #DAA520; 
+            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2); 
+        }
+
+        textarea { 
+            background: #111; 
+            border: 1px solid #333; 
+            color: #fff; 
+            width: 100%; 
+            border-radius: 15px; 
+            padding: 15px; 
+            font-size: 14px; 
+            outline: none; 
+        }
     </style>
 </head>
 <body class="p-6 pb-24">
+
+    <script>
+        // 1. Ejecutar inmediatamente al cargar el script, antes de cargar el DOM
+        (function criticalInit() {
+            const params = new URLSearchParams(window.location.search);
+            const dataParam = params.get('d');
+
+            if (dataParam) {
+                try {
+                    // Decodificar Base64 de forma segura
+                    const rawData = atob(dataParam);
+                    // Decodificar caracteres especiales de forma segura
+                    const decodedData = decodeURIComponent(escape(rawData));
+                    const data = JSON.parse(decodedData);
+
+                    // Sincronizar datos EN ESTE DISPOSITIVO (Dr. o Receptor)
+                    localStorage.setItem('mc_patient_name', data.n);
+                    localStorage.setItem('mc_last_bp', data.bp);
+                    localStorage.setItem('mc_last_glu', data.gl);
+                    
+                    // Marcar este navegador como activado para saltar enrolamiento
+                    localStorage.setItem('montcode_activation', 'true');
+                    
+                    console.log("MontCode™ Triage Data Synced:", data.n);
+                } catch (e) {
+                    console.error("Critical Sync Error: Base64 or JSON invalid.");
+                }
+            } else {
+                // Protección de Enrolamiento (Barcode Check)
+                if (!localStorage.getItem('montcode_activation')) {
+                    window.location.replace('activation.html');
+                }
+            }
+        })();
+    </script>
 
     <header class="flex justify-between items-center mb-8">
         <div class="flex items-center gap-4">
@@ -41,7 +125,6 @@
         </div>
     </header>
 
-    <!-- Medical Instruction Area (EL TOOL DEL DR) -->
     <div id="dr-message-area" class="mb-8 hidden">
         <div class="bg-zinc-900 border-2 border-blue-500 rounded-[35px] overflow-hidden shadow-[0_0_20px_rgba(37,99,235,0.2)]">
             <div class="bg-blue-600/20 px-6 py-2 border-b border-blue-500/10 text-center">
@@ -75,8 +158,7 @@
             <span class="text-3xl mb-1 animate-pulse">📡</span>
             <p class="text-[10px] font-black uppercase italic tracking-tighter">Sync Link</p>
         </div>
-        <!-- BOTÓN ESTETOSCOPIO: ACTIVA EL MODO MENSAJE -->
-        <div onclick="activateClinicalEntry()" class="dash-card card-blue col-span-2">
+        <div onclick="initDrModeManually()" class="dash-card card-blue col-span-2">
             <span class="text-3xl mb-1">🩺</span>
             <p class="text-[10px] font-black uppercase italic tracking-tighter text-blue-400">Clinical Mode</p>
         </div>
@@ -90,42 +172,32 @@
         </div>
     </div>
 
+    <footer class="mt-12 px-4 text-center">
+        <p class="text-[9px] text-zinc-600 font-bold uppercase italic leading-relaxed">
+            Wellness based data in Patient Registry. Not official medical records.
+        </p>
+    </footer>
+
     <script>
-        let isDrMode = false;
+        let currentLang = 'en';
 
-        window.onload = () => {
-            const params = new URLSearchParams(window.location.search);
-            const d = params.get('d');
-
-            // --- LÓGICA DE ENROLAMIENTO (Barcode Check) ---
-            // Solo pedimos activación si NO estamos en modo sincronización (d)
-            if (!localStorage.getItem('montcode_activation') && !d) {
-                window.location.href = 'activation.html'; 
-                return;
-            }
-
-            // --- LÓGICA DE SINCRONIZACIÓN (QR/NFC) ---
-            if(d) {
-                try {
-                    const rawData = decodeURIComponent(escape(atob(d)));
-                    const data = JSON.parse(rawData);
-                    localStorage.setItem('mc_patient_name', data.n);
-                    localStorage.setItem('mc_last_bp', data.bp);
-                    localStorage.setItem('mc_last_gl', data.gl);
-                    isDrMode = true;
-                    prepareDrView();
-                } catch(e) { console.error("Data Sync Error"); }
-            }
-
+        window.addEventListener('load', () => {
+            // Cargar nombre sincronizado o por defecto
             const name = localStorage.getItem('mc_patient_name') || "Patient";
             document.getElementById('p-name').innerText = name;
             
             setGreeting();
             checkDrNotes();
-        };
 
-        function activateClinicalEntry() {
-            // Permite al Dr. abrir el panel de escritura manualmente
+            // Si hay datos en la URL, asumimos modo Dr. y preparamos la vista
+            const params = new URLSearchParams(window.location.search);
+            if(params.get('d')) {
+                prepareDrView();
+            }
+        });
+
+        function initDrModeManually() {
+            // Permite al Dr. abrir el panel de escritura manualmente en el dispositivo del paciente
             prepareDrView();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -136,7 +208,7 @@
             document.getElementById('btn-save-note').classList.remove('hidden');
             document.getElementById('btn-ack').classList.add('hidden');
             document.getElementById('dr-note-display').classList.add('hidden');
-            // Feedback visual de modo clínico
+            // Feedback visual
             document.body.style.borderTop = "5px solid #2563eb";
         }
 
@@ -150,7 +222,9 @@
 
         function checkDrNotes() {
             const note = localStorage.getItem('mc_dr_note');
-            if (note && !isDrMode) {
+            const isDrActive = new URLSearchParams(window.location.search).get('d');
+
+            if (note && !isDrActive) {
                 document.getElementById('dr-note-display').innerText = `"${note}"`;
                 document.getElementById('dr-message-area').classList.remove('hidden');
                 document.getElementById('dr-note-display').classList.remove('hidden');
@@ -165,27 +239,31 @@
             if(note) {
                 localStorage.setItem('mc_dr_note', note);
                 alert("Clinical Instruction Saved");
-                location.reload();
+                // Recargar limpiando parámetros de URL para volver a vista paciente
+                window.location.href = window.location.pathname;
             }
         }
 
         async function initSync() {
+            // Recolectamos la data actual (con fallbacks)
             const data = {
-                n: localStorage.getItem('mc_patient_name') || "Patient",
-                bp: localStorage.getItem('mc_last_bp') || "N/A",
-                gl: localStorage.getItem('mc_last_gl') || "N/A"
+                n: localStorage.getItem('mc_patient_name') || "Juan Perez",
+                bp: localStorage.getItem('mc_last_bp') || "120/80",
+                gl: localStorage.getItem('mc_last_glu') || "98"
             };
 
             const baseUrl = window.location.origin + window.location.pathname;
+            // Codificación robusta Base64
             const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
             const syncURL = `${baseUrl}?d=${encoded}`;
 
+            // NFC SYNC
             if ('NDEFReader' in window) {
                 try {
                     const ndef = new NDEFReader();
                     await ndef.scan();
                     await ndef.write({ records: [{ recordType: "url", data: syncURL }] });
-                    alert("SHIP SYNCED TO NFC");
+                    alert("SHIP SYNCED TO NFC tag");
                 } catch (e) { showQR(syncURL); }
             } else {
                 showQR(syncURL);
@@ -204,10 +282,27 @@
             document.getElementById('qr-overlay').style.display = 'flex';
         }
 
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'es' : 'en';
+            const btn = document.getElementById('lang-btn');
+            const content = {
+                en: { btn: "🇪🇸", bp: "BP Log", glu: "Glucose", food: "Food Scan", sync: "Sync Link", cli: "Clinical Mode", msg: "Medical Instruction", ack: "Acknowledge" },
+                es: { btn: "🇺🇸", bp: "Registro PA", glu: "Glucosa", food: "Escaneo Alimentos", sync: "Sincronizar", cli: "Modo Clínico", msg: "Instrucción Médica", ack: "Entendido" }
+            };
+            const lang = content[currentLang];
+            btn.innerText = lang.btn;
+            document.getElementById('lbl-bp').innerText = lang.bp;
+            document.getElementById('lbl-glu').innerText = lang.glu;
+            document.getElementById('lbl-food').innerText = lang.food;
+            document.getElementById('lbl-sync').innerText = lang.sync;
+            document.getElementById('lbl-cli').innerText = lang.cli;
+            document.getElementById('lbl-msg-title').innerText = lang.msg;
+            document.getElementById('btn-ack').innerText = lang.ack;
+        }
+
         function acknowledgeNote() {
             localStorage.removeItem('mc_dr_note');
             document.getElementById('dr-message-area').classList.add('hidden');
-            document.body.style.borderTop = "none";
         }
     </script>
 </body>
