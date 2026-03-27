@@ -7,6 +7,7 @@
     
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Librería QR indispensable para el generador -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <style>
@@ -27,7 +28,7 @@
 </head>
 <body class="p-6 pb-24">
 
-    <!-- Language Toggle -->
+    <!-- Language Toggle (English Primary) -->
     <div class="flex justify-end mb-4">
         <button onclick="toggleLanguage()" id="lang-btn" class="text-2xl grayscale hover:grayscale-0 transition" title="Change Language">🇪🇸</button>
     </div>
@@ -45,7 +46,7 @@
         </div>
     </header>
 
-    <!-- Medical Instruction Inbox (Dr Notes) -->
+    <!-- Medical Instruction Inbox (Dr Notes) - English Primary -->
     <div id="dr-message-area" class="mb-8 hidden">
         <div class="bg-zinc-900 border-2 border-blue-500 rounded-[35px] overflow-hidden shadow-[0_0_20px_rgba(37,99,235,0.2)]">
             <div class="bg-blue-600/20 px-6 py-2 border-b border-blue-500/10">
@@ -82,12 +83,12 @@
         </div>
     </div>
 
-    <!-- QR Overlay -->
+    <!-- QR Overlay (El generador dinámico inyectará el QR aquí) -->
     <div id="qr-overlay" onclick="this.style.display='none'">
         <div class="bg-white p-8 rounded-[45px] w-[320px] flex flex-col items-center">
-            <div id="qrcode"></div>
+            <div id="qrcode" class="p-2 bg-white"></div>
             <p class="text-black font-black text-[10px] uppercase mt-6 tracking-widest">Provider Sync QR</p>
-            <p class="text-zinc-400 text-[8px] mt-2 text-center px-4 italic">Scan to link this Clinical Hub locally</p>
+            <p class="text-zinc-400 text-[8px] mt-2 text-center px-4 italic">Scan to open this specific Patient Dashboard</p>
         </div>
     </div>
 
@@ -107,7 +108,7 @@
             setGreeting();
             checkDrNotes();
             
-            // Redirección si no hay activación (excepto si es modo Dr)
+            // Seguridad: Redirección si no ha pasado por el enrollment
             const isDrMode = new URLSearchParams(window.location.search).get('mode') === 'dr';
             if (!localStorage.getItem('montcode_activation') && !isDrMode) {
                 window.location.replace('activation.html');
@@ -132,28 +133,40 @@
 
         async function initSync() {
             const name = localStorage.getItem('mc_patient_name') || "User";
-            // GENERACIÓN DINÁMICA: Detecta la URL actual del usuario automáticamente
+            
+            // GENERACIÓN DE URL DINÁMICA: Detecta dónde está corriendo la app ahora mismo
             const baseUrl = window.location.href.split('?')[0].split('#')[0];
             const syncURL = `${baseUrl}?mode=dr&pt=${encodeURIComponent(name)}`;
             
+            // Primero intenta NFC si el navegador lo permite
             if ('NDEFReader' in window) {
                 try {
                     const ndef = new NDEFReader();
                     await ndef.scan();
                     await ndef.write(syncURL);
-                    alert("NFC Linked Successfully");
+                    alert("NFC Encoded with your Hub Link!");
                 } catch (error) {
-                    showQR(syncURL);
+                    showQR(syncURL); // Si falla NFC (o iPhone), muestra QR
                 }
             } else {
-                showQR(syncURL);
+                showQR(syncURL); // Dispositivos sin NFC (como PC o iPhone antiguo)
             }
         }
 
         function showQR(url) {
             const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = "";
-            new QRCode(qrContainer, { text: url, width: 220, height: 220 });
+            qrContainer.innerHTML = ""; // Limpiar QR anterior
+            
+            // Genera el QR con la URL del usuario específico
+            new QRCode(qrContainer, {
+                text: url,
+                width: 200,
+                height: 200,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+            
             document.getElementById('qr-overlay').style.display = 'flex';
         }
 
@@ -202,3 +215,4 @@
     </script>
 </body>
 </html>
+
