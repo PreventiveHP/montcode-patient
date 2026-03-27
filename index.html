@@ -20,41 +20,45 @@
         .card-blue { border-bottom: 4px solid #2563eb; }
         .card-yellow { border-bottom: 4px solid #eab308; }
         .card-purple { border-bottom: 4px solid #a855f7; }
-        .card-zinc { border-bottom: 4px solid #71717a; }
-        #qr-overlay, #provider-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
+        
+        #qr-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
+        .logo-border { border: 2px solid #DAA520; box-shadow: 0 0 15px rgba(218, 165, 32, 0.2); }
     </style>
 </head>
-<body class="p-6 pb-20">
+<body class="p-6 pb-24">
 
-    <div class="flex justify-end mb-2">
-        <button onclick="toggleSpanish()" class="text-2xl grayscale hover:grayscale-0 transition" title="Translate to Spanish">🇪🇸</button>
+    <!-- Language Toggle -->
+    <div class="flex justify-end mb-4">
+        <button onclick="toggleLanguage()" id="lang-btn" class="text-2xl grayscale hover:grayscale-0 transition" title="Change Language">🇪🇸</button>
     </div>
 
     <header class="flex justify-between items-center mb-8">
         <div class="flex items-center gap-4">
-            <img src="logo.png.jpg" class="w-14 h-14 rounded-full border-2 border-[#DAA520] object-cover shadow-lg">
+            <img src="logo.png.jpg" class="w-14 h-14 rounded-full logo-border object-cover">
             <div>
-                <h2 id="greet" class="text-blue-400 font-black text-[14px] tech-font uppercase italic leading-none">Good Morning,</h2>
+                <h2 id="greet" class="text-blue-400 font-black text-[12px] tech-font uppercase italic leading-none">Good Morning,</h2>
                 <p id="p-name" class="text-white font-bold text-[18px] uppercase italic">Patient</p>
             </div>
         </div>
         <div class="text-right">
-            <p id="p-dob" class="text-[8px] text-zinc-600 font-black uppercase italic">DOB: VERIFIED</p>
+            <p class="text-[8px] text-zinc-600 font-black uppercase italic tracking-widest">MontCode™ Verified</p>
         </div>
     </header>
 
+    <!-- Medical Instruction Inbox (Dr Notes) -->
     <div id="dr-message-area" class="mb-8 hidden">
-        <div class="bg-zinc-900 border-2 border-blue-500 rounded-[35px] overflow-hidden">
-            <div class="bg-blue-600/20 px-6 py-2 border-b border-blue-500/10 flex justify-between">
-                <p class="text-[9px] font-black text-blue-400 tech-font uppercase">Medical Instruction</p>
+        <div class="bg-zinc-900 border-2 border-blue-500 rounded-[35px] overflow-hidden shadow-[0_0_20px_rgba(37,99,235,0.2)]">
+            <div class="bg-blue-600/20 px-6 py-2 border-b border-blue-500/10">
+                <p id="lbl-msg-title" class="text-[9px] font-black text-blue-400 tech-font uppercase italic">Medical Instruction</p>
             </div>
             <div class="p-6 text-center">
-                <p id="dr-note-text" class="text-white text-[15px] font-black italic uppercase italic">NO MESSAGE</p>
-                <button onclick="acknowledgeNote()" class="mt-4 text-[9px] bg-blue-600 text-white px-5 py-2 rounded-full font-black uppercase italic">Acknowledge</button>
+                <p id="dr-note-text" class="text-white text-[15px] font-black italic uppercase leading-tight">NO MESSAGE</p>
+                <button onclick="acknowledgeNote()" id="btn-ack" class="mt-5 text-[9px] bg-blue-600 text-white px-8 py-3 rounded-full font-black uppercase italic">Acknowledge</button>
             </div>
         </div>
     </div>
 
+    <!-- Main Grid -->
     <div class="grid grid-cols-2 gap-4">
         <div onclick="location.href='bp.html'" class="dash-card card-red">
             <span class="text-3xl mb-1">🫀</span>
@@ -64,36 +68,50 @@
             <span class="text-3xl mb-1">🩸</span>
             <p id="lbl-glu" class="text-[10px] font-black uppercase italic tracking-tighter">Glucose</p>
         </div>
-        <div onclick="initNFCSync()" class="dash-card card-purple">
-            <span class="text-3xl mb-1 animate-pulse">📡</span>
-            <p id="lbl-nfc" class="text-[10px] font-black uppercase italic tracking-tighter">NFC Sync</p>
+        <div onclick="location.href='food.html'" class="dash-card card-yellow">
+            <span class="text-3xl mb-1">🥗</span>
+            <p id="lbl-food" class="text-[10px] font-black uppercase italic tracking-tighter">Food Scan</p>
         </div>
-        <div onclick="document.getElementById('provider-overlay').style.display='flex'" class="dash-card card-blue">
+        <div onclick="initSync()" class="dash-card card-purple">
+            <span class="text-3xl mb-1 animate-pulse">📡</span>
+            <p id="lbl-sync" class="text-[10px] font-black uppercase italic tracking-tighter">Sync Link</p>
+        </div>
+        <div onclick="location.href='provider-console.html'" class="dash-card card-blue col-span-2">
             <span class="text-3xl mb-1">🩺</span>
-            <p id="lbl-cli" class="text-[10px] font-black uppercase italic tracking-tighter text-blue-400">Clinical Mode</p>
+            <p id="lbl-cli" class="text-[10px] font-black uppercase italic tracking-tighter text-blue-400">Clinical Provider Mode</p>
         </div>
     </div>
 
+    <!-- QR Overlay -->
     <div id="qr-overlay" onclick="this.style.display='none'">
         <div class="bg-white p-8 rounded-[45px] w-[320px] flex flex-col items-center">
             <div id="qrcode"></div>
-            <p class="text-black font-black text-[10px] uppercase mt-4">Provider Sync QR</p>
+            <p class="text-black font-black text-[10px] uppercase mt-6 tracking-widest">Provider Sync QR</p>
+            <p class="text-zinc-400 text-[8px] mt-2 text-center px-4 italic">Scan to link this Clinical Hub locally</p>
         </div>
     </div>
 
+    <!-- Legal Disclaimer -->
+    <footer class="mt-12 px-4 text-center">
+        <p class="text-[9px] text-zinc-600 font-bold uppercase italic leading-relaxed">
+            Wellness based data in Patient Registry. Not official medical records.
+        </p>
+    </footer>
+
     <script>
-        // REDIRECCIÓN INTELIGENTE
-        // Si la URL contiene "?mode=dr", no pedimos activación (permite al Dr entrar)
-        const isDrMode = new URLSearchParams(window.location.search).get('mode') === 'dr';
-        if (!localStorage.getItem('montcode_activation') && !isDrMode) {
-            window.location.replace('activation.html');
-        }
+        let currentLang = 'en';
 
         window.addEventListener('load', () => {
             const name = localStorage.getItem('mc_patient_name') || "Patient";
             document.getElementById('p-name').innerText = name;
             setGreeting();
             checkDrNotes();
+            
+            // Redirección si no hay activación (excepto si es modo Dr)
+            const isDrMode = new URLSearchParams(window.location.search).get('mode') === 'dr';
+            if (!localStorage.getItem('montcode_activation') && !isDrMode) {
+                window.location.replace('activation.html');
+            }
         });
 
         function setGreeting() {
@@ -112,39 +130,69 @@
             }
         }
 
-        async function initNFCSync() {
+        async function initSync() {
             const name = localStorage.getItem('mc_patient_name') || "User";
-            // RUTA DINÁMICA: index.html + modo dr + nombre del paciente
-            const syncURL = `${window.location.origin}${window.location.pathname}?mode=dr&pt=${encodeURIComponent(name)}`;
+            // GENERACIÓN DINÁMICA: Detecta la URL actual del usuario automáticamente
+            const baseUrl = window.location.href.split('?')[0].split('#')[0];
+            const syncURL = `${baseUrl}?mode=dr&pt=${encodeURIComponent(name)}`;
             
             if ('NDEFReader' in window) {
                 try {
                     const ndef = new NDEFReader();
                     await ndef.scan();
                     await ndef.write(syncURL);
-                    alert("NFC Linked to: " + name);
+                    alert("NFC Linked Successfully");
                 } catch (error) {
-                    alert("NFC Error: Use Chrome on Android.");
+                    showQR(syncURL);
                 }
             } else {
-                // Fallback a QR si el NFC no está disponible
-                const qrContainer = document.getElementById('qrcode');
-                qrContainer.innerHTML = "";
-                new QRCode(qrContainer, { text: syncURL, width: 200, height: 200 });
-                document.getElementById('qr-overlay').style.display = 'flex';
+                showQR(syncURL);
             }
         }
 
-        function toggleSpanish() {
-            const labels = {
-                "lbl-bp": "Registro PA",
-                "lbl-glu": "Glucosa",
-                "lbl-nfc": "Sinc NFC",
-                "lbl-cli": "Modo Clínico"
+        function showQR(url) {
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = "";
+            new QRCode(qrContainer, { text: url, width: 220, height: 220 });
+            document.getElementById('qr-overlay').style.display = 'flex';
+        }
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'es' : 'en';
+            const btn = document.getElementById('lang-btn');
+            
+            const content = {
+                en: {
+                    btn: "🇪🇸",
+                    bp: "BP Log",
+                    glu: "Glucose",
+                    food: "Food Scan",
+                    sync: "Sync Link",
+                    cli: "Clinical Provider Mode",
+                    msg: "Medical Instruction",
+                    ack: "Acknowledge"
+                },
+                es: {
+                    btn: "🇺🇸",
+                    bp: "Registro PA",
+                    glu: "Glucosa",
+                    food: "Escaneo Alimentos",
+                    sync: "Sincronizar",
+                    cli: "Modo Clínico",
+                    msg: "Instrucción Médica",
+                    ack: "Entendido"
+                }
             };
-            for (let id in labels) {
-                document.getElementById(id).innerText = labels[id];
-            }
+
+            const lang = content[currentLang];
+            btn.innerText = lang.btn;
+            document.getElementById('lbl-bp').innerText = lang.bp;
+            document.getElementById('lbl-glu').innerText = lang.glu;
+            document.getElementById('lbl-food').innerText = lang.food;
+            document.getElementById('lbl-sync').innerText = lang.sync;
+            document.getElementById('lbl-cli').innerText = lang.cli;
+            document.getElementById('lbl-msg-title').innerText = lang.msg;
+            document.getElementById('btn-ack').innerText = lang.ack;
         }
 
         function acknowledgeNote() {
