@@ -4,6 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MontCode™ Patient Hub</title>
+    
+    <!-- PWA INTEGRATION -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MC Patient">
+    
+    <!-- APP ICONS -->
+    <link rel="apple-touch-icon" href="logo.png.jpg">
+    <link rel="icon" type="image/jpg" href="logo.png.jpg">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -49,7 +62,6 @@
             <div class="text-4xl mb-4">🩺</div>
             <h2 class="tech-font font-black text-blue-500 text-lg italic uppercase tracking-tighter">Clinical Mode</h2>
             <p class="text-zinc-500 text-[9px] font-bold mt-2 uppercase">Switch to provider console for instructions.</p>
-            <!-- RUTA CORREGIDA: Asumiendo que el archivo se llama provider-console.html -->
             <button onclick="location.href='provider-console.html'" class="mt-8 w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase italic shadow-lg shadow-blue-500/20">Enter Console</button>
             <button onclick="document.getElementById('provider-overlay').style.display='none'" class="mt-3 w-full py-4 border border-zinc-800 text-zinc-500 rounded-2xl font-black text-[10px] uppercase italic">Cancel</button>
         </div>
@@ -114,7 +126,7 @@
         </div>
 
         <div onclick="document.getElementById('provider-overlay').style.display='flex'" class="dash-card card-blue">
-            <span class="text-3xl mb-1"></span>
+            <span class="text-3xl mb-1">🩺</span>
             <p class="text-[10px] font-black uppercase italic tracking-tighter text-blue-400">Clinical</p>
         </div>
 
@@ -138,22 +150,18 @@
 
     <script>
         window.addEventListener('load', () => {
-            // Verificar Activación
             if (!localStorage.getItem('montcode_activation')) {
                 window.location.replace('activation.html');
                 return;
             }
 
-            // Datos del Perfil
             const name = localStorage.getItem('mc_patient_name') || "Patient";
             const dob = localStorage.getItem('mc_patient_dob') || "VERIFIED";
             document.getElementById('p-name').innerText = name;
             document.getElementById('p-dob').innerText = "DOB: " + dob;
 
-            // Saludo Dinámico
             setEnglishGreeting();
 
-            // Cargar Notas Médicas Pendientes
             const savedNote = localStorage.getItem('mc_dr_note');
             if (savedNote) displayNote(savedNote);
         });
@@ -172,7 +180,6 @@
         }
 
         function acknowledgeNote() {
-            // Se puede decidir si borrar o no, pero para triage es mejor borrar tras lectura
             localStorage.removeItem('mc_dr_note');
             document.getElementById('dr-message-area').classList.add('hidden');
         }
@@ -180,10 +187,7 @@
         function generateDoctorQR() {
             const qrContainer = document.getElementById('qrcode');
             qrContainer.innerHTML = "";
-            
-            // CONEXIÓN CLAVE: El Dr. necesita la URL exacta para el Mirroring
             const currentURL = window.location.href.split('?')[0]; 
-            
             new QRCode(qrContainer, {
                 text: currentURL, 
                 width: 220,
@@ -192,6 +196,13 @@
                 correctLevel: QRCode.CorrectLevel.H
             });
             document.getElementById('qr-overlay').style.display = 'flex';
+        }
+
+        // Service Worker Registration for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+            });
         }
     </script>
 </body>
