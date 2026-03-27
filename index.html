@@ -1,225 +1,155 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MontCode™ Patient Hub</title>
     
-    <!-- PWA INTEGRATION -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#000000">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="MC Patient">
-    
-    <!-- APP ICONS -->
-    <link rel="apple-touch-icon" href="logo.png.jpg">
-    <link rel="icon" type="image/jpg" href="logo.png.jpg">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700;900&display=swap');
-        body { background: #000; color: white; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .tech-font { font-family: 'Orbitron', sans-serif; }
-        
-        .dash-card { background: #0a0a0a; border-radius: 28px; padding: 20px; border: 1px solid #1a1a1a; transition: 0.2s; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 130px; position: relative; }
-        .dash-card:active { transform: scale(0.95); background: #111; }
-        
-        /* Clinical Colors */
-        .card-red { border-bottom: 4px solid #dc2626; box-shadow: 0 8px 20px -10px rgba(220, 38, 38, 0.4); }
-        .card-green { border-bottom: 4px solid #16a34a; box-shadow: 0 8px 20px -10px rgba(22, 163, 74, 0.4); }
-        .card-blue { border-bottom: 4px solid #2563eb; box-shadow: 0 8px 20px -10px rgba(37, 99, 235, 0.4); }
-        .card-yellow { border-bottom: 4px solid #eab308; box-shadow: 0 8px 20px -10px rgba(234, 179, 8, 0.4); }
-        .card-purple { border-bottom: 4px solid #a855f7; box-shadow: 0 8px 20px -10px rgba(168, 85, 247, 0.4); }
-        .card-zinc { border-bottom: 4px solid #71717a; box-shadow: 0 8px 20px -10px rgba(113, 113, 122, 0.4); }
-
+        .dash-card { background: #0a0a0a; border-radius: 28px; padding: 20px; border: 1px solid #1a1a1a; transition: 0.2s; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 130px; }
+        .dash-card:active { transform: scale(0.95); }
+        .card-red { border-bottom: 4px solid #dc2626; }
+        .card-green { border-bottom: 4px solid #16a34a; }
+        .card-blue { border-bottom: 4px solid #2563eb; }
+        .card-yellow { border-bottom: 4px solid #eab308; }
+        .card-purple { border-bottom: 4px solid #a855f7; }
+        .card-zinc { border-bottom: 4px solid #71717a; }
         #qr-overlay, #provider-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
-        
-        @keyframes pulse-blue {
-            0% { border-color: rgba(59, 130, 246, 0.3); }
-            50% { border-color: rgba(59, 130, 246, 0.8); }
-            100% { border-color: rgba(59, 130, 246, 0.3); }
-        }
-        .dr-pulse { animation: pulse-blue 2s infinite; }
     </style>
 </head>
 <body class="p-6 pb-20">
 
-    <!-- QR Overlay -->
-    <div id="qr-overlay" onclick="this.style.display='none'">
-        <div class="bg-white p-8 rounded-[45px] w-[320px] flex flex-col items-center shadow-2xl" onclick="event.stopPropagation()">
-            <div id="qrcode" class="mb-4 border-2 border-zinc-100 p-2 rounded-2xl"></div>
-            <p class="text-black font-black text-[10px] uppercase tech-font italic tracking-tighter text-center">Scan to Sync Clinical View</p>
-            <button onclick="document.getElementById('qr-overlay').style.display='none'" class="mt-6 w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase italic">Close</button>
-        </div>
+    <div class="flex justify-end mb-2">
+        <button onclick="toggleSpanish()" class="text-2xl grayscale hover:grayscale-0 transition" title="Translate to Spanish">🇪🇸</button>
     </div>
 
-    <!-- Clinical Mode Overlay -->
-    <div id="provider-overlay" onclick="this.style.display='none'">
-        <div class="bg-[#0a0a0a] border border-zinc-800 p-8 rounded-[40px] w-[320px] text-center" onclick="event.stopPropagation()">
-            <div class="text-4xl mb-4">🩺</div>
-            <h2 class="tech-font font-black text-blue-500 text-lg italic uppercase tracking-tighter">Clinical Mode</h2>
-            <p class="text-zinc-500 text-[9px] font-bold mt-2 uppercase">Switch to provider console for instructions.</p>
-            <button onclick="location.href='provider-console.html'" class="mt-8 w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase italic shadow-lg shadow-blue-500/20">Enter Console</button>
-            <button onclick="document.getElementById('provider-overlay').style.display='none'" class="mt-3 w-full py-4 border border-zinc-800 text-zinc-500 rounded-2xl font-black text-[10px] uppercase italic">Cancel</button>
-        </div>
-    </div>
-
-    <header class="flex justify-between items-center mb-8 mt-4">
+    <header class="flex justify-between items-center mb-8">
         <div class="flex items-center gap-4">
-            <img src="logo.png.jpg" class="w-14 h-14 rounded-full border-2 border-[#DAA520] object-cover shadow-lg shadow-yellow-500/20">
+            <img src="logo.png.jpg" class="w-14 h-14 rounded-full border-2 border-[#DAA520] object-cover shadow-lg">
             <div>
-                <h2 id="greeting-msg" class="text-blue-400 font-black text-[14px] tech-font uppercase italic leading-none">Good Morning,</h2>
-                <p id="p-name" class="text-white font-bold text-[18px] uppercase tracking-tighter italic leading-tight">Patient</p>
+                <h2 id="greet" class="text-blue-400 font-black text-[14px] tech-font uppercase italic leading-none">Good Morning,</h2>
+                <p id="p-name" class="text-white font-bold text-[18px] uppercase italic">Patient</p>
             </div>
         </div>
         <div class="text-right">
-            <p id="p-dob" class="text-[8px] text-zinc-600 font-black uppercase tracking-widest italic">DOB: VERIFIED</p>
+            <p id="p-dob" class="text-[8px] text-zinc-600 font-black uppercase italic">DOB: VERIFIED</p>
         </div>
     </header>
 
-    <!-- Sync Button -->
-    <div onclick="generateDoctorQR()" class="bg-blue-600/10 border border-blue-500/30 p-5 rounded-[30px] mb-6 flex items-center justify-between active:scale-95 transition">
-        <div class="flex items-center gap-3">
-            <span class="text-2xl">⚡</span>
-            <div>
-                <p class="text-[10px] font-black text-blue-400 uppercase italic leading-tight">Sync Provider</p>
-                <p class="text-[7px] text-blue-300/50 font-bold uppercase tracking-widest">Share Dashboard with Dr.</p>
-            </div>
-        </div>
-        <div class="bg-blue-600 p-2 rounded-full shadow-lg shadow-blue-600/40">
-            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
-        </div>
-    </div>
-
-    <!-- Dr. Message Area -->
     <div id="dr-message-area" class="mb-8 hidden">
-        <div class="bg-zinc-900/80 border-2 border-blue-500/50 rounded-[35px] overflow-hidden dr-pulse">
-            <div class="bg-blue-600/20 px-6 py-3 border-b border-blue-500/10 flex justify-between items-center">
-                <p class="text-[9px] font-black text-blue-400 tech-font uppercase italic tracking-tighter">Medical Instruction</p>
-                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]"></span>
+        <div class="bg-zinc-900 border-2 border-blue-500 rounded-[35px] overflow-hidden">
+            <div class="bg-blue-600/20 px-6 py-2 border-b border-blue-500/10 flex justify-between">
+                <p class="text-[9px] font-black text-blue-400 tech-font uppercase">Medical Instruction</p>
             </div>
             <div class="p-6 text-center">
-                <p id="dr-note-text" class="text-white text-[15px] font-black italic uppercase tracking-tight">NO MESSAGE</p>
-                <button onclick="acknowledgeNote()" class="mt-4 text-[9px] bg-blue-600 text-white px-5 py-2 rounded-full font-black uppercase italic tracking-widest active:scale-90 transition">Acknowledge</button>
+                <p id="dr-note-text" class="text-white text-[15px] font-black italic uppercase italic">NO MESSAGE</p>
+                <button onclick="acknowledgeNote()" class="mt-4 text-[9px] bg-blue-600 text-white px-5 py-2 rounded-full font-black uppercase italic">Acknowledge</button>
             </div>
         </div>
     </div>
 
-    <!-- Grid -->
     <div class="grid grid-cols-2 gap-4">
         <div onclick="location.href='bp.html'" class="dash-card card-red">
             <span class="text-3xl mb-1">🫀</span>
-            <p class="text-[10px] font-black uppercase italic tracking-tighter">BP Log</p>
+            <p id="lbl-bp" class="text-[10px] font-black uppercase italic tracking-tighter">BP Log</p>
         </div>
-
         <div onclick="location.href='glucose.html'" class="dash-card card-green">
             <span class="text-3xl mb-1">🩸</span>
-            <p class="text-[10px] font-black uppercase italic tracking-tighter">Glucose</p>
+            <p id="lbl-glu" class="text-[10px] font-black uppercase italic tracking-tighter">Glucose</p>
         </div>
-
-        <div onclick="location.href='sync.html?go=HUB'" class="dash-card card-purple">
+        <div onclick="initNFCSync()" class="dash-card card-purple">
             <span class="text-3xl mb-1 animate-pulse">📡</span>
-            <p class="text-[10px] font-black uppercase italic tracking-tighter">NFC Sync</p>
+            <p id="lbl-nfc" class="text-[10px] font-black uppercase italic tracking-tighter">NFC Sync</p>
         </div>
-
         <div onclick="document.getElementById('provider-overlay').style.display='flex'" class="dash-card card-blue">
-            <span class="text-3xl mb-1"></span>
-            <p class="text-[10px] font-black uppercase italic tracking-tighter text-blue-400">Clinical</p>
-        </div>
-
-        <div onclick="location.href='food.html'" class="dash-card card-yellow">
-            <span class="text-3xl mb-1">🥗</span>
-            <p class="text-[10px] font-black uppercase italic tracking-tighter">Food Scan</p>
-        </div>
-
-        <div onclick="location.href='activation.html'" class="dash-card card-zinc">
-            <span class="text-3xl mb-1">⚙️</span>
-            <p class="text-[10px] font-black uppercase italic tracking-tighter">Enrollment</p>
+            <span class="text-3xl mb-1">🩺</span>
+            <p id="lbl-cli" class="text-[10px] font-black uppercase italic tracking-tighter text-blue-400">Clinical Mode</p>
         </div>
     </div>
 
-    <footer class="mt-12 text-center opacity-30">
-        <p class="text-[7px] font-bold uppercase italic tracking-widest leading-relaxed">
-            MontCode™ Rescue: Tactical Triage.<br>
-            Not based on official medical records.
-        </p>
-    </footer>
+    <div id="qr-overlay" onclick="this.style.display='none'">
+        <div class="bg-white p-8 rounded-[45px] w-[320px] flex flex-col items-center">
+            <div id="qrcode"></div>
+            <p class="text-black font-black text-[10px] uppercase mt-4">Provider Sync QR</p>
+        </div>
+    </div>
 
     <script>
-        // 1. Verificación Inmediata (Antes de cargar el DOM)
-        if (!localStorage.getItem('montcode_activation')) {
+        // REDIRECCIÓN INTELIGENTE
+        // Si la URL contiene "?mode=dr", no pedimos activación (permite al Dr entrar)
+        const isDrMode = new URLSearchParams(window.location.search).get('mode') === 'dr';
+        if (!localStorage.getItem('montcode_activation') && !isDrMode) {
             window.location.replace('activation.html');
         }
 
         window.addEventListener('load', () => {
-            // 2. Cargar Datos del Perfil con Fallbacks seguros
-            const name = localStorage.getItem('mc_patient_name') || "Guest Patient";
-            const dob = localStorage.getItem('mc_patient_dob') || "NOT SET";
-            
+            const name = localStorage.getItem('mc_patient_name') || "Patient";
             document.getElementById('p-name').innerText = name;
-            document.getElementById('p-dob').innerText = "DOB: " + dob;
-
-            // 3. Establecer saludo dinámico
-            setEnglishGreeting();
-
-            // 4. Verificar si hay notas del Doctor
-            const savedNote = localStorage.getItem('mc_dr_note');
-            if (savedNote && savedNote !== "undefined") {
-                displayNote(savedNote);
-            }
-
-            // 5. Limpiar URL de parámetros basura
-            if (window.location.search) {
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
+            setGreeting();
+            checkDrNotes();
         });
 
-        function setEnglishGreeting() {
+        function setGreeting() {
             const hour = new Date().getHours();
-            let greet = "Good Morning,";
-            if (hour >= 12 && hour < 17) greet = "Good Afternoon,";
-            if (hour >= 17 || hour < 5) greet = "Good Evening,";
-            document.getElementById('greeting-msg').innerText = greet;
+            let g = "Good Morning,";
+            if(hour >= 12 && hour < 17) g = "Good Afternoon,";
+            if(hour >= 17 || hour < 5) g = "Good Evening,";
+            document.getElementById('greet').innerText = g;
         }
 
-        function displayNote(text) {
-            document.getElementById('dr-note-text').innerText = `"${text}"`;
-            document.getElementById('dr-message-area').classList.remove('hidden');
+        function checkDrNotes() {
+            const note = localStorage.getItem('mc_dr_note');
+            if (note) {
+                document.getElementById('dr-note-text').innerText = `"${note}"`;
+                document.getElementById('dr-message-area').classList.remove('hidden');
+            }
+        }
+
+        async function initNFCSync() {
+            const name = localStorage.getItem('mc_patient_name') || "User";
+            // RUTA DINÁMICA: index.html + modo dr + nombre del paciente
+            const syncURL = `${window.location.origin}${window.location.pathname}?mode=dr&pt=${encodeURIComponent(name)}`;
+            
+            if ('NDEFReader' in window) {
+                try {
+                    const ndef = new NDEFReader();
+                    await ndef.scan();
+                    await ndef.write(syncURL);
+                    alert("NFC Linked to: " + name);
+                } catch (error) {
+                    alert("NFC Error: Use Chrome on Android.");
+                }
+            } else {
+                // Fallback a QR si el NFC no está disponible
+                const qrContainer = document.getElementById('qrcode');
+                qrContainer.innerHTML = "";
+                new QRCode(qrContainer, { text: syncURL, width: 200, height: 200 });
+                document.getElementById('qr-overlay').style.display = 'flex';
+            }
+        }
+
+        function toggleSpanish() {
+            const labels = {
+                "lbl-bp": "Registro PA",
+                "lbl-glu": "Glucosa",
+                "lbl-nfc": "Sinc NFC",
+                "lbl-cli": "Modo Clínico"
+            };
+            for (let id in labels) {
+                document.getElementById(id).innerText = labels[id];
+            }
         }
 
         function acknowledgeNote() {
             localStorage.removeItem('mc_dr_note');
             document.getElementById('dr-message-area').classList.add('hidden');
-            if (navigator.vibrate) navigator.vibrate(50);
-        }
-
-        function generateDoctorQR() {
-            const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = "";
-            // Genera el link limpio al Hub actual
-            const currentURL = window.location.origin + window.location.pathname; 
-            
-            new QRCode(qrContainer, {
-                text: currentURL, 
-                width: 220,
-                height: 220,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
-            document.getElementById('qr-overlay').style.display = 'flex';
-        }
-
-        // Service Worker Registration
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log('MontCode SW Active'))
-                .catch(err => console.error('SW Registration failed:', err));
-            });
         }
     </script>
 </body>
