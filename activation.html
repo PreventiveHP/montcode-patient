@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -8,17 +8,17 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700;900&display=swap');
-        body { background: #000; color: white; font-family: 'Inter', sans-serif; }
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; }
         .tech-font { font-family: 'Orbitron', sans-serif; }
-        .scanner-box { width: 100%; height: 250px; background: #050505; border-radius: 30px; overflow: hidden; border: 2px solid #222; position: relative; }
+        .scanner-box { width: 100%; height: 250px; background: #050505; border-radius: 30px; overflow: hidden; border: 2px solid #222; position: relative; flex-shrink: 0; }
         #reader video { object-fit: cover !important; }
         .input-field { background: #111; border: 1px solid #222; padding: 16px; border-radius: 15px; width: 100%; color: white; outline: none; margin-bottom: 10px; font-weight: 800; text-transform: uppercase; font-size: 12px; }
         .input-field:focus { border-color: #2563eb; }
-        .step-inactive { opacity: 0.3; filter: grayscale(1); pointer-events: none; }
+        .step-inactive { opacity: 0.15; filter: grayscale(1); pointer-events: none; transition: 0.3s; }
     </style>
 </head>
 <body class="p-6">
-    <header class="flex justify-between mb-6">
+    <header class="flex justify-between mb-6 pt-2">
         <button onclick="window.location.replace('index.html')" class="text-[10px] font-black uppercase text-zinc-500 italic">← Cancel</button>
         <img src="logo.png.jpg" class="w-8 h-8 rounded-full border border-[#DAA520] object-cover">
     </header>
@@ -34,7 +34,7 @@
     <!-- FORMULARIO DE PACIENTE -->
     <div id="patient-form" class="space-y-3 mb-6">
         <div class="flex flex-col">
-            <label class="text-[8px] font-black uppercase text-zinc-500 mb-1 ml-2">Hardware ID / Provider</p>
+            <label class="text-[8px] font-black uppercase text-zinc-500 mb-1 ml-2">Hardware ID / Provider Status</label>
             <input type="text" id="masterID" placeholder="WAITING FOR SCAN..." readonly class="input-field text-blue-500">
         </div>
         
@@ -52,21 +52,34 @@
         let html5QrCode = new Html5Qrcode("reader");
         let activeData = { kit: null, dr: null };
 
-        const config = { fps: 20, qrbox: { width: 250, height: 150 } };
+        const config = { 
+            fps: 20, 
+            qrbox: { width: 250, height: 150 },
+            aspectRatio: 1.0
+        };
 
-        html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-            // Lógica Radical: ¿Es Barcode de Kit o QR de Dr?
-            if (decodedText.startsWith("102")) {
-                activeData.kit = decodedText;
-                document.getElementById('masterID').value = "KIT: " + decodedText;
-                unlockFields();
-                vibrate();
-            } else if (decodedText.includes("dr_id") || decodedText.startsWith("MC-DR")) {
-                activeData.dr = decodedText;
-                document.getElementById('masterID').value = "DR LINK READY";
-                unlockFields();
-                vibrate();
+        // Iniciar escáner automáticamente
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            config, 
+            (decodedText) => {
+                // Lógica de detección: Barcode de Kit (Empieza con 102) o QR de Dr
+                if (decodedText.startsWith("102")) {
+                    activeData.kit = decodedText;
+                    document.getElementById('masterID').value = "KIT ID: " + decodedText;
+                    vibrate();
+                    unlockFields();
+                } else if (decodedText.includes("dr_id") || decodedText.startsWith("MC-DR") || decodedText.includes("provider")) {
+                    activeData.dr = decodedText;
+                    document.getElementById('masterID').value = "CLINICAL LINK ACTIVE";
+                    vibrate();
+                    unlockFields();
+                }
             }
+        ).catch(err => {
+            console.error("Camera error:", err);
+            // Si falla la cámara, mostramos los campos para no trabar al usuario
+            unlockFields(); 
         });
 
         function unlockFields() {
@@ -82,20 +95,35 @@
             const name = document.getElementById('p-name').value;
             const dob = document.getElementById('p-dob').value;
 
-            if (!name || !dob) return alert("Please fill all fields");
+            if (!name || !dob) {
+                alert("Please enter Name and Date of Birth");
+                return;
+            }
 
+            // --- LA CORRECCIÓN CLAVE ---
+            // 1. Guardamos la bandera que el HUB (index.html) está buscando
+            localStorage.setItem('montcode_activation', 'true'); 
+            
+            // 2. Guardamos los datos del perfil
             localStorage.setItem('mc_patient_name', name);
             localStorage.setItem('mc_patient_dob', dob);
+            
+            // 3. Guardamos ID de hardware si se escaneó
             if (activeData.kit) localStorage.setItem('mc_kit_id', activeData.kit);
             
-            // Efecto de éxito
-            const btn = document.getElementById('btn-save');
-            btn.innerText = "SUCCESSFUL ✓";
-            btn.style.background = "#16a34a";
+            // Detener cámara antes de salir
+            html5QrCode.stop().then(() => {
+                // Efecto visual de éxito
+                const btn = document.getElementById('btn-save');
+                btn.innerText = "SUCCESSFUL ✓";
+                btn.style.background = "#16a34a";
 
-            setTimeout(() => {
+                setTimeout(() => {
+                    window.location.replace('index.html');
+                }, 800);
+            }).catch(() => {
                 window.location.replace('index.html');
-            }, 1000);
+            });
         }
     </script>
 </body>
