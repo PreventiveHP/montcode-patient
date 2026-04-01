@@ -1,36 +1,23 @@
-{
-  "short_name": "MC Patient",
-  "name": "MontCode™ Patient Hub",
-  "description": "Tactical Health triage system for patients.",
+ {
+  "name": "MontCode™ Rescue",
+  "short_name": "MontCode",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#2563eb",
   "icons": [
     {
-      "src": "assets/icons/patient-icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "assets/icons/patient-icon-512.png",
-      "type": "image/png",
+      "src": "logo.png.jpg",
       "sizes": "512x512",
-      "purpose": "any"
+      "type": "image/jpeg",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": "index.html",
-  "background_color": "#000000",
-  "display": "standalone",
-  "scope": "./",
-  "theme_color": "#2563eb",
   "shortcuts": [
     {
       "name": "View BP Log",
       "url": "bp.html",
-      "icons": [{ "src": "assets/icons/bp-shortcut.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Scan Food",
-      "url": "food.html",
-      "icons": [{ "src": "assets/icons/food-shortcut.png", "sizes": "96x96" }]
+      "icons": [{ "src": "logo.png.jpg", "sizes": "96x96" }]
     }
   ]
 }
