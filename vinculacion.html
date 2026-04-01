@@ -2,36 +2,50 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>MontCode™ | Link Provider</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MontCode™ | Link</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body class="bg-black text-white p-6">
-    <h1 class="text-xl font-black italic uppercase mb-4">Link with Doctor</h1>
-    <div id="reader" style="width: 100%; border-radius: 20px; overflow: hidden;"></div>
-    <div id="result" class="mt-4 p-4 bg-zinc-900 rounded-2xl text-[10px] break-all font-mono">
-        Scan the QR on the Doctor's Console...
+    <button onclick="location.href='index.html'" class="mb-6 text-zinc-500 font-bold uppercase text-[10px]">← Back</button>
+    
+    <h1 class="text-2xl font-black italic uppercase mb-2 tracking-tighter">Bridge Link</h1>
+    <p class="text-zinc-500 text-[10px] uppercase font-bold mb-6 tracking-widest">Scan the Doctor's QR to activate the tunnel</p>
+
+    <div id="reader" class="rounded-3xl overflow-hidden border-2 border-zinc-800"></div>
+
+    <div id="result" class="mt-8 p-6 bg-zinc-900 rounded-3xl border border-zinc-800 text-center hidden">
+        <p class="text-green-500 font-black uppercase text-xs">✅ Link Established</p>
+        <p class="text-[9px] text-zinc-500 mt-2">Your clinical data will now be transmitted to the Provider Console securely.</p>
+        <button onclick="location.href='index.html'" class="mt-6 bg-white text-black w-full py-3 rounded-2xl font-black uppercase text-[10px]">Go to Home</button>
     </div>
 
     <script>
         function onScanSuccess(decodedText) {
             try {
-                // Guardamos el endpoint del Dr en el teléfono
-                const drData = JSON.parse(decodedText);
-                localStorage.setItem('mc_dr_endpoint', JSON.stringify(drData));
+                // El texto del QR del Dr es un JSON de suscripción Push
+                const data = JSON.parse(decodedText);
+                localStorage.setItem('mc_dr_endpoint', decodedText);
                 
-                document.getElementById('result').innerHTML = "✅ LINK ESTABLISHED! Now you can send vitals.";
-                document.getElementById('result').classList.add('text-green-500');
+                // Mostrar éxito
+                document.getElementById('reader').classList.add('hidden');
+                document.getElementById('result').classList.remove('hidden');
                 
-                // Detener cámara después de éxito
+                // Detener escáner
                 html5QrcodeScanner.clear();
             } catch (e) {
-                alert("Invalid MontCode QR");
+                alert("Invalid QR Code for MontCode™ Bridge");
             }
         }
 
-        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+            fps: 10, 
+            qrbox: {width: 250, height: 250},
+            aspectRatio: 1.0 
+        });
         html5QrcodeScanner.render(onScanSuccess);
     </script>
 </body>
 </html>
+
