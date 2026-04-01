@@ -105,8 +105,10 @@
     async function transmitToHub(sys, dia) {
         const bridgeUrl = localStorage.getItem('mc_dr_endpoint') || 'https://montcode-provider.vercel.app/api/hub';
         const statusText = document.getElementById('status-text');
+        const statusDot = document.getElementById('status-dot');
         
         statusText.innerText = "SYNCING...";
+        statusText.style.color = "#fbbf24"; // Amarillo mientras sube
 
         try {
             const res = await fetch(bridgeUrl, {
@@ -114,17 +116,22 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     provider: "MANUEL_MONT", 
-                    sys: sys,
-                    dia: dia,
+                    sys: sys,           // Crucial: Nombre corto
+                    dia: dia,           // Crucial: Nombre corto
+                    systolic: sys,      // Respaldo
+                    diastolic: dia,     // Respaldo
                     timestamp: Date.now()
                 })
             });
             if(res.ok) {
                 statusText.innerText = "BRIDGE SYNCED ✅";
                 statusText.style.color = "#22c55e";
+                statusDot.className = "w-2 h-2 bg-green-500";
+                // Regresa al estado azul después de 3 segundos
+                setTimeout(checkBridgeStatus, 3000);
             }
         } catch (e) {
-            statusText.innerText = "SAVED LOCALLY";
+            statusText.innerText = "OFFLINE - SAVED LOCAL";
             statusText.style.color = "#facc15";
         }
     }
@@ -165,7 +172,6 @@
         } else {
             let s = currentInput.slice(0, 3);
             let d = currentInput.slice(3);
-            // Si tiene 5 dígitos muestra /--, si tiene 6 muestra /---
             display.innerText = s + "/" + d.padEnd(currentInput.length > 5 ? 3 : 2, '-');
         }
     }
