@@ -15,8 +15,6 @@
         .key:active { background: #222; transform: scale(0.95); }
         .key-save { background: #3b82f6; color: #fff; grid-column: span 2; font-size: 1rem; }
         .display-bp { font-size: 5rem; font-weight: 900; color: #3b82f6; text-align: center; line-height: 1; padding: 15px 0; min-height: 100px; }
-        .med-btn { border: 2px solid #333; border-radius: 12px; padding: 10px; cursor: pointer; transition: 0.3s; }
-        .med-btn.active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
         .chart-modern { background: #050505; border-radius: 30px; border: 1px solid #1a1a1a; padding: 15px; margin-top: 20px; height: 220px; }
         .cond-chip { padding: 4px 10px; border-radius: 10px; font-size: 8px; font-weight: 900; border: 1px solid #222; color: #444; cursor: pointer; }
         .cond-chip.active { border-color: #3b82f6; color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
@@ -33,7 +31,7 @@
                 <button onclick="setLang('es')" class="w-7 h-7 rounded-full border border-zinc-700 opacity-40" id="btn-es">🇪🇸</button>
             </div>
         </div>
-        <span class="text-[8px] text-zinc-500 font-bold uppercase">MontCode™ v5.7</span>
+        <span class="text-[8px] text-blue-500 font-black uppercase tracking-widest italic">P2P Tactical</span>
     </div>
 
     <div class="status-banner" id="status-box">
@@ -46,7 +44,7 @@
     <div class="flex flex-wrap gap-2 mb-4 justify-center">
         <div class="cond-chip" id="chip-HTN" onclick="this.classList.toggle('active'); updateUI();">HTN</div>
         <div class="cond-chip" id="chip-DM" onclick="this.classList.toggle('active'); updateUI();">DM</div>
-        <div class="cond-chip" id="chip-STROKE" onclick="this.classList.toggle('active'); updateUI();">HX STROKE</div>
+        <div class="cond-chip" id="chip-CKD" onclick="this.classList.toggle('active'); updateUI();">CKD</div>
     </div>
 
     <div class="grid grid-cols-4 gap-1 mb-4">
@@ -111,45 +109,9 @@
         if (!bridgeData) return;
 
         const statusText = document.getElementById('status-text');
+        const statusDot = document.getElementById('status-dot');
+        
         statusText.innerText = "SYNCING...";
+        statusDot.className = "w-2 h-2 bg-yellow-500 animate-ping";
 
         try {
-            // Enviamos al API Hub en Vercel
-            await fetch('/api/hub', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    kit_id: "PATIENT_01", 
-                    sys: sys,
-                    dia: dia,
-                    timestamp: new Date().toISOString()
-                })
-            });
-            statusText.innerText = "BRIDGE SYNCED ✅";
-        } catch (e) {
-            statusText.innerText = "OFFLINE - SAVED LOCALLY";
-        }
-    }
-
-    function saveBP() {
-        if(currentInput.length < 5) return;
-        const s = parseInt(currentInput.slice(0,3));
-        const d = parseInt(currentInput.slice(3,6));
-        
-        db.push({ sys: s, dia: d, d: new Date().toISOString() });
-        localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
-        
-        transmitToHub(s, d);
-        runTriageSpeak(s, d);
-        
-        currentInput = ""; 
-        updateDisplay(); 
-        updateUI();
-    }
-
-    function runTriageSpeak(sys, dia) {
-        const msg = currentLang === 'es' ? `Presión ${sys} sobre ${dia}.` : `Pressure ${sys} over ${dia}.`;
-        const utterance = new SpeechSynthesisUtterance(msg);
-        utterance.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
-        window.speechSynthesis.speak(utterance);
-    }
