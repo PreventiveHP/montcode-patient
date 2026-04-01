@@ -120,14 +120,15 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    kit_id: "MANUEL_MONT", 
+                    provider: "MANUEL_MONT", 
                     sys: sys,
                     dia: dia,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().getTime() // Enviamos tiempo numérico para el Polling del Dr.
                 })
             });
             statusText.innerText = "BRIDGE SYNCED ✅";
             statusDot.className = "w-2 h-2 bg-green-500 animate-pulse";
+            statusText.style.color = "#22c55e";
         } catch (e) {
             statusText.innerText = "OFFLINE - SAVED LOCALLY";
             statusDot.className = "w-2 h-2 bg-zinc-700";
@@ -135,7 +136,12 @@
     }
 
     function saveBP() {
-        if(currentInput.length < 5) return;
+        // Validación estricta: Deben ser 6 dígitos (3 sys + 3 dia) para evitar undefined
+        if(currentInput.length < 6) {
+            alert(currentLang === 'es' ? "Ingrese 6 dígitos (Ej: 120080)" : "Enter 6 digits (Ex: 120080)");
+            return;
+        }
+        
         const s = parseInt(currentInput.slice(0,3));
         const d = parseInt(currentInput.slice(3,6));
         
@@ -240,4 +246,3 @@
 </script>
 </body>
 </html>
-
