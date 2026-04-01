@@ -7,11 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
-        /* Forzamos que el lector tenga un tamaño mínimo para que no colapse */
-        #reader { width: 100% !important; min-height: 300px; background: #050505; border-radius: 24px; overflow: hidden; }
-        /* Estilo para los botones internos de la librería que a veces se ven feos */
-        #reader button { background: #3b82f6 !important; border: none !important; padding: 10px 20px !important; border-radius: 12px !important; color: white !important; font-weight: bold !important; text-transform: uppercase !important; font-size: 10px !important; margin-top: 10px !important; }
-        video { border-radius: 24px; }
+        #reader { width: 100% !important; min-height: 300px; background: #050505; border-radius: 24px; overflow: hidden; border: 1px solid #222; }
+        video { border-radius: 24px; object-fit: cover; }
+        /* Ocultar botones feos de la librería si aparecen */
+        #reader__dashboard_section_csr button { display: none; }
     </style>
 </head>
 <body class="bg-black text-white p-6">
@@ -31,58 +30,57 @@
             <span class="text-green-500">✅</span>
         </div>
         <p class="text-green-500 font-black uppercase text-xs">Link Established</p>
-        <p class="text-[9px] text-zinc-500 mt-2 uppercase font-bold">Encrypted Tunnel Active. Data will sync with Dr. Console.</p>
+        <p class="text-[9px] text-zinc-500 mt-2 uppercase font-bold">Encrypted Tunnel Active.</p>
         <button onclick="location.href='index.html'" class="mt-6 bg-white text-black w-full py-4 rounded-2xl font-black uppercase text-[11px] shadow-lg">Enter Dashboard</button>
     </div>
 
     <script>
-        let html5QrcodeScanner;
+        let html5QrCode;
 
-        function onScanSuccess(decodedText) {
+        async function onScanSuccess(decodedText) {
             try {
-                // Verificamos si el QR contiene la suscripción
                 const data = JSON.parse(decodedText);
-                if (!data.endpoint) throw new Error("Invalid endpoint");
+                if (!data.endpoint) throw new Error("Invalid");
 
                 localStorage.setItem('mc_dr_endpoint', decodedText);
                 
-                // Feedback visual y limpieza
                 document.getElementById('reader').style.display = 'none';
                 document.getElementById('result').classList.remove('hidden');
                 
-                if (html5QrcodeScanner) {
-                    html5QrcodeScanner.clear().catch(err => console.error("Clear failed", err));
+                if (html5QrCode) {
+                    await html5QrCode.stop();
                 }
                 
-                // Sonido de éxito (Opcional)
                 window.speechSynthesis.speak(new SpeechSynthesisUtterance("Link established"));
                 
             } catch (e) {
                 console.error("QR Error:", e);
-                alert("Invalid QR Code. Please scan the official MontCode™ Provider QR.");
             }
         }
 
-        // Iniciamos el escáner con un pequeño delay para asegurar que el DOM esté listo
         function startScanner() {
-            html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-                fps: 15, 
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0,
-                showTorchButtonIfSupported: true,
-                rememberLastUsedCamera: true
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 15, qrbox: { width: 250, height: 250 } };
+
+            // Forzamos la cámara trasera usando "environment"
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config, 
+                onScanSuccess
+            ).catch(err => {
+                console.error("Error starting camera:", err);
+                // Si falla, intentamos cualquier cámara disponible
+                html5QrCode.start({ facingMode: "user" }, config, onScanSuccess);
             });
-            html5QrcodeScanner.render(onScanSuccess);
         }
 
-        // Ejecutar al cargar
         document.addEventListener("DOMContentLoaded", () => {
-            setTimeout(startScanner, 800);
+            setTimeout(startScanner, 1000);
         });
     </script>
 
     <footer class="mt-10 text-[7px] text-zinc-700 text-center uppercase font-bold px-8">
-        MontCode™ Tactical Bridge - No Cloud, No HIPAA Risks, 100% Local Encryption.
+        MontCode™ Tactical Bridge - 100% Local Encryption.
     </footer>
 </body>
 </html>
