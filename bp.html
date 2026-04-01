@@ -84,7 +84,6 @@
             setLang('en');
         };
 
-        // --- TRADUCCIÓN ---
         function setLang(lang) {
             currentLang = lang;
             const t = lang === 'es' ? 
@@ -96,14 +95,12 @@
             document.querySelector('.lang-save').innerText = t.save;
             document.getElementById('status-text').innerText = t.status;
 
-            // Flags visual effect
             document.getElementById('btn-es').style.opacity = lang === 'es' ? '1' : '0.4';
             document.getElementById('btn-es').style.filter = lang === 'es' ? 'grayscale(0)' : 'grayscale(1)';
             document.getElementById('btn-en').style.opacity = lang === 'en' ? '1' : '0.4';
             document.getElementById('btn-en').style.filter = lang === 'en' ? 'grayscale(0)' : 'grayscale(1)';
         }
 
-        // --- VOZ NARRADA (TTS) ---
         function speakReading(sys, dia) {
             const msg = currentLang === 'es' ? 
                 `Presión registrada: ${sys} sobre ${dia}. Enviando al Doctor Montalván.` : 
@@ -113,7 +110,6 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // --- MICROFONO (STT) ---
         function startMic() {
             const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
             rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
@@ -124,7 +120,6 @@
             rec.start();
         }
 
-        // --- LOGICA DE DATOS ---
         async function transmitToHub(sys, dia) {
             const patientName = localStorage.getItem('mc_patient_name') || "User_Local";
             try {
