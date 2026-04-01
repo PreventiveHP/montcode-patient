@@ -10,32 +10,48 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700;900&display=swap');
         body { background: #000; color: white; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; }
         .tech-font { font-family: 'Orbitron', sans-serif; }
-        .scanner-box { width: 100%; height: 250px; background: #050505; border-radius: 30px; overflow: hidden; border: 2px solid #222; position: relative; flex-shrink: 0; }
+        
+        .scanner-box { 
+            width: 100%; height: 250px; background: #050505; 
+            border-radius: 30px; overflow: hidden; border: 2px solid #222; 
+            position: relative; flex-shrink: 0; 
+            box-shadow: 0 0 20px rgba(0, 112, 243, 0.2);
+        }
+
         #reader video { object-fit: cover !important; }
-        .input-field { background: #111; border: 1px solid #222; padding: 16px; border-radius: 15px; width: 100%; color: white; outline: none; margin-bottom: 10px; font-weight: 800; text-transform: uppercase; font-size: 12px; }
-        .input-field:focus { border-color: #2563eb; }
-        .step-inactive { opacity: 0.15; filter: grayscale(1); pointer-events: none; transition: 0.3s; }
+
+        .input-field { 
+            background: #111; border: 1px solid #222; padding: 16px; 
+            border-radius: 15px; width: 100%; color: white; outline: none; 
+            margin-bottom: 10px; font-weight: 800; text-transform: uppercase; 
+            font-size: 12px; transition: 0.3s;
+        }
+
+        .input-field:focus { border-color: #2563eb; background: #161616; }
+        .step-inactive { opacity: 0.15; filter: grayscale(1); pointer-events: none; transition: 0.4s; }
+        
+        .btn-glow {
+            box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
+        }
     </style>
 </head>
 <body class="p-6">
-    <header class="flex justify-between mb-6 pt-2">
-        <button onclick="window.location.replace('index.html')" class="text-[10px] font-black uppercase text-zinc-500 italic">← Cancel</button>
-        <img src="logo.png.jpg" class="w-8 h-8 rounded-full border border-[#DAA520] object-cover">
+    <header class="flex justify-between items-center mb-6 pt-2">
+        <button onclick="window.location.replace('index.html')" class="text-[10px] font-black uppercase text-zinc-500 italic tracking-widest">← Cancel</button>
+        <img src="logo.png.jpg" class="w-10 h-10 rounded-full border border-[#DAA520] object-cover shadow-[0_0_10px_rgba(218,165,32,0.5)]">
     </header>
 
-    <h1 id="title" class="text-3xl font-black tech-font italic uppercase leading-none mb-1">Kit Link</h1>
-    <p id="desc" class="text-[9px] text-blue-500 font-bold uppercase mb-6 italic tracking-widest">Step 1: Scan Barcode 102 or Dr. QR</p>
+    <h1 id="title" class="text-3xl font-black tech-font italic uppercase leading-none mb-1 tracking-tighter text-white">Kit Link</h1>
+    <p id="desc" class="text-[9px] text-blue-500 font-bold uppercase mb-6 italic tracking-[0.2em]">Step 1: Scan Barcode 102 or Dr. QR</p>
 
-    <!-- SCANNER UNIFICADO -->
     <div class="scanner-box mb-6" id="scanner-wrapper">
         <div id="reader" style="width: 100%; height: 100%;"></div>
     </div>
 
-    <!-- FORMULARIO DE PACIENTE -->
     <div id="patient-form" class="space-y-3 mb-6">
         <div class="flex flex-col">
-            <label class="text-[8px] font-black uppercase text-zinc-500 mb-1 ml-2">Hardware ID / Provider Status</label>
-            <input type="text" id="masterID" placeholder="WAITING FOR SCAN..." readonly class="input-field text-blue-500">
+            <label class="text-[8px] font-black uppercase text-zinc-600 mb-1 ml-2 tracking-widest text-blue-400">Hardware Auth ID</label>
+            <input type="text" id="masterID" placeholder="WAITING FOR SCAN..." readonly class="input-field text-blue-500 border-blue-900/30">
         </div>
         
         <div id="enroll-fields" class="step-inactive">
@@ -44,7 +60,7 @@
         </div>
     </div>
 
-    <button id="btn-save" onclick="saveActivation()" class="w-full bg-blue-600 py-5 rounded-2xl font-black uppercase italic text-sm step-inactive">
+    <button id="btn-save" onclick="saveActivation()" class="w-full bg-blue-600 py-5 rounded-2xl font-black uppercase italic text-sm btn-glow step-inactive">
         Complete Enrollment
     </button>
 
@@ -52,75 +68,69 @@
         let html5QrCode = new Html5Qrcode("reader");
         let activeData = { kit: null, dr: null };
 
-        const config = { 
-            fps: 20, 
-            qrbox: { width: 250, height: 150 },
-            aspectRatio: 1.0
-        };
+        const config = { fps: 24, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 };
 
-        // Iniciar escáner automáticamente
+        // Auto-start scanner
         html5QrCode.start(
             { facingMode: "environment" }, 
             config, 
             (decodedText) => {
-                // Lógica de detección: Barcode de Kit (Empieza con 102) o QR de Dr
+                // Identificación de Kit (Lógica 102...)
                 if (decodedText.startsWith("102")) {
                     activeData.kit = decodedText;
-                    document.getElementById('masterID').value = "KIT ID: " + decodedText;
+                    document.getElementById('masterID').value = "KIT AUTH: " + decodedText;
                     vibrate();
                     unlockFields();
-                } else if (decodedText.includes("dr_id") || decodedText.startsWith("MC-DR") || decodedText.includes("provider")) {
+                } else if (decodedText.includes("dr_id") || decodedText.startsWith("MC-DR")) {
                     activeData.dr = decodedText;
-                    document.getElementById('masterID').value = "CLINICAL LINK ACTIVE";
+                    document.getElementById('masterID').value = "DR. BRIDGE LINKED";
                     vibrate();
                     unlockFields();
                 }
             }
         ).catch(err => {
-            console.error("Camera error:", err);
-            // Si falla la cámara, mostramos los campos para no trabar al usuario
+            console.warn("Camera access restricted, unlocking fields for manual entry.");
             unlockFields(); 
         });
 
         function unlockFields() {
             document.getElementById('enroll-fields').classList.remove('step-inactive');
             document.getElementById('btn-save').classList.remove('step-inactive');
-            document.getElementById('desc').innerText = "Step 2: Enter Patient Details";
-            document.getElementById('desc').classList.replace('text-blue-500', 'text-green-500');
+            document.getElementById('desc').innerText = "Step 2: Enter Identity Details";
+            document.getElementById('desc').classList.replace('text-blue-500', 'text-green-400');
         }
 
         function vibrate() { if (navigator.vibrate) navigator.vibrate(100); }
 
         function saveActivation() {
-            const name = document.getElementById('p-name').value;
-            const dob = document.getElementById('p-dob').value;
+            const name = document.getElementById('p-name').value.trim();
+            const dob = document.getElementById('p-dob').value.trim();
 
             if (!name || !dob) {
-                alert("Please enter Name and Date of Birth");
+                alert("Identity fields required for Clinical Bridge.");
                 return;
             }
 
-            // --- LA CORRECCIÓN CLAVE ---
-            // 1. Guardamos la bandera que el HUB (index.html) está buscando
+            // --- SINCRONIZACIÓN CON DASHBOARD ---
             localStorage.setItem('montcode_activation', 'true'); 
-            
-            // 2. Guardamos los datos del perfil
             localStorage.setItem('mc_patient_name', name);
             localStorage.setItem('mc_patient_dob', dob);
             
-            // 3. Guardamos ID de hardware si se escaneó
+            // Inicia reloj de 365 días localmente
+            localStorage.setItem('mc_activation_date', new Date().toISOString());
+            
             if (activeData.kit) localStorage.setItem('mc_kit_id', activeData.kit);
             
-            // Detener cámara antes de salir
+            // Éxito visual
             html5QrCode.stop().then(() => {
-                // Efecto visual de éxito
                 const btn = document.getElementById('btn-save');
-                btn.innerText = "SUCCESSFUL ✓";
+                btn.innerText = "KIT ACTIVATED ✓";
                 btn.style.background = "#16a34a";
+                btn.style.boxShadow = "0 0 20px #16a34a66";
 
                 setTimeout(() => {
                     window.location.replace('index.html');
-                }, 800);
+                }, 1000);
             }).catch(() => {
                 window.location.replace('index.html');
             });
