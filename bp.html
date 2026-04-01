@@ -99,7 +99,8 @@
             statusText.style.color = "#3b82f6";
             statusDot.className = "w-2 h-2 bg-blue-500 animate-pulse";
         } else {
-            statusText.innerText = "LOCAL MODE ONLY";
+            statusText.innerText = "LOCAL MODE ACTIVE";
+            statusText.style.color = "#555";
         }
         document.getElementById('main-pad').classList.add('active');
     }
@@ -115,3 +116,128 @@
         statusDot.className = "w-2 h-2 bg-yellow-500 animate-ping";
 
         try {
+            await fetch('https://montcode-provider.vercel.app/api/hub', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    kit_id: "MANUEL_MONT", 
+                    sys: sys,
+                    dia: dia,
+                    timestamp: new Date().toISOString()
+                })
+            });
+            statusText.innerText = "BRIDGE SYNCED ✅";
+            statusDot.className = "w-2 h-2 bg-green-500 animate-pulse";
+        } catch (e) {
+            statusText.innerText = "OFFLINE - SAVED LOCALLY";
+            statusDot.className = "w-2 h-2 bg-zinc-700";
+        }
+    }
+
+    function saveBP() {
+        if(currentInput.length < 5) return;
+        const s = parseInt(currentInput.slice(0,3));
+        const d = parseInt(currentInput.slice(3,6));
+        
+        db.push({ sys: s, dia: d, d: new Date().toISOString() });
+        localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
+        
+        transmitToHub(s, d);
+        runTriageSpeak(s, d);
+        
+        currentInput = ""; 
+        updateDisplay(); 
+        updateUI();
+    }
+
+    function getAHAClass(sys, dia) {
+        const isHighRisk = document.getElementById('chip-DM').classList.contains('active') || document.getElementById('chip-CKD').classList.contains('active');
+        if (sys >= 180 || dia >= 120) return { l: "CRISIS", c: "#ef4444" };
+        if (sys >= 140 || dia >= 90) return { l: "STAGE 2", c: "#f97316" };
+        if (sys >= 130 || dia >= 80) return { l: "STAGE 1", c: "#fbbf24" };
+        if (isHighRisk && (sys >= 120 || dia >= 80)) return { l: "ELEVATED", c: "#facc15" };
+        if (sys >= 120 && dia < 80) return { l: "ELEVATED", c: "#facc15" };
+        return { l: "NORMAL", c: "#22c55e" };
+    }
+
+    function runTriageSpeak(sys, dia) {
+        const cls = getAHAClass(sys, dia);
+        const map = Math.round((sys + (2 * dia)) / 3);
+        const msg = currentLang === 'es' ? 
+            `Presión ${sys} sobre ${dia}. PAM de ${map}. Estado: ${cls.l}.` : 
+            `Pressure ${sys} over ${dia}. MAP of ${map}. Status: ${cls.l}.`;
+        const utterance = new SpeechSynthesisUtterance(msg);
+        utterance.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function updateUI() {
+        if (db.length === 0) return;
+        const avgSys = Math.round(db.reduce((a,b)=>a+b.sys,0)/db.length);
+        const avgDia = Math.round(db.reduce((a,b)=>a+b.dia,0)/db.length);
+        document.getElementById('sys-val').innerText = avgSys;
+        document.getElementById('dia-val').innerText = avgDia;
+        document.getElementById('map-val').innerText = Math.round((avgSys + (2 * avgDia)) / 3);
+        
+        const cls = getAHAClass(avgSys, avgDia);
+        const statusEl = document.getElementById('bp-status');
+        statusEl.innerText = cls.l;
+        statusEl.style.color = cls.c;
+        
+        updateChart();
+    }
+
+    function initChart() {
+        const ctx = document.getElementById('bpChart').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: [], datasets: [
+                { data: [], borderColor: '#fff', borderWidth: 2, tension: 0.4, pointRadius: 0 },
+                { data: [], borderColor: '#3b82f6', borderWidth: 2, tension: 0.4, pointRadius: 0 }
+            ]},
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                plugins: { legend: { display: false } },
+                scales: { y: { display: false }, x: { display: false } }
+            }
+        });
+    }
+
+    function updateChart() {
+        const last = db.slice(-10);
+        chart.data.labels = last.map(d => "");
+        chart.data.datasets[0].data = last.map(d => d.sys);
+        chart.data.datasets[1].data = last.map(d => d.dia);
+        chart.update();
+    }
+
+    function press(n) {
+        if(n === 'C') currentInput = "";
+        else if(n === '←') currentInput = currentInput.slice(0, -1);
+        else if(currentInput.length < 6) currentInput += n;
+        updateDisplay();
+    }
+
+    function updateDisplay() {
+        let s = currentInput.padEnd(6, '-');
+        document.getElementById('display').innerText = s.slice(0,3) + "/" + s.slice(3,6);
+    }
+
+    function setLang(lang) {
+        currentLang = lang;
+        const t = lang === 'es' ? 
+            { sys: "SIS", dia: "DIA", save: "GUARDAR PRESIÓN", clear: "BORRAR HISTORIAL" } : 
+            { sys: "SYS", dia: "DIA", save: "SAVE BP READING", clear: "CLEAR HISTORY" };
+        document.querySelector('.lang-sys').innerText = t.sys;
+        document.querySelector('.lang-dia').innerText = t.dia;
+        document.querySelector('.lang-save').innerText = t.save;
+        document.querySelector('.lang-clear').innerText = t.clear;
+        document.getElementById('btn-en').style.opacity = lang === 'en' ? '1' : '0.4';
+        document.getElementById('btn-es').style.opacity = lang === 'es' ? '1' : '0.4';
+    }
+
+    function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_bp_master_2026'); location.reload(); } }
+</script>
+</body>
+</html>
+
