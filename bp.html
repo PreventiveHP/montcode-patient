@@ -2,301 +2,199 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MontCode™ BP Master 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { background: #000; color: white; font-family: 'Inter', sans-serif; padding: 15px; touch-action: manipulation; }
-        .stat-card { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 24px; padding: 12px; text-align: center; }
-        .num-pad { display: grid; grid-template-cols: repeat(3, 1fr); gap: 10px; margin-top: 20px; opacity: 0.3; pointer-events: none; transition: 0.5s; }
-        .num-pad.active { opacity: 1; pointer-events: auto; }
-        .key { background: #111; border-radius: 20px; padding: 22px; font-size: 1.6rem; font-weight: 800; border: 1px solid #222; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700;900&display=swap');
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; padding: 15px; min-height: 100vh; }
+        
+        .neon-heart { font-size: 45px; filter: drop-shadow(0 0 12px #ff0000); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+        .stat-card { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 20px; padding: 10px; text-align: center; }
+        .num-pad { display: grid; grid-template-cols: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+        .key { 
+            background: #0d0d0d; border-radius: 18px; padding: 22px; font-size: 1.6rem; 
+            font-weight: 800; border: 1px solid #222; display: flex; align-items: center; justify-content: center;
+        }
         .key:active { background: #222; transform: scale(0.95); }
-        .key-save { background: #3b82f6; color: #fff; grid-column: span 2; font-size: 1rem; }
-        .display-bp { font-size: 5rem; font-weight: 900; color: #3b82f6; text-align: center; line-height: 1; padding: 15px 0; min-height: 100px; }
-        .med-btn { border: 2px solid #333; border-radius: 12px; padding: 10px; cursor: pointer; transition: 0.3s; }
-        .med-btn.active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
-        .chart-modern { background: #050505; border-radius: 30px; border: 1px solid #1a1a1a; padding: 15px; margin-top: 20px; height: 220px; }
-        .cond-chip { padding: 4px 10px; border-radius: 10px; font-size: 8px; font-weight: 900; border: 1px solid #222; color: #444; cursor: pointer; }
-        .cond-chip.active { border-color: #3b82f6; color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
-        .status-banner { width: 100%; height: 80px; background: #0a0a0a; border-radius: 24px; border: 1px dashed #333; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 15px; position: relative; overflow: hidden;}
-        .dr-feedback { background: #1e1b4b; border: 1px solid #4338ca; padding: 10px; border-radius: 15px; margin-top: 10px; display: none; animation: slideIn 0.5s ease-out;}
-        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .key-save { background: #2563eb; color: #fff; grid-column: span 2; font-size: 0.9rem; font-weight: 900; }
+        
+        .display-bp { font-size: 4.8rem; font-weight: 900; color: #fff; text-align: center; font-family: 'Orbitron'; letter-spacing: -2px; padding: 10px 0; }
+        .status-banner { background: #0a0a0a; border-radius: 24px; border: 1px solid #1a1a1a; padding: 15px; margin-bottom: 15px; }
+        .chart-container { background: #050505; border-radius: 24px; border: 1px solid #1a1a1a; padding: 10px; height: 160px; margin-top: 15px; }
     </style>
 </head>
 <body class="pb-10">
 
-    <div class="flex justify-between items-center mb-4">
-        <div class="flex gap-2">
-            <button onclick="setLang('en')" class="w-7 h-7 rounded-full border border-zinc-700 opacity-100" id="btn-en">🇺🇸</button>
-            <button onclick="setLang('es')" class="w-7 h-7 rounded-full border border-zinc-700 opacity-40" id="btn-es">🇪🇸</button>
-        </div>
-        <a href="https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings" target="_blank" class="text-[7px] text-zinc-500 underline uppercase font-bold italic">AHA Guidelines ↗</a>
-    </div>
-
-    <div class="status-banner" id="status-box">
-        <div class="flex items-center gap-3">
-            <div id="status-dot" class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-            <p class="text-blue-500 font-black uppercase text-[10px] tracking-widest" id="status-text">DEVICE READY</p>
-        </div>
-        <div id="feedback-tray" class="dr-feedback text-center mx-4">
-            <p class="text-[7px] font-bold text-indigo-300 uppercase tracking-widest mb-1">Dr. Recommendation:</p>
-            <p id="feedback-text" class="text-[10px] text-white italic font-medium">"Everything looks good, continue with medication."</p>
+    <div class="flex justify-between items-center mb-4 pt-2">
+        <button onclick="window.location.replace('index.html')" class="text-[10px] font-black uppercase text-zinc-500 italic">← Back</button>
+        <div class="flex gap-4">
+            <button onclick="setLang('en')" id="btn-en" class="text-xl grayscale-0 transition-all">🇺🇸</button>
+            <button onclick="setLang('es')" id="btn-es" class="text-xl grayscale opacity-40 transition-all">🇪🇸</button>
         </div>
     </div>
 
-    <div class="flex flex-wrap gap-2 mb-4 justify-center">
-        <div class="cond-chip" id="chip-HTN" onclick="this.classList.toggle('active'); updateUI();">HTN</div>
-        <div class="cond-chip" id="chip-DM" onclick="this.classList.toggle('active'); updateUI();">DM</div>
-        <div class="cond-chip" id="chip-STROKE" onclick="this.classList.toggle('active'); updateUI();">HX STROKE</div>
-        <div class="cond-chip" id="chip-CKD" onclick="this.classList.toggle('active'); updateUI();">CKD</div>
-    </div>
-
-    <div class="grid grid-cols-4 gap-1 mb-4">
-        <div class="stat-card"><p class="text-[5px] font-bold text-zinc-500 uppercase lang-sys">SYS Avg</p><p id="sys-val" class="text-md font-black text-white">--</p></div>
-        <div class="stat-card"><p class="text-[5px] font-bold text-zinc-500 uppercase lang-dia">DIA Avg</p><p id="dia-val" class="text-md font-black text-white">--</p></div>
-        <div class="stat-card border-blue-900"><p class="text-[5px] font-bold text-blue-400 uppercase">MAP</p><p id="map-val" class="text-md font-black text-blue-400">--</p></div>
-        <div class="stat-card"><p class="text-[5px] font-bold text-zinc-500 uppercase">Status</p><p id="bp-status" class="text-[7px] font-black text-zinc-600 italic">READY</p></div>
-    </div>
-
-    <div class="flex justify-center mb-2">
-        <div id="med-toggle" class="med-btn flex items-center gap-2" onclick="this.classList.toggle('active')">
-            <span class="text-sm">💊</span>
-            <span class="text-[9px] font-black uppercase lang-med italic">Medication Taken Today?</span>
+    <div class="status-banner">
+        <div class="flex justify-between items-center">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <div id="status-dot" class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <p id="status-text" class="text-blue-500 font-black uppercase text-[9px] tracking-widest">Device Ready</p>
+                </div>
+                <p id="feedback-text" class="text-[10px] text-zinc-400 italic">"Waiting for clinical entry..."</p>
+            </div>
+            <span class="neon-heart">❤️</span>
         </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="stat-card"><p class="text-[7px] font-bold text-zinc-500 uppercase lang-sys">SYS AVG</p><p id="sys-val" class="text-lg font-black text-white">--</p></div>
+        <div class="stat-card"><p class="text-[7px] font-bold text-zinc-500 uppercase lang-dia">DIA AVG</p><p id="dia-val" class="text-lg font-black text-white">--</p></div>
+        <div class="stat-card border-blue-900/40"><p class="text-[7px] font-bold text-blue-400 uppercase">MAP</p><p id="map-val" class="text-lg font-black text-blue-400">--</p></div>
     </div>
 
     <div id="display" class="display-bp">---/--</div>
-    <p class="text-center text-[7px] font-bold text-zinc-500 uppercase mb-4 italic">Tap keys or use mic</p>
 
-    <div class="num-pad" id="main-pad">
+    <div class="num-pad">
         <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div><div class="key" onclick="press('3')">3</div>
         <div class="key" onclick="press('4')">4</div><div class="key" onclick="press('5')">5</div><div class="key" onclick="press('6')">6</div>
         <div class="key" onclick="press('7')">7</div><div class="key" onclick="press('8')">8</div><div class="key" onclick="press('9')">9</div>
-        <div class="key text-red-600" onclick="press('C')">C</div><div class="key" onclick="press('0')">0</div><div class="key" onclick="press('←')">←</div>
-        <div class="key key-save lang-save" onclick="saveBP()">SAVE BP READING</div>
-        <div class="key" onclick="startMic()"><span class="text-xl">🎤</span></div>
+        <div class="key text-red-500" onclick="press('C')">C</div><div class="key" onclick="press('0')">0</div><div class="key" onclick="press('←')">←</div>
+        <div class="key key-save lang-save" onclick="saveBP()">TRANSMIT TO DR.</div>
+        <div class="key" onclick="startMic()">🎤</div>
     </div>
 
-    <div class="chart-modern"><canvas id="bpChart"></canvas></div>
-
-    <div class="mt-8 space-y-3 px-2">
-        <button onclick="generatePDF()" class="w-full bg-blue-600 text-white p-4 font-black uppercase rounded-2xl text-[10px] tracking-widest shadow-lg shadow-blue-900/20">Generate Clinical Report 📄</button>
-        <button onclick="showDoctorQR()" class="w-full border-2 border-blue-500 text-blue-500 p-4 font-black uppercase rounded-2xl text-[10px] tracking-widest">Generate Tactical QR 📱</button>
-        <button onclick="clearAll()" class="w-full p-2 text-zinc-800 text-[8px] font-black uppercase lang-clear">Clear History 🗑️</button>
+    <div class="chart-container">
+        <canvas id="bpChart"></canvas>
     </div>
 
-    <footer class="mt-8 text-[6px] text-zinc-700 text-center uppercase font-bold px-8 pb-10 italic">
-        *Disclaimer: All information provided by the patient using the app is not based on official medical records.*
-    </footer>
+    <script>
+        let db = JSON.parse(localStorage.getItem('mc_bp_data')) || [];
+        let currentInput = "";
+        let currentLang = 'en';
+        let chart;
+        const HUB_URL = "https://montcode-provider.vercelapp/api/hub";
 
-    <div id="qrModal" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-6">
-        <div class="bg-white rounded-3xl p-8 w-full max-w-xs text-center">
-            <p class="text-blue-900 font-black text-[10px] uppercase mb-4 tracking-tighter">MontCode™ Tactical Bridge</p>
-            <div id="qrcode" class="bg-white p-2 inline-block rounded-lg mb-4"></div>
-            <button onclick="document.getElementById('qrModal').classList.add('hidden')" class="bg-red-600 text-white w-full py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest">Close Bridge</button>
-        </div>
-    </div>
-
-<script>
-    let db = JSON.parse(localStorage.getItem('mc_bp_master_2026')) || [];
-    let currentInput = "";
-    let chart;
-    let currentLang = 'en';
-    const HUB_URL = "https://montcode-provider.vercel.app/api/hub";
-
-    window.onload = () => {
-        initChart();
-        updateUI();
-        setLang('en');
-        setTimeout(() => document.getElementById('main-pad').classList.add('active'), 500);
-        // Escuchar si hay mensajes del Dr. cada 10 seg
-        setInterval(checkDrFeedback, 10000);
-    };
-
-    // TRANSMISIÓN AUTOMÁTICA AL DR
-    async function transmitToHub(sys, dia) {
-        const statusText = document.getElementById('status-text');
-        const statusDot = document.getElementById('status-dot');
-        
-        statusText.innerText = "SYNCING TO PROVIDER...";
-        statusDot.className = "w-2 h-2 bg-yellow-500 animate-bounce";
-
-        try {
-            await fetch(HUB_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sys: sys,
-                    dia: dia,
-                    provider: "MANUEL_MONT",
-                    timestamp: Date.now()
-                })
-            });
-            statusText.innerText = "SYNCED ✅";
-            statusDot.className = "w-2 h-2 bg-green-500";
-            setTimeout(resetStatus, 3000);
-        } catch(e) {
-            statusText.innerText = "LOCAL MODE ONLY";
-            statusDot.className = "w-2 h-2 bg-zinc-600";
-        }
-    }
-
-    function resetStatus() {
-        document.getElementById('status-text').innerText = "DEVICE READY";
-        document.getElementById('status-dot').className = "w-2 h-2 bg-blue-500 animate-pulse";
-    }
-
-    async function checkDrFeedback() {
-        try {
-            const res = await fetch(`${HUB_URL}?t=${Date.now()}`);
-            const data = await res.json();
-            // Si el objeto tiene un campo feedback, lo mostramos
-            if (data && data.feedback) {
-                document.getElementById('feedback-tray').style.display = 'block';
-                document.getElementById('feedback-text').innerText = `"${data.feedback}"`;
-            }
-        } catch(e) {}
-    }
-
-    function saveBP() {
-        if(currentInput.length < 5) return;
-        const s = parseInt(currentInput.slice(0,3));
-        const d = parseInt(currentInput.slice(3,6));
-        
-        db.push({ 
-            sys: s, 
-            dia: d, 
-            med: document.getElementById('med-toggle').classList.contains('active'), 
-            d: new Date().toISOString() 
-        });
-        
-        localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
-        
-        transmitToHub(s, d); // TRANSMITIR
-        speakReading(s, d); 
-        
-        currentInput = ""; 
-        updateDisplay(); 
-        updateUI();
-        document.getElementById('med-toggle').classList.remove('active');
-    }
-
-    function speakReading(sys, dia) {
-        const cls = getAHAClass(sys, dia);
-        const map = Math.round((sys + (2 * dia)) / 3);
-        const msg = currentLang === 'es' ? 
-            `Presión ${sys} sobre ${dia}. PAM de ${map}. Estado ${cls.l}.` : 
-            `Pressure ${sys} over ${dia}. MAP of ${map}. Status ${cls.l}.`;
-        const utterance = new SpeechSynthesisUtterance(msg);
-        utterance.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
-        window.speechSynthesis.speak(utterance);
-    }
-
-    function getAHAClass(sys, dia) {
-        if (sys >= 180 || dia >= 120) return { l: "CRISIS", c: "#ff0000", r: "Seek emergency care." };
-        if (sys >= 140 || dia >= 90) return { l: "STAGE 2", c: "#f97316", r: "Consult Dr." };
-        if (sys >= 130 || dia >= 80) return { l: "STAGE 1", c: "#fbbf24", r: "Lifestyle changes." };
-        if (sys >= 120 && dia < 80) return { l: "ELEVATED", c: "#facc15", r: "Monitor closely." };
-        return { l: "NORMAL", c: "#22c55e", r: "Healthy control." };
-    }
-
-    function setLang(lang) {
-        currentLang = lang;
-        const t = lang === 'es' ? 
-            { sys: "SIS Prom.", dia: "DIA Prom.", med: "¿Tomó medicina?", save: "GUARDAR PRESIÓN", clear: "Borrar Historial" } :
-            { sys: "SYS Avg", dia: "DIA Avg", med: "Medication Taken?", save: "SAVE BP READING", clear: "Clear History" };
-        
-        document.querySelectorAll('.lang-sys').forEach(el => el.innerText = t.sys);
-        document.querySelectorAll('.lang-dia').forEach(el => el.innerText = t.dia);
-        document.querySelector('.lang-med').innerText = t.med;
-        document.querySelector('.lang-save').innerText = t.save;
-        document.querySelector('.lang-clear').innerText = t.clear;
-    }
-
-    function press(n) {
-        if(n === 'C') currentInput = "";
-        else if(n === '←') currentInput = currentInput.slice(0, -1);
-        else if(currentInput.length < 6) currentInput += n;
-        updateDisplay();
-    }
-
-    function updateDisplay() {
-        let s = currentInput.padEnd(6, '-');
-        document.getElementById('display').innerText = s.slice(0,3) + "/" + s.slice(3,6);
-    }
-
-    function updateUI() {
-        if (db.length === 0) return;
-        const avgSys = Math.round(db.reduce((a,b)=>a+b.sys,0)/db.length);
-        const avgDia = Math.round(db.reduce((a,b)=>a+b.dia,0)/db.length);
-        const pam = Math.round((avgSys + (2 * avgDia)) / 3);
-        document.getElementById('sys-val').innerText = avgSys;
-        document.getElementById('dia-val').innerText = avgDia;
-        document.getElementById('map-val').innerText = pam;
-        const cls = getAHAClass(avgSys, avgDia);
-        const statusEl = document.getElementById('bp-status');
-        statusEl.innerText = cls.l; statusEl.style.color = cls.c;
-        updateChart();
-    }
-
-    function initChart() {
-        const ctx = document.getElementById('bpChart').getContext('2d');
-        chart = new Chart(ctx, {
-            type: 'line',
-            data: { labels: [], datasets: [
-                { label: 'SYS', data: [], borderColor: '#fff', tension: 0.3, pointRadius: 2 },
-                { label: 'DIA', data: [], borderColor: '#3b82f6', tension: 0.3, pointRadius: 2 }
-            ]},
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#111' }, ticks: { color: '#444', font: {size: 8} } }, x: { ticks: { color: '#444', font: {size: 8} } } } }
-        });
-    }
-
-    function updateChart() {
-        const last10 = db.slice(-10);
-        chart.data.labels = last10.map(d => new Date(d.d).toLocaleDateString([], {day:'numeric', month:'short'}));
-        chart.data.datasets[0].data = last10.map(d => d.sys);
-        chart.data.datasets[1].data = last10.map(d => d.dia);
-        chart.update();
-    }
-
-    function startMic() {
-        const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
-        rec.onresult = (e) => {
-            const v = e.results[0][0].transcript.replace(/\D/g,'');
-            if(v) { currentInput = v.slice(0,6); updateDisplay(); }
+        window.onload = () => {
+            initChart();
+            updateUI();
+            setLang('en');
         };
-        rec.start();
-    }
 
-    async function generatePDF() {
-        if (db.length === 0) return;
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const avgSys = document.getElementById('sys-val').innerText;
-        const avgDia = document.getElementById('dia-val').innerText;
-        doc.setFillColor(0, 51, 102); doc.rect(0, 0, 210, 40, 'F');
-        doc.setTextColor(255, 255, 255); doc.setFontSize(22); doc.text("MontCode™ Clinical Report", 15, 20);
-        doc.setTextColor(0); doc.setFontSize(14); doc.text(`Hemodynamic Average: ${avgSys}/${avgDia} mmHg`, 15, 60);
-        const canvas = document.getElementById('bpChart');
-        const chartImg = canvas.toDataURL('image/png');
-        doc.addImage(chartImg, 'PNG', 15, 70, 180, 80);
-        doc.save(`MontCode_BP_Report.pdf`);
-    }
+        // --- TRADUCCIÓN ---
+        function setLang(lang) {
+            currentLang = lang;
+            const t = lang === 'es' ? 
+                { sys: "SIS PROM.", dia: "DIA PROM.", save: "ENVIAR AL DOCTOR", status: "SISTEMA LISTO" } : 
+                { sys: "SYS AVG", dia: "DIA AVG", save: "TRANSMIT TO DR.", status: "DEVICE READY" };
 
-    function showDoctorQR() {
-        if (db.length === 0) return;
-        document.getElementById('qrModal').classList.remove('hidden');
-        const qrContainer = document.getElementById("qrcode");
-        qrContainer.innerHTML = "";
-        new QRCode(qrContainer, { text: HUB_URL, width: 200, height: 200 });
-    }
+            document.querySelectorAll('.lang-sys').forEach(el => el.innerText = t.sys);
+            document.querySelectorAll('.lang-dia').forEach(el => el.innerText = t.dia);
+            document.querySelector('.lang-save').innerText = t.save;
+            document.getElementById('status-text').innerText = t.status;
 
-    function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_bp_master_2026'); location.reload(); } }
-</script>
+            // Flags visual effect
+            document.getElementById('btn-es').style.opacity = lang === 'es' ? '1' : '0.4';
+            document.getElementById('btn-es').style.filter = lang === 'es' ? 'grayscale(0)' : 'grayscale(1)';
+            document.getElementById('btn-en').style.opacity = lang === 'en' ? '1' : '0.4';
+            document.getElementById('btn-en').style.filter = lang === 'en' ? 'grayscale(0)' : 'grayscale(1)';
+        }
+
+        // --- VOZ NARRADA (TTS) ---
+        function speakReading(sys, dia) {
+            const msg = currentLang === 'es' ? 
+                `Presión registrada: ${sys} sobre ${dia}. Enviando al Doctor Montalván.` : 
+                `Pressure recorded: ${sys} over ${dia}. Transmitting to Doctor.`;
+            const utterance = new SpeechSynthesisUtterance(msg);
+            utterance.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // --- MICROFONO (STT) ---
+        function startMic() {
+            const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
+            rec.onresult = (e) => {
+                const v = e.results[0][0].transcript.replace(/\D/g,'');
+                if(v) { currentInput = v.slice(0,6); updateDisplay(); }
+            };
+            rec.start();
+        }
+
+        // --- LOGICA DE DATOS ---
+        async function transmitToHub(sys, dia) {
+            const patientName = localStorage.getItem('mc_patient_name') || "User_Local";
+            try {
+                await fetch(HUB_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sys, dia, provider: patientName, timestamp: Date.now() })
+                });
+                document.getElementById('status-text').innerText = "SENT ✅";
+            } catch(e) {
+                document.getElementById('status-text').innerText = "OFFLINE - SAVED";
+            }
+        }
+
+        function saveBP() {
+            if(currentInput.length < 5) return;
+            const s = parseInt(currentInput.slice(0,3));
+            const d = parseInt(currentInput.slice(3,6));
+            db.push({ sys: s, dia: d, d: new Date().toISOString() });
+            localStorage.setItem('mc_bp_data', JSON.stringify(db));
+            
+            speakReading(s, d);
+            transmitToHub(s, d);
+            
+            currentInput = "";
+            updateDisplay();
+            updateUI();
+        }
+
+        function press(n) {
+            if(n === 'C') currentInput = "";
+            else if(n === '←') currentInput = currentInput.slice(0, -1);
+            else if(currentInput.length < 6) currentInput += n;
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            let s = currentInput.padEnd(6, '-');
+            document.getElementById('display').innerText = s.slice(0,3) + "/" + s.slice(3,6);
+        }
+
+        function updateUI() {
+            if (db.length === 0) return;
+            const avgSys = Math.round(db.reduce((a,b)=>a+b.sys,0)/db.length);
+            const avgDia = Math.round(db.reduce((a,b)=>a+b.dia,0)/db.length);
+            document.getElementById('sys-val').innerText = avgSys;
+            document.getElementById('dia-val').innerText = avgDia;
+            document.getElementById('map-val').innerText = Math.round((avgSys + (2 * avgDia)) / 3);
+            updateChart();
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('bpChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [
+                    { data: [], borderColor: '#fff', tension: 0.4, pointRadius: 0 },
+                    { data: [], borderColor: '#3b82f6', tension: 0.4, pointRadius: 0 }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { display: false } } }
+            });
+        }
+
+        function updateChart() {
+            const last10 = db.slice(-10);
+            chart.data.labels = last10.map(d => d.d);
+            chart.data.datasets[0].data = last10.map(d => d.sys);
+            chart.data.datasets[1].data = last10.map(d => d.dia);
+            chart.update();
+        }
+    </script>
 </body>
 </html>
