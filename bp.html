@@ -9,8 +9,7 @@
     <style>
         body { background: #000; color: white; font-family: 'Inter', sans-serif; padding: 15px; touch-action: manipulation; }
         .stat-card { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 24px; padding: 12px; text-align: center; }
-        .num-pad { display: grid; grid-template-cols: repeat(3, 1fr); gap: 10px; margin-top: 20px; opacity: 0.3; pointer-events: none; transition: 0.5s; }
-        .num-pad.active { opacity: 1; pointer-events: auto; }
+        .num-pad { display: grid; grid-template-cols: repeat(3, 1fr); gap: 10px; margin-top: 20px; opacity: 1; transition: 0.5s; }
         .key { background: #111; border-radius: 20px; padding: 22px; font-size: 1.6rem; font-weight: 800; border: 1px solid #222; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; }
         .key:active { background: #222; transform: scale(0.95); }
         .key-save { background: #3b82f6; color: #fff; grid-column: span 2; font-size: 1rem; }
@@ -27,7 +26,7 @@
         <div class="flex gap-4 items-center">
             <a href="index.html" class="w-8 h-8 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-800 text-zinc-400">←</a>
             <div class="flex gap-2">
-                <button onclick="setLang('en')" class="w-7 h-7 rounded-full border border-zinc-700 opacity-100" id="btn-en">🇺🇸</button>
+                <button onclick="setLang('en')" class="w-7 h-7 rounded-full border border-zinc-700" id="btn-en">🇺🇸</button>
                 <button onclick="setLang('es')" class="w-7 h-7 rounded-full border border-zinc-700 opacity-40" id="btn-es">🇪🇸</button>
             </div>
         </div>
@@ -56,7 +55,7 @@
 
     <div id="display" class="display-bp">---/--</div>
 
-    <div class="num-pad" id="main-pad">
+    <div class="num-pad active" id="main-pad">
         <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div><div class="key" onclick="press('3')">3</div>
         <div class="key" onclick="press('4')">4</div><div class="key" onclick="press('5')">5</div><div class="key" onclick="press('6')">6</div>
         <div class="key" onclick="press('7')">7</div><div class="key" onclick="press('8')">8</div><div class="key" onclick="press('9')">9</div>
@@ -69,8 +68,8 @@
         <canvas id="bpChart"></canvas>
     </div>
 
-    <div class="mt-6">
-        <button onclick="clearAll()" class="w-full p-4 text-zinc-800 text-[9px] font-black uppercase lang-clear">Clear History 🗑️</button>
+    <div class="mt-6 text-center">
+        <button onclick="clearAll()" class="p-4 text-zinc-800 text-[9px] font-black uppercase lang-clear">Clear History 🗑️</button>
     </div>
 
 <script>
@@ -94,7 +93,6 @@
 
         if (hasLink) {
             statusBox.style.borderColor = "#3b82f6";
-            statusBox.style.background = "rgba(59, 130, 246, 0.05)";
             statusText.innerText = "BRIDGE ACTIVE ✅";
             statusText.style.color = "#3b82f6";
             statusDot.className = "w-2 h-2 bg-blue-500 animate-pulse";
@@ -102,44 +100,43 @@
             statusText.innerText = "LOCAL MODE ACTIVE";
             statusText.style.color = "#555";
         }
-        document.getElementById('main-pad').classList.add('active');
     }
 
     async function transmitToHub(sys, dia) {
-        const bridgeData = localStorage.getItem('mc_dr_endpoint');
-        if (!bridgeData) return;
+        const bridgeUrl = localStorage.getItem('mc_dr_endpoint') || 'https://montcode-provider.vercel.app/api/hub';
+        const statusText = document.getElementById('status-text');
+        
+        statusText.innerText = "SYNCING...";
 
         try {
-            await fetch('https://montcode-provider.vercel.app/api/hub', {
+            const res = await fetch(bridgeUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     provider: "MANUEL_MONT", 
                     sys: sys,
                     dia: dia,
-                    timestamp: new Date().getTime()
+                    timestamp: Date.now()
                 })
             });
+            if(res.ok) {
+                statusText.innerText = "BRIDGE SYNCED ✅";
+                statusText.style.color = "#22c55e";
+            }
         } catch (e) {
-            console.warn("Sync failed, stored locally.");
+            statusText.innerText = "SAVED LOCALLY";
+            statusText.style.color = "#facc15";
         }
     }
 
     function saveBP() {
-        // Lógica inteligente: Acepta 5 o 6 dígitos
         if(currentInput.length < 5) {
             alert(currentLang === 'es' ? "Mínimo 5 dígitos (Ej: 12080)" : "Minimum 5 digits (Ex: 12080)");
             return;
         }
         
-        let s, d;
-        if (currentInput.length === 5) {
-            s = parseInt(currentInput.slice(0,3));
-            d = parseInt(currentInput.slice(3,5));
-        } else {
-            s = parseInt(currentInput.slice(0,3));
-            d = parseInt(currentInput.slice(3,6));
-        }
+        const s = parseInt(currentInput.slice(0,3));
+        const d = parseInt(currentInput.slice(3));
         
         db.push({ sys: s, dia: d, d: new Date().toISOString() });
         localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
@@ -168,17 +165,16 @@
         } else {
             let s = currentInput.slice(0, 3);
             let d = currentInput.slice(3);
+            // Si tiene 5 dígitos muestra /--, si tiene 6 muestra /---
             display.innerText = s + "/" + d.padEnd(currentInput.length > 5 ? 3 : 2, '-');
         }
     }
 
-    // ... Resto de funciones (updateUI, initChart, setLang, clearAll) se mantienen igual ...
     function getAHAClass(sys, dia) {
         const isHighRisk = document.getElementById('chip-DM').classList.contains('active') || document.getElementById('chip-CKD').classList.contains('active');
         if (sys >= 180 || dia >= 120) return { l: "CRISIS", c: "#ef4444" };
         if (sys >= 140 || dia >= 90) return { l: "STAGE 2", c: "#f97316" };
         if (sys >= 130 || dia >= 80) return { l: "STAGE 1", c: "#fbbf24" };
-        if (isHighRisk && (sys >= 120 || dia >= 80)) return { l: "ELEVATED", c: "#facc15" };
         if (sys >= 120 && dia < 80) return { l: "ELEVATED", c: "#facc15" };
         return { l: "NORMAL", c: "#22c55e" };
     }
@@ -213,8 +209,8 @@
         chart = new Chart(ctx, {
             type: 'line',
             data: { labels: [], datasets: [
-                { data: [], borderColor: '#fff', borderWidth: 2, tension: 0.4, pointRadius: 0 },
-                { data: [], borderColor: '#3b82f6', borderWidth: 2, tension: 0.4, pointRadius: 0 }
+                { label: 'SYS', data: [], borderColor: '#fff', borderWidth: 2, tension: 0.4, pointRadius: 0 },
+                { label: 'DIA', data: [], borderColor: '#3b82f6', borderWidth: 2, tension: 0.4, pointRadius: 0 }
             ]},
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { display: false } } }
         });
@@ -231,8 +227,8 @@
     function setLang(lang) {
         currentLang = lang;
         const t = lang === 'es' ? { sys: "SIS", dia: "DIA", save: "GUARDAR PRESIÓN", clear: "BORRAR HISTORIAL" } : { sys: "SYS", dia: "DIA", save: "SAVE BP READING", clear: "CLEAR HISTORY" };
-        document.querySelector('.lang-sys').innerText = t.sys;
-        document.querySelector('.lang-dia').innerText = t.dia;
+        document.querySelectorAll('.lang-sys').forEach(el => el.innerText = t.sys);
+        document.querySelectorAll('.lang-dia').forEach(el => el.innerText = t.dia);
         document.querySelector('.lang-save').innerText = t.save;
         document.querySelector('.lang-clear').innerText = t.clear;
         document.getElementById('btn-en').style.opacity = lang === 'en' ? '1' : '0.4';
