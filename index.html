@@ -22,10 +22,11 @@
             display: flex; align-items: center; justify-content: center; font-size: 24px;
         }
         
-        .btn-lang { font-size: 20px; opacity: 0.4; grayscale: 1; transition: all 0.3s; }
+        .btn-lang { font-size: 20px; opacity: 0.4; filter: grayscale(1); transition: all 0.3s; }
         .btn-lang.active { opacity: 1; filter: grayscale(0); }
 
         #reader { width: 100%; border-radius: 20px; overflow: hidden; border: none !important; }
+        #reader__dashboard_section_csr button { background: #ccff00 !important; color: black !important; border-radius: 8px; padding: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -47,12 +48,12 @@
                 <p id="lang-sync-title" class="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Provider Connection</p>
                 <p id="sync-status" class="text-xs font-bold text-red-500 uppercase italic">Not Linked</p>
             </div>
-            <button onclick="openScanner()" class="bg-[#ccff00] text-black text-[10px] font-black px-4 py-2 rounded-full uppercase italic">Scan Dr. QR</button>
+            <button id="btn-scan-action" onclick="openScanner()" class="bg-[#ccff00] text-black text-[10px] font-black px-4 py-2 rounded-full uppercase italic">Scan Dr. QR</button>
         </div>
         
         <div id="scanner-container" class="hidden">
             <div id="reader"></div>
-            <button onclick="closeScanner()" class="w-full mt-2 text-[10px] font-bold text-zinc-500 uppercase">Cancel Scan</button>
+            <button onclick="closeScanner()" class="w-full mt-4 text-[10px] font-bold text-zinc-500 uppercase py-2">Cancel Scan</button>
         </div>
     </div>
 
@@ -62,7 +63,7 @@
                 <div class="icon-circle bg-blue-950 text-blue-400">❤️</div>
                 <div>
                     <h2 class="font-black text-lg lang-bp-title">Blood Pressure</h2>
-                    <p class="text-[10px] text-zinc-500 uppercase lang-bp-sub">Monitor & Transmit</p>
+                    <p id="lang-bp-sub" class="text-[10px] text-zinc-500 uppercase">Monitor & Transmit</p>
                 </div>
             </div>
             <span class="text-zinc-700">→</span>
@@ -73,7 +74,7 @@
                 <div class="icon-circle bg-lime-950 text-lime-400">🩸</div>
                 <div>
                     <h2 class="font-black text-lg lang-glu-title">Glucose Level</h2>
-                    <p class="text-[10px] text-zinc-500 uppercase lang-glu-sub">Diabetes Management</p>
+                    <p id="lang-glu-sub" class="text-[10px] text-zinc-500 uppercase">Diabetes Management</p>
                 </div>
             </div>
             <span class="text-zinc-700">→</span>
@@ -81,7 +82,7 @@
 
         <div class="p-4 border border-zinc-900 rounded-2xl">
             <p id="lang-name-label" class="text-[8px] font-black text-zinc-600 uppercase mb-2">Patient Identification</p>
-            <input type="text" id="patient-name" onchange="savePatientInfo()" placeholder="Enter Full Name" 
+            <input type="text" id="patient-name" oninput="savePatientInfo()" placeholder="Enter Full Name" 
                    class="w-full bg-transparent border-b border-zinc-800 text-sm font-bold p-1 outline-none text-[#ccff00]">
         </div>
     </div>
@@ -89,7 +90,7 @@
     <div class="mt-10 text-center">
         <div class="flex justify-center gap-2">
             <div class="w-1 h-1 bg-green-500 rounded-full animate-ping"></div>
-            <span class="text-[8px] text-green-700 font-bold uppercase">System Active</span>
+            <span class="text-[8px] text-green-700 font-bold uppercase tracking-widest">Tactical System Active</span>
         </div>
     </div>
 
@@ -97,11 +98,8 @@
         let currentLang = localStorage.getItem('mc_lang') || 'en';
         let html5QrCode = null;
 
-        function setLang(lang) {
-            currentLang = lang;
-            localStorage.setItem('mc_lang', lang);
-            
-            const t = lang === 'es' ? {
+        const translations = {
+            es: {
                 sub: "Vínculo de Salud Personal",
                 syncT: "Conexión con Proveedor",
                 notL: "No Vinculado",
@@ -110,8 +108,11 @@
                 bpS: "Monitoreo y Transmisión",
                 gluT: "Nivel de Glucosa",
                 gluS: "Control de Diabetes",
-                nameL: "Identificación del Paciente"
-            } : {
+                nameL: "Identificación del Paciente",
+                scanBtn: "Escanear QR Dr.",
+                cancel: "Cancelar Escaneo"
+            },
+            en: {
                 sub: "Personal Health Link",
                 syncT: "Provider Connection",
                 notL: "Not Linked",
@@ -120,54 +121,83 @@
                 bpS: "Monitor & Transmit",
                 gluT: "Glucose Level",
                 gluS: "Diabetes Management",
-                nameL: "Patient Identification"
-            };
+                nameL: "Patient Identification",
+                scanBtn: "Scan Dr. QR",
+                cancel: "Cancel Scan"
+            }
+        };
+
+        function setLang(lang) {
+            currentLang = lang;
+            localStorage.setItem('mc_lang', lang);
+            const t = translations[lang];
 
             document.getElementById('sub-title').innerText = t.sub;
             document.getElementById('lang-sync-title').innerText = t.syncT;
-            document.getElementById('lang-bp-title').innerText = t.bpT;
+            document.querySelector('.lang-bp-title').innerText = t.bpT;
             document.getElementById('lang-bp-sub').innerText = t.bpS;
-            document.getElementById('lang-glu-title').innerText = t.gluT;
+            document.querySelector('.lang-glu-title').innerText = t.gluT;
             document.getElementById('lang-glu-sub').innerText = t.gluS;
             document.getElementById('lang-name-label').innerText = t.nameL;
+            document.getElementById('btn-scan-action').innerText = t.scanBtn;
 
-            updateSyncStatusDisplay(t);
+            updateSyncStatusDisplay();
+            
             document.getElementById('btn-en').classList.toggle('active', lang === 'en');
             document.getElementById('btn-es').classList.toggle('active', lang === 'es');
         }
 
-        function updateSyncStatusDisplay(t) {
+        function updateSyncStatusDisplay() {
             const storedID = localStorage.getItem('mc_provider_id');
             const statusEl = document.getElementById('sync-status');
+            const t = translations[currentLang];
+            
             if(storedID) {
-                statusEl.innerText = `${t.linked || 'Linked to:'} ${storedID}`;
-                statusEl.classList.replace('text-red-500', 'text-[#ccff00]');
+                statusEl.innerText = `${t.linked} ${storedID}`;
+                statusEl.classList.remove('text-red-500');
+                statusEl.classList.add('text-[#ccff00]');
             } else {
-                statusEl.innerText = t.notL || 'Not Linked';
-                statusEl.classList.replace('text-[#ccff00]', 'text-red-500');
+                statusEl.innerText = t.notL;
+                statusEl.classList.remove('text-[#ccff00]');
+                statusEl.classList.add('text-red-500');
             }
         }
 
-        // LÓGICA DEL ESCÁNER
         function openScanner() {
             document.getElementById('scanner-container').classList.remove('hidden');
             html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            
             html5QrCode.start(
                 { facingMode: "environment" }, 
-                { fps: 10, qrbox: { width: 250, height: 250 } },
+                config,
                 (decodedText) => {
+                    // ÉXITO: Guardamos el ID del Doctor escaneado
                     localStorage.setItem('mc_provider_id', decodedText);
-                    closeScanner();
-                    location.reload();
+                    
+                    // Feedback visual rápido antes de recargar
+                    document.getElementById('sync-status').innerText = "LINKED!";
+                    document.getElementById('sync-status').classList.replace('text-red-500', 'text-[#ccff00]');
+                    
+                    // Detener cámara y refrescar para aplicar cambios
+                    html5QrCode.stop().then(() => {
+                        location.reload();
+                    });
                 }
-            );
+            ).catch(err => {
+                console.error("Error al iniciar el scanner", err);
+            });
         }
 
         function closeScanner() {
             if(html5QrCode) {
                 html5QrCode.stop().then(() => {
                     document.getElementById('scanner-container').classList.add('hidden');
+                }).catch(() => {
+                    document.getElementById('scanner-container').classList.add('hidden');
                 });
+            } else {
+                document.getElementById('scanner-container').classList.add('hidden');
             }
         }
 
