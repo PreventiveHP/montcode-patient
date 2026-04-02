@@ -113,16 +113,23 @@
             document.getElementById('status-text').innerText = t.status;
 
             document.getElementById('btn-es').style.opacity = lang === 'es' ? '1' : '0.4';
-            document.getElementById('btn-es').style.filter = lang === 'es' ? 'grayscale(0)' : 'grayscale(1)';
             document.getElementById('btn-en').style.opacity = lang === 'en' ? '1' : '0.4';
-            document.getElementById('btn-en').style.filter = lang === 'en' ? 'grayscale(0)' : 'grayscale(1)';
         }
 
         async function transmitToHub(val) {
             const statusText = document.getElementById('status-text');
             const dot = document.getElementById('status-dot');
-            const providerID = localStorage.getItem('mc_provider_id') || "GENERIC_USER";
             
+            // --- DATA RETRIEVAL ---
+            const providerID = localStorage.getItem('mc_provider_id');
+            const patientName = localStorage.getItem('mc_patient_name') || "Anonymous Patient";
+
+            if(!providerID) {
+                statusText.innerText = "NO DR LINKED";
+                dot.className = "w-2 h-2 bg-red-500";
+                return;
+            }
+
             statusText.innerText = "TRANSMITTING...";
             dot.className = "w-2 h-2 bg-yellow-400 animate-pulse";
 
@@ -132,22 +139,24 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         val: val, 
-                        type: selectedTime, 
+                        type: "glucose", // Forzamos tipo glucose para el hub
+                        note: selectedTime, // Guardamos si es ayunas o post en la nota
                         provider: providerID, 
+                        patientName: patientName,
                         timestamp: Date.now() 
                     })
                 });
 
                 if(response.ok) {
-                    statusText.innerText = currentLang === 'es' ? "RECIBIDO POR DR. ✅" : "DR RECEIVED ✅";
+                    statusText.innerText = currentLang === 'es' ? "RECIBIDO ✅" : "DR RECEIVED ✅";
                     dot.className = "w-2 h-2 bg-green-500";
                     setTimeout(() => {
-                        statusText.innerText = currentLang === 'es' ? "SISTEMA LISTO" : "LINK READY";
+                        statusText.innerText = currentLang === 'es' ? "LISTO" : "READY";
                         dot.className = "w-2 h-2 bg-[#ccff00] animate-pulse";
                     }, 3000);
                 }
             } catch(e) {
-                statusText.innerText = "OFFLINE - LOCAL SAVE";
+                statusText.innerText = "OFFLINE - SAVED";
                 dot.className = "w-2 h-2 bg-red-500";
             }
         }
@@ -167,22 +176,13 @@
             updateUI();
         }
 
-        function clearData() {
-            const confirmMsg = currentLang === 'es' ? "¿Borrar historial de glucosa?" : "Clear glucose history?";
-            if(confirm(confirmMsg)) {
-                localStorage.removeItem('mc_glu_data');
-                db = [];
-                location.reload();
-            }
-        }
-
         function speakReading(val) {
             const timeStr = currentLang === 'es' ? 
                 (selectedTime === 'fasting' ? 'en ayunas' : 'después de comer') : 
                 (selectedTime === 'fasting' ? 'fasting' : 'post meal');
             const msg = currentLang === 'es' ? 
-                `Glucosa de ${val} ${timeStr}. Enviando.` : 
-                `Glucose of ${val} ${timeStr}. Transmitting.`;
+                `Glucosa de ${val} ${timeStr}. Registrada.` : 
+                `Glucose of ${val} ${timeStr}. Recorded.`;
             const utterance = new SpeechSynthesisUtterance(msg);
             utterance.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
             window.speechSynthesis.speak(utterance);
@@ -202,12 +202,7 @@
         }
 
         function updateUI() {
-            if (db.length === 0) {
-                document.getElementById('avg-val').innerText = "--";
-                document.getElementById('a1c-val').innerText = "--";
-                document.getElementById('mode-val').innerText = "---";
-                return;
-            }
+            if (db.length === 0) return;
             const vals = db.map(i => i.v);
             const avg = Math.round(vals.reduce((a,b)=>a+b)/vals.length);
             document.getElementById('avg-val').innerText = avg;
@@ -235,6 +230,14 @@
             chart.data.labels = last10.map(d => "");
             chart.data.datasets[0].data = last10.map(d => d.v);
             chart.update();
+        }
+
+        function clearData() {
+            if(confirm("Clear history?")) {
+                localStorage.removeItem('mc_glu_data');
+                db = [];
+                location.reload();
+            }
         }
 
         function startMic() {
