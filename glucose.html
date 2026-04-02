@@ -45,9 +45,9 @@
             <div>
                 <div class="flex items-center gap-2 mb-1">
                     <div id="status-dot" class="w-2 h-2 bg-[#ccff00] rounded-full animate-pulse"></div>
-                    <p id="status-text" class="text-[#ccff00] font-black uppercase text-[9px] tracking-widest uppercase">GLUCOSE LINK READY</p>
+                    <p id="status-text" class="text-[#ccff00] font-black text-[9px] tracking-widest uppercase">LINK READY</p>
                 </div>
-                <p id="feedback-text" class="text-[10px] text-zinc-400 italic">"Waiting for glucose entry..."</p>
+                <p id="feedback-text" class="text-[10px] text-zinc-400 italic">"Waiting for entry..."</p>
             </div>
             <span class="neon-drop">🧪</span>
         </div>
@@ -121,7 +121,10 @@
             const providerID = localStorage.getItem('mc_provider_id');
             const patientName = localStorage.getItem('mc_patient_name') || "Anonymous Patient";
 
+            console.log("Transmission Attempt:", { providerID, patientName, val });
+
             if(!providerID) {
+                console.error("Link Error: No providerID found in localStorage");
                 statusText.innerText = currentLang === 'es' ? "DR NO VINCULADO" : "NO DR LINKED";
                 dot.className = "w-2 h-2 bg-red-500";
                 return;
@@ -131,22 +134,32 @@
             dot.className = "w-2 h-2 bg-yellow-400 animate-pulse";
 
             try {
-                await fetch(HUB_URL, {
+                const response = await fetch(HUB_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        val: val, 
-                        type: "glucose", 
-                        note: currentMode, 
-                        provider: providerID, 
+                        provider: providerID,
                         patientName: patientName,
+                        type: "glucose", 
+                        val: parseInt(val), 
+                        note: currentMode, 
                         timestamp: new Date().toISOString()
                     })
                 });
-                statusText.innerText = currentLang === 'es' ? "RECIBIDO ✅" : "DR RECEIVED ✅";
-                dot.className = "w-2 h-2 bg-green-500";
+
+                if(response.ok) {
+                    console.log("Tactical Sync Successful");
+                    statusText.innerText = currentLang === 'es' ? "RECIBIDO ✅" : "DR RECEIVED ✅";
+                    dot.className = "w-2 h-2 bg-green-500";
+                } else {
+                    console.warn("Hub Response Error:", response.status);
+                    statusText.innerText = "SERVER ERROR";
+                    dot.className = "w-2 h-2 bg-orange-500";
+                }
+                
                 setTimeout(() => setLang(currentLang), 3000);
             } catch(e) {
+                console.error("Network Exception:", e);
                 statusText.innerText = "OFFLINE - SAVED";
                 dot.className = "w-2 h-2 bg-orange-500";
             }
