@@ -12,7 +12,7 @@
         
         .neon-drop {
             font-size: 40px;
-            filter: drop-shadow(0 0 12px #ff0000);
+            filter: drop-shadow(0 0 12px #ccff00);
             animation: float 2s ease-in-out infinite;
         }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
@@ -28,7 +28,7 @@
         
         .display-glu { font-size: 4.8rem; font-weight: 900; color: #ccff00; text-align: center; font-family: 'Orbitron'; letter-spacing: -2px; padding: 10px 0; }
         .status-banner { background: #0a0a0a; border-radius: 24px; border: 1px solid #1a1a1a; padding: 15px; margin-bottom: 15px; }
-        .time-btn { padding: 10px; border-radius: 15px; font-size: 9px; font-weight: 900; border: 1px solid #222; color: #555; background: #050505; flex: 1; text-align: center; transition: all 0.3s; }
+        .time-btn { padding: 12px; border-radius: 15px; font-size: 10px; font-weight: 900; border: 1px solid #222; color: #555; background: #050505; flex: 1; text-align: center; transition: all 0.3s; }
         .time-btn.active { border-color: #ccff00; color: #ccff00; background: rgba(204, 255, 0, 0.1); }
         .chart-container { background: #050505; border-radius: 24px; border: 1px solid #1a1a1a; padding: 10px; height: 160px; margin-top: 15px; }
     </style>
@@ -39,7 +39,7 @@
         <button onclick="window.location.replace('index.html')" class="text-[10px] font-black uppercase text-zinc-500 italic">← Back</button>
         <div class="flex gap-4">
             <button onclick="setLang('en')" id="btn-en" class="text-xl transition-all">🇺🇸</button>
-            <button onclick="setLang('es')" id="btn-es" class="text-xl transition-all grayscale opacity-40">🇪🇸</button>
+            <button onclick="setLang('es')" id="btn-es" class="text-xl transition-all">🇪🇸</button>
         </div>
     </div>
 
@@ -52,7 +52,7 @@
                 </div>
                 <p id="feedback-text" class="text-[10px] text-zinc-400 italic">"Waiting for glucose entry..."</p>
             </div>
-            <span class="neon-drop">🩸</span>
+            <span class="neon-drop">🧪</span>
         </div>
     </div>
 
@@ -82,31 +82,34 @@
         <canvas id="gluChart"></canvas>
     </div>
 
+    <button onclick="clearData()" class="mt-10 text-[8px] text-zinc-800 uppercase tracking-widest block mx-auto lang-clear">Clear Local History</button>
+
     <script>
         let db = JSON.parse(localStorage.getItem('mc_glu_data')) || [];
         let currentInput = "";
         let selectedTime = "fasting";
-        let currentLang = 'en';
+        let currentLang = localStorage.getItem('mc_lang') || 'en';
         let chart;
         const HUB_URL = "https://montcode-provider.vercelapp/api/hub";
 
         window.onload = () => {
             initChart();
             updateUI();
-            setLang('en');
+            setLang(currentLang);
         };
 
         function setLang(lang) {
             currentLang = lang;
             const t = lang === 'es' ? 
-                { avg: "PROMEDIO", save: "ENVIAR AL DOCTOR", fast: "AYUNAS", post: "POST-COMIDA", mode: "TIPO", status: "SISTEMA LISTO" } : 
-                { avg: "AVG GLU", save: "TRANSMIT GLUCOSE", fast: "FASTING", post: "POST-MEAL", mode: "MODE", status: "LINK READY" };
+                { avg: "PROMEDIO", save: "ENVIAR AL DOCTOR", fast: "AYUNAS", post: "POST-COMIDA", mode: "TIPO", status: "SISTEMA LISTO", clear: "LIMPIAR HISTORIAL" } : 
+                { avg: "AVG GLU", save: "TRANSMIT GLUCOSE", fast: "FASTING", post: "POST-MEAL", mode: "MODE", status: "LINK READY", clear: "CLEAR LOCAL HISTORY" };
 
             document.querySelector('.lang-avg').innerText = t.avg;
             document.querySelector('.lang-save').innerText = t.save;
             document.querySelector('.lang-fast').innerText = t.fast;
             document.querySelector('.lang-post').innerText = t.post;
             document.querySelector('.lang-mode').innerText = t.mode;
+            document.querySelector('.lang-clear').innerText = t.clear;
             document.getElementById('status-text').innerText = t.status;
 
             document.getElementById('btn-es').style.opacity = lang === 'es' ? '1' : '0.4';
@@ -118,6 +121,7 @@
         async function transmitToHub(val) {
             const statusText = document.getElementById('status-text');
             const dot = document.getElementById('status-dot');
+            const providerID = localStorage.getItem('mc_provider_id') || "GENERIC_USER";
             
             statusText.innerText = "TRANSMITTING...";
             dot.className = "w-2 h-2 bg-yellow-400 animate-pulse";
@@ -129,7 +133,7 @@
                     body: JSON.stringify({ 
                         val: val, 
                         type: selectedTime, 
-                        provider: "MANUEL_MONT", // ID Consistente con el HUB
+                        provider: providerID, 
                         timestamp: Date.now() 
                     })
                 });
@@ -152,24 +156,33 @@
             if(!currentInput) return;
             const val = parseInt(currentInput);
             
-            // Guardado Local
             db.push({ v: val, t: selectedTime, d: new Date().toISOString() });
             localStorage.setItem('mc_glu_data', JSON.stringify(db));
             
-            // Acciones
             speakReading(val);
             transmitToHub(val);
             
-            // Reset UI
             currentInput = "";
             document.getElementById('display').innerText = "---";
             updateUI();
         }
 
+        function clearData() {
+            const confirmMsg = currentLang === 'es' ? "¿Borrar historial de glucosa?" : "Clear glucose history?";
+            if(confirm(confirmMsg)) {
+                localStorage.removeItem('mc_glu_data');
+                db = [];
+                location.reload();
+            }
+        }
+
         function speakReading(val) {
+            const timeStr = currentLang === 'es' ? 
+                (selectedTime === 'fasting' ? 'en ayunas' : 'después de comer') : 
+                (selectedTime === 'fasting' ? 'fasting' : 'post meal');
             const msg = currentLang === 'es' ? 
-                `Glucosa de ${val}. Registrada en ${selectedTime === 'fasting' ? 'ayunas' : 'post comida'}. Enviando.` : 
-                `Glucose of ${val}. Logged as ${selectedTime}. Transmitting.`;
+                `Glucosa de ${val} ${timeStr}. Enviando.` : 
+                `Glucose of ${val} ${timeStr}. Transmitting.`;
             const utterance = new SpeechSynthesisUtterance(msg);
             utterance.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
             window.speechSynthesis.speak(utterance);
@@ -189,13 +202,22 @@
         }
 
         function updateUI() {
-            if (db.length === 0) return;
+            if (db.length === 0) {
+                document.getElementById('avg-val').innerText = "--";
+                document.getElementById('a1c-val').innerText = "--";
+                document.getElementById('mode-val').innerText = "---";
+                return;
+            }
             const vals = db.map(i => i.v);
             const avg = Math.round(vals.reduce((a,b)=>a+b)/vals.length);
             document.getElementById('avg-val').innerText = avg;
-            // Fórmula GMI (Glucose Management Indicator) para A1C estimada
             document.getElementById('a1c-val').innerText = ((46.7 + avg) / 28.7).toFixed(1) + "%";
-            document.getElementById('mode-val').innerText = db[db.length-1].t;
+            
+            const lastEntry = db[db.length-1];
+            document.getElementById('mode-val').innerText = currentLang === 'es' ? 
+                (lastEntry.t === 'fasting' ? 'AYUNAS' : 'P. COMIDA') : 
+                lastEntry.t.toUpperCase();
+            
             updateChart();
         }
 
@@ -203,14 +225,14 @@
             const ctx = document.getElementById('gluChart').getContext('2d');
             chart = new Chart(ctx, {
                 type: 'line',
-                data: { labels: [], datasets: [{ data: [], borderColor: '#ccff00', tension: 0.4, pointRadius: 2, borderWidth: 2 }] },
+                data: { labels: [], datasets: [{ data: [], borderColor: '#ccff00', tension: 0.4, pointRadius: 3, borderWidth: 2 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { display: false } } }
             });
         }
 
         function updateChart() {
             const last10 = db.slice(-10);
-            chart.data.labels = last10.map(d => d.d);
+            chart.data.labels = last10.map(d => "");
             chart.data.datasets[0].data = last10.map(d => d.v);
             chart.update();
         }
