@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -10,7 +10,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700;900&display=swap');
         body { background: #000; color: white; font-family: 'Inter', sans-serif; padding: 15px; min-height: 100vh; }
         
-        /* Gota de Sangre Neón */
         .neon-drop {
             font-size: 40px;
             filter: drop-shadow(0 0 12px #ff0000);
@@ -29,7 +28,7 @@
         
         .display-glu { font-size: 4.8rem; font-weight: 900; color: #ccff00; text-align: center; font-family: 'Orbitron'; letter-spacing: -2px; padding: 10px 0; }
         .status-banner { background: #0a0a0a; border-radius: 24px; border: 1px solid #1a1a1a; padding: 15px; margin-bottom: 15px; }
-        .time-btn { padding: 10px; border-radius: 15px; font-size: 9px; font-weight: 900; border: 1px solid #222; color: #555; background: #050505; flex: 1; text-align: center; }
+        .time-btn { padding: 10px; border-radius: 15px; font-size: 9px; font-weight: 900; border: 1px solid #222; color: #555; background: #050505; flex: 1; text-align: center; transition: all 0.3s; }
         .time-btn.active { border-color: #ccff00; color: #ccff00; background: rgba(204, 255, 0, 0.1); }
         .chart-container { background: #050505; border-radius: 24px; border: 1px solid #1a1a1a; padding: 10px; height: 160px; margin-top: 15px; }
     </style>
@@ -116,62 +115,64 @@
             document.getElementById('btn-en').style.filter = lang === 'en' ? 'grayscale(0)' : 'grayscale(1)';
         }
 
-        function speakReading(val) {
-            const msg = currentLang === 'es' ? 
-                `Glucosa de ${val}. Registrada en ${selectedTime === 'fasting' ? 'ayunas' : 'post comida'}.` : 
-                `Glucose of ${val}. Logged as ${selectedTime}.`;
-            const utterance = new SpeechSynthesisUtterance(msg);
-            utterance.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
-            window.speechSynthesis.speak(utterance);
-        }
-
-        function startMic() {
-            const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
-            rec.onresult = (e) => {
-                const v = e.results[0][0].transcript.replace(/\D/g,'');
-                if(v) { currentInput = v.slice(0,3); document.getElementById('display').innerText = currentInput; }
-            };
-            rec.start();
-        }
-
-        function selectTime(t) {
-            selectedTime = t;
-            document.getElementById('time-fast').classList.toggle('active', t === 'fasting');
-            document.getElementById('time-post').classList.toggle('active', t === 'post-meal');
-        }
-
         async function transmitToHub(val) {
-            const patientName = localStorage.getItem('mc_patient_name') || "User_Local";
+            const statusText = document.getElementById('status-text');
+            const dot = document.getElementById('status-dot');
+            
+            statusText.innerText = "TRANSMITTING...";
+            dot.className = "w-2 h-2 bg-yellow-400 animate-pulse";
+
             try {
-                await fetch(HUB_URL, {
+                const response = await fetch(HUB_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         val: val, 
                         type: selectedTime, 
-                        provider: patientName, 
+                        provider: "MANUEL_MONT", // ID Consistente con el HUB
                         timestamp: Date.now() 
                     })
                 });
-                document.getElementById('status-text').innerText = "DR RECEIVED ✅";
+
+                if(response.ok) {
+                    statusText.innerText = currentLang === 'es' ? "RECIBIDO POR DR. ✅" : "DR RECEIVED ✅";
+                    dot.className = "w-2 h-2 bg-green-500";
+                    setTimeout(() => {
+                        statusText.innerText = currentLang === 'es' ? "SISTEMA LISTO" : "LINK READY";
+                        dot.className = "w-2 h-2 bg-[#ccff00] animate-pulse";
+                    }, 3000);
+                }
             } catch(e) {
-                document.getElementById('status-text').innerText = "LOCAL SAVE";
+                statusText.innerText = "OFFLINE - LOCAL SAVE";
+                dot.className = "w-2 h-2 bg-red-500";
             }
         }
 
         function saveGlu() {
             if(!currentInput) return;
             const val = parseInt(currentInput);
+            
+            // Guardado Local
             db.push({ v: val, t: selectedTime, d: new Date().toISOString() });
             localStorage.setItem('mc_glu_data', JSON.stringify(db));
             
+            // Acciones
             speakReading(val);
             transmitToHub(val);
             
+            // Reset UI
             currentInput = "";
             document.getElementById('display').innerText = "---";
             updateUI();
+        }
+
+        function speakReading(val) {
+            const msg = currentLang === 'es' ? 
+                `Glucosa de ${val}. Registrada en ${selectedTime === 'fasting' ? 'ayunas' : 'post comida'}. Enviando.` : 
+                `Glucose of ${val}. Logged as ${selectedTime}. Transmitting.`;
+            const utterance = new SpeechSynthesisUtterance(msg);
+            utterance.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
+            window.speechSynthesis.speak(utterance);
         }
 
         function press(n) {
@@ -181,11 +182,18 @@
             document.getElementById('display').innerText = currentInput || "---";
         }
 
+        function selectTime(t) {
+            selectedTime = t;
+            document.getElementById('time-fast').classList.toggle('active', t === 'fasting');
+            document.getElementById('time-post').classList.toggle('active', t === 'post-meal');
+        }
+
         function updateUI() {
             if (db.length === 0) return;
             const vals = db.map(i => i.v);
             const avg = Math.round(vals.reduce((a,b)=>a+b)/vals.length);
             document.getElementById('avg-val').innerText = avg;
+            // Fórmula GMI (Glucose Management Indicator) para A1C estimada
             document.getElementById('a1c-val').innerText = ((46.7 + avg) / 28.7).toFixed(1) + "%";
             document.getElementById('mode-val').innerText = db[db.length-1].t;
             updateChart();
@@ -205,6 +213,16 @@
             chart.data.labels = last10.map(d => d.d);
             chart.data.datasets[0].data = last10.map(d => d.v);
             chart.update();
+        }
+
+        function startMic() {
+            const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
+            rec.onresult = (e) => {
+                const v = e.results[0][0].transcript.replace(/\D/g,'');
+                if(v) { currentInput = v.slice(0,3); document.getElementById('display').innerText = currentInput; }
+            };
+            rec.start();
         }
     </script>
 </body>
