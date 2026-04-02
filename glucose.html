@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -118,17 +118,10 @@
         async function transmitToHub(val) {
             const statusText = document.getElementById('status-text');
             const dot = document.getElementById('status-dot');
-            const providerID = localStorage.getItem('mc_provider_id');
-            const patientName = localStorage.getItem('mc_patient_name') || "Anonymous Patient";
-
-            console.log("Transmission Attempt:", { providerID, patientName, val });
-
-            if(!providerID) {
-                console.error("Link Error: No providerID found in localStorage");
-                statusText.innerText = currentLang === 'es' ? "DR NO VINCULADO" : "NO DR LINKED";
-                dot.className = "w-2 h-2 bg-red-500";
-                return;
-            }
+            
+            // Usamos el ID del proveedor manual para asegurar compatibilidad
+            const providerID = "MANUEL_MONT"; 
+            const patientName = localStorage.getItem('mc_patient_name') || "Paciente Glucosa";
 
             statusText.innerText = currentLang === 'es' ? "TRANSMITIENDO..." : "TRANSMITTING...";
             dot.className = "w-2 h-2 bg-yellow-400 animate-pulse";
@@ -141,28 +134,27 @@
                         provider: providerID,
                         patientName: patientName,
                         type: "glucose", 
-                        val: parseInt(val), 
+                        // Enviamos el valor en 'sys' para compatibilidad total con tu receptor Vercel
+                        sys: parseInt(val), 
+                        dia: 0, 
                         note: currentMode, 
-                        timestamp: new Date().toISOString()
+                        timestamp: Date.now()
                     })
                 });
 
                 if(response.ok) {
-                    console.log("Tactical Sync Successful");
                     statusText.innerText = currentLang === 'es' ? "RECIBIDO ✅" : "DR RECEIVED ✅";
                     dot.className = "w-2 h-2 bg-green-500";
                 } else {
-                    console.warn("Hub Response Error:", response.status);
                     statusText.innerText = "SERVER ERROR";
                     dot.className = "w-2 h-2 bg-orange-500";
                 }
-                
-                setTimeout(() => setLang(currentLang), 3000);
             } catch(e) {
-                console.error("Network Exception:", e);
-                statusText.innerText = "OFFLINE - SAVED";
-                dot.className = "w-2 h-2 bg-orange-500";
+                statusText.innerText = "LINK ERROR";
+                dot.className = "w-2 h-2 bg-red-500";
             }
+            
+            setTimeout(() => setLang(currentLang), 3000);
         }
 
         function saveGlu() {
