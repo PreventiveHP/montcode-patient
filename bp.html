@@ -99,16 +99,22 @@
             document.getElementById('status-text').innerText = t.status;
 
             document.getElementById('btn-es').style.opacity = lang === 'es' ? '1' : '0.4';
-            document.getElementById('btn-es').style.filter = lang === 'es' ? 'grayscale(0)' : 'grayscale(1)';
             document.getElementById('btn-en').style.opacity = lang === 'en' ? '1' : '0.4';
-            document.getElementById('btn-en').style.filter = lang === 'en' ? 'grayscale(0)' : 'grayscale(1)';
         }
 
         async function transmitToHub(sys, dia) {
             const statusText = document.getElementById('status-text');
             const statusDot = document.getElementById('status-dot');
-            // Buscamos un ID genérico o el guardado en el sistema
-            const providerID = localStorage.getItem('mc_provider_id') || "GENERIC_USER";
+            
+            // --- DATA RETRIEVAL ---
+            const providerID = localStorage.getItem('mc_provider_id');
+            const patientName = localStorage.getItem('mc_patient_name') || "Anonymous Patient";
+
+            if(!providerID) {
+                statusText.innerText = "NO DR LINKED";
+                statusDot.className = "w-2 h-2 bg-red-500";
+                return;
+            }
 
             statusText.innerText = "TRANSMITTING...";
             statusDot.className = "w-2 h-2 bg-yellow-500 animate-pulse";
@@ -118,9 +124,11 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
+                        type: "bp", // Identifica que es Presión Arterial
                         sys: sys, 
                         dia: dia, 
-                        provider: providerID, 
+                        provider: providerID,
+                        patientName: patientName,
                         timestamp: Date.now() 
                     })
                 });
@@ -155,15 +163,6 @@
             updateUI();
         }
 
-        function clearData() {
-            const confirmMsg = currentLang === 'es' ? "¿Borrar todo el historial local?" : "Clear all local history?";
-            if(confirm(confirmMsg)) {
-                localStorage.removeItem('mc_bp_data');
-                db = [];
-                location.reload();
-            }
-        }
-
         function speakReading(sys, dia) {
             const msg = currentLang === 'es' ? 
                 `Presión ${sys} sobre ${dia}. Registrada.` : 
@@ -186,12 +185,7 @@
         }
 
         function updateUI() {
-            if (db.length === 0) {
-                document.getElementById('sys-val').innerText = "--";
-                document.getElementById('dia-val').innerText = "--";
-                document.getElementById('map-val').innerText = "--";
-                return;
-            }
+            if (db.length === 0) return;
             const avgSys = Math.round(db.reduce((a,b)=>a+b.sys,0)/db.length);
             const avgDia = Math.round(db.reduce((a,b)=>a+b.dia,0)/db.length);
             document.getElementById('sys-val').innerText = avgSys;
@@ -220,14 +214,12 @@
             chart.update();
         }
 
-        function startMic() {
-            const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
-            rec.onresult = (e) => {
-                const v = e.results[0][0].transcript.replace(/\D/g,'');
-                if(v) { currentInput = v.slice(0,6); updateDisplay(); }
-            };
-            rec.start();
+        function clearData() {
+            if(confirm("Clear local history?")) {
+                localStorage.removeItem('mc_bp_data');
+                db = [];
+                location.reload();
+            }
         }
     </script>
 </body>
