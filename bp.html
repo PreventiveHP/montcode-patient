@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MontCode™ Clinical Master</title>
+    <title>MontCode™ Clinical Master 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -15,15 +15,15 @@
         .num-pad.active { opacity: 1; pointer-events: auto; }
         .key { background: #111; border-radius: 20px; padding: 22px; font-size: 1.6rem; font-weight: 800; border: 1px solid #222; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; }
         .key:active { background: #222; transform: scale(0.95); }
-        .key-save { background: #3b82f6; color: #fff; grid-column: span 2; font-size: 1rem; }
-        .display-bp { font-size: 5rem; font-weight: 900; color: #3b82f6; text-align: center; line-height: 1; padding: 15px 0; min-height: 100px; }
+        .key-save { background: #3b82f6; color: #fff; grid-column: span 2; font-size: 1rem; transition: 0.3s; }
+        .display-bp { font-size: 5rem; font-weight: 900; color: #3b82f6; text-align: center; line-height: 1; padding: 15px 0; min-height: 100px; transition: 0.3s; }
         .med-btn { border: 2px solid #333; border-radius: 12px; padding: 10px; cursor: pointer; transition: 0.3s; }
         .med-btn.active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
         .chart-modern { background: #050505; border-radius: 30px; border: 1px solid #1a1a1a; padding: 15px; margin-top: 20px; height: 220px; }
         .cond-chip { padding: 4px 10px; border-radius: 10px; font-size: 8px; font-weight: 900; border: 1px solid #222; color: #444; cursor: pointer; }
         .cond-chip.active { border-color: #3b82f6; color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
         .status-banner { width: 100%; height: 80px; background: #0a0a0a; border-radius: 24px; border: 1px dashed #333; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; transition: 0.5s; }
-        .bridge-active { border-style: solid; border-color: #ccff00; background: rgba(204, 255, 0, 0.05); }
+        .bridge-on { border-style: solid; border-color: #ccff00; background: rgba(204, 255, 0, 0.05); }
     </style>
 </head>
 <body class="pb-10">
@@ -44,10 +44,10 @@
     </div>
 
     <div class="flex flex-wrap gap-2 mb-4 justify-center">
-        <div class="cond-chip" id="chip-HTN" onclick="this.classList.toggle('active');">HTN</div>
-        <div class="cond-chip" id="chip-DM" onclick="this.classList.toggle('active');">DM</div>
-        <div class="cond-chip" id="chip-STROKE" onclick="this.classList.toggle('active');">HX STROKE</div>
-        <div class="cond-chip" id="chip-CKD" onclick="this.classList.toggle('active');">CKD</div>
+        <div class="cond-chip" id="chip-HTN" onclick="this.classList.toggle('active'); updateUI();">HTN</div>
+        <div class="cond-chip" id="chip-DM" onclick="this.classList.toggle('active'); updateUI();">DM</div>
+        <div class="cond-chip" id="chip-STROKE" onclick="this.classList.toggle('active'); updateUI();">HX STROKE</div>
+        <div class="cond-chip" id="chip-CKD" onclick="this.classList.toggle('active'); updateUI();">CKD</div>
     </div>
 
     <div class="grid grid-cols-4 gap-1 mb-4">
@@ -65,7 +65,7 @@
     </div>
 
     <div id="display" class="display-bp">---/--</div>
-    <p class="text-center text-[7px] font-bold text-zinc-500 uppercase mb-4 italic" id="mode-hint">Enter BP or Glucose</p>
+    <p class="text-center text-[7px] font-bold text-zinc-500 uppercase mb-4 italic" id="input-hint">Say only the number</p>
 
     <div class="num-pad" id="main-pad">
         <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div><div class="key" onclick="press('3')">3</div>
@@ -85,29 +85,35 @@
         <button onclick="clearAll()" class="w-full p-2 text-zinc-800 text-[8px] font-black uppercase lang-clear">Clear History 🗑️</button>
     </div>
 
+    <footer class="mt-8 text-[6px] text-zinc-700 text-center uppercase font-bold px-8 pb-10">
+        *Disclaimer: All information provided by the patient using the app is not based on official medical records.*
+    </footer>
+
 <script>
     let db = JSON.parse(localStorage.getItem('mc_bp_master_2026')) || [];
     let currentInput = "";
     let chart;
     let currentLang = 'en';
+
+    // Recuperar info del Portal Index
     const providerID = localStorage.getItem('mc_provider_id');
-    const patientName = localStorage.getItem('mc_patient_name') || "Unknown Patient";
+    const patientName = localStorage.getItem('mc_patient_name') || "Patient";
 
     window.onload = () => {
         initChart();
         updateUI();
         setLang('en');
-        checkBridge();
+        checkBridgeStatus();
         setTimeout(() => document.getElementById('main-pad').classList.add('active'), 500);
     };
 
-    function checkBridge() {
-        const box = document.getElementById('status-box');
-        const txt = document.getElementById('status-text');
-        const dot = document.getElementById('status-dot');
+    function checkBridgeStatus() {
         if(providerID) {
-            box.classList.add('bridge-active');
-            txt.innerText = `BRIDGE ACTIVE: ${providerID}`;
+            const box = document.getElementById('status-box');
+            const txt = document.getElementById('status-text');
+            const dot = document.getElementById('status-dot');
+            box.classList.add('bridge-on');
+            txt.innerText = `LINKED: ${providerID}`;
             txt.style.color = "#ccff00";
             dot.style.background = "#ccff00";
         }
@@ -122,21 +128,19 @@
 
     function updateDisplay() {
         const d = document.getElementById('display');
-        const hint = document.getElementById('mode-hint');
+        const hint = document.getElementById('input-hint');
         const btn = document.getElementById('save-btn');
 
         if(currentInput.length <= 3) {
-            // MODO GLUCOSA
             d.innerText = currentInput.padEnd(3, '-');
-            d.style.color = "#ccff00";
+            d.style.color = "#ccff00"; // Color Glucosa
             hint.innerText = "GLUCOSE MODE DETECTED";
             btn.style.background = "#ccff00";
             btn.style.color = "black";
         } else {
-            // MODO BP
             let s = currentInput.padEnd(6, '-');
             d.innerText = s.slice(0,3) + "/" + s.slice(3,6);
-            d.style.color = "#3b82f6";
+            d.style.color = "#3b82f6"; // Color BP
             hint.innerText = "BLOOD PRESSURE MODE";
             btn.style.background = "#3b82f6";
             btn.style.color = "white";
@@ -149,7 +153,7 @@
         let s, d, type;
         if(currentInput.length <= 3) {
             s = parseInt(currentInput);
-            d = 77; // CÓDIGO TÁCTICO GLUCOSA
+            d = 77; // Código para Glucosa
             type = "GLUCOSE";
         } else {
             s = parseInt(currentInput.slice(0,3));
@@ -157,65 +161,94 @@
             type = "BP";
         }
 
-        // 1. Guardar Localmente
+        // 1. Guardar Localmente para PDF y Gráfica
         db.push({ sys: s, dia: d, type: type, med: document.getElementById('med-toggle').classList.contains('active'), d: new Date().toISOString() });
         localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
 
-        // 2. Transmisión Pusher vía Vercel
+        // 2. Transmisión Real-time a través de Vercel
         const statusTxt = document.getElementById('status-text');
         statusTxt.innerText = "TRANSMITTING...";
-        
+
         try {
-            const response = await fetch('/api/pusher-relay', {
+            const res = await fetch('/api/pusher-relay', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     sys: s, 
                     dia: d, 
-                    patient: patientName,
-                    provider: providerID || "UNLINKED"
+                    patient: patientName, 
+                    provider: providerID || "UNLINKED" 
                 })
             });
-
-            if(response.ok) {
-                statusTxt.innerText = "SENT TO DOCTOR ✅";
+            if(res.ok) {
+                statusTxt.innerText = "TRANSMITTED TO HUB ✅";
                 if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
             }
         } catch (e) {
             statusTxt.innerText = "LOCAL SAVE ONLY (OFFLINE)";
         }
 
-        // Voz y Limpieza
+        // Voz y Reinicio
         speakReading(s, d, type);
         currentInput = ""; 
         updateDisplay(); 
         updateUI();
         document.getElementById('med-toggle').classList.remove('active');
-        setTimeout(() => checkBridge(), 3000);
+        setTimeout(checkBridgeStatus, 3000);
     }
 
     function speakReading(sys, dia, type) {
-        const msg = type === "GLUCOSE" ? 
-            (currentLang === 'es' ? `Glucosa ${sys} miligramos.` : `Glucose ${sys} milligrams.`) :
-            (currentLang === 'es' ? `Presión ${sys} sobre ${dia}.` : `Pressure ${sys} over ${dia}.`);
+        let msg = "";
+        if(type === "GLUCOSE") {
+            msg = currentLang === 'es' ? `Glucosa ${sys}.` : `Glucose ${sys}.`;
+        } else {
+            const cls = getAHAClass(sys, dia);
+            msg = currentLang === 'es' ? 
+                `Presión ${sys} sobre ${dia}. Estado ${cls.l}.` : 
+                `Pressure ${sys} over ${dia}. Status ${cls.l}.`;
+        }
         const utterance = new SpeechSynthesisUtterance(msg);
         utterance.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
         window.speechSynthesis.speak(utterance);
     }
 
+    function getAHAClass(sys, dia) {
+        if (sys >= 180 || dia >= 120) return { l: "CRISIS", c: "#ff0000" };
+        if (sys >= 140 || dia >= 90) return { l: "STAGE 2", c: "#f97316" };
+        if (sys >= 130 || dia >= 80) return { l: "STAGE 1", c: "#fbbf24" };
+        if (sys >= 120 && dia < 80) return { l: "ELEVATED", c: "#facc15" };
+        return { l: "NORMAL", c: "#22c55e" };
+    }
+
+    function setLang(lang) {
+        currentLang = lang;
+        const translations = {
+            en: { sys: "SYS Avg", dia: "DIA Avg", med: "Medication Taken Today?", save: "TRANSMIT READING", clear: "Clear History" },
+            es: { sys: "SIS Prom.", dia: "DIA Prom.", med: "¿Tomó medicina hoy?", save: "TRANSMITIR LECTURA", clear: "Borrar Historial" }
+        };
+        const t = translations[lang];
+        document.querySelectorAll('.lang-sys').forEach(el => el.innerText = t.sys);
+        document.querySelectorAll('.lang-dia').forEach(el => el.innerText = t.dia);
+        document.querySelector('.lang-med').innerText = t.med;
+        document.querySelector('.lang-save').innerText = t.save;
+        document.querySelector('.lang-clear').innerText = t.clear;
+    }
+
     function updateUI() {
-        const readings = db.filter(r => !r.type || r.type === "BP");
-        if (readings.length === 0) return;
-        const avgSys = Math.round(readings.reduce((a,b)=>a+b.sys,0)/readings.length);
-        const avgDia = Math.round(readings.reduce((a,b)=>a+b.dia,0)/readings.length);
+        const bpOnly = db.filter(r => !r.type || r.type === "BP");
+        if (bpOnly.length === 0) return;
+        const avgSys = Math.round(bpOnly.reduce((a,b)=>a+b.sys,0)/bpOnly.length);
+        const avgDia = Math.round(bpOnly.reduce((a,b)=>a+b.dia,0)/bpOnly.length);
         const pam = Math.round((avgSys + (2 * avgDia)) / 3);
         document.getElementById('sys-val').innerText = avgSys;
         document.getElementById('dia-val').innerText = avgDia;
         document.getElementById('map-val').innerText = pam;
+        const cls = getAHAClass(avgSys, avgDia);
+        const statusEl = document.getElementById('bp-status');
+        statusEl.innerText = cls.l; statusEl.style.color = cls.c;
         updateChart();
     }
 
-    // [Resto de funciones: PDF, Chart, Mic, setLang se mantienen igual a tu original]
     function initChart() {
         const ctx = document.getElementById('bpChart').getContext('2d');
         chart = new Chart(ctx, {
@@ -236,29 +269,25 @@
         chart.update();
     }
 
-    function setLang(lang) {
-        currentLang = lang;
-        const translations = {
-            en: { sys: "SYS Avg", dia: "DIA Avg", med: "Medication Taken Today?", save: "TRANSMIT READING", clear: "Clear History" },
-            es: { sys: "SIS Prom.", dia: "DIA Prom.", med: "¿Tomó medicina hoy?", save: "TRANSMITIR LECTURA", clear: "Borrar Historial" }
+    function startMic() {
+        const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
+        rec.onresult = (e) => {
+            const v = e.results[0][0].transcript.replace(/\D/g,'');
+            if(v) { currentInput = v.slice(0,6); updateDisplay(); }
         };
-        const t = translations[lang];
-        document.querySelectorAll('.lang-sys').forEach(el => el.innerText = t.sys);
-        document.querySelectorAll('.lang-dia').forEach(el => el.innerText = t.dia);
-        document.querySelector('.lang-med').innerText = t.med;
-        document.querySelector('.lang-save').innerText = t.save;
-        document.querySelector('.lang-clear').innerText = t.clear;
+        rec.start();
     }
 
-    function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_bp_master_2026'); location.reload(); } }
-    
-    // Función de PDF mantenida íntegra
     async function generatePDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        doc.text("MontCode™ Clinical Report", 15, 20);
+        doc.text("MontCode™ Clinical Report - 2026", 15, 20);
+        // ... (resto de tu lógica de PDF se mantiene igual)
         doc.save(`MontCode_Report.pdf`);
     }
+
+    function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_bp_master_2026'); location.reload(); } }
 </script>
 </body>
 </html>
