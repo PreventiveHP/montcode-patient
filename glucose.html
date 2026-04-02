@@ -3,18 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MontCode™ Glucose Master 2026</title>
+    <title>MontCode™ Glucose Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700;900&display=swap');
-        body { background: #000; color: white; font-family: 'Inter', sans-serif; padding: 15px; min-height: 100vh; }
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; padding: 15px; min-height: 100vh; overflow-x: hidden; }
         
-        .neon-drop {
-            font-size: 40px;
-            filter: drop-shadow(0 0 12px #ccff00);
-            animation: float 2s ease-in-out infinite;
-        }
+        .neon-drop { font-size: 40px; filter: drop-shadow(0 0 12px #ccff00); animation: float 2s ease-in-out infinite; }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 
         .stat-card { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 20px; padding: 10px; text-align: center; }
@@ -22,6 +18,7 @@
         .key { 
             background: #0d0d0d; border-radius: 18px; padding: 22px; font-size: 1.6rem; 
             font-weight: 800; border: 1px solid #222; display: flex; align-items: center; justify-content: center;
+            touch-action: manipulation;
         }
         .key:active { background: #ccff00; color: #000; transform: scale(0.95); }
         .key-save { background: #ccff00; color: #000; grid-column: span 2; font-size: 0.9rem; font-weight: 900; }
@@ -48,7 +45,7 @@
             <div>
                 <div class="flex items-center gap-2 mb-1">
                     <div id="status-dot" class="w-2 h-2 bg-[#ccff00] rounded-full animate-pulse"></div>
-                    <p id="status-text" class="text-[#ccff00] font-black uppercase text-[9px] tracking-widest">GLUCOSE LINK READY</p>
+                    <p id="status-text" class="text-[#ccff00] font-black uppercase text-[9px] tracking-widest uppercase">GLUCOSE LINK READY</p>
                 </div>
                 <p id="feedback-text" class="text-[10px] text-zinc-400 italic">"Waiting for glucose entry..."</p>
             </div>
@@ -87,7 +84,7 @@
     <script>
         let db = JSON.parse(localStorage.getItem('mc_glu_data')) || [];
         let currentInput = "";
-        let selectedTime = "fasting";
+        let currentMode = "fasting";
         let currentLang = localStorage.getItem('mc_lang') || 'en';
         let chart;
         const HUB_URL = "https://montcode-provider.vercelapp/api/hub";
@@ -100,9 +97,10 @@
 
         function setLang(lang) {
             currentLang = lang;
+            localStorage.setItem('mc_lang', lang);
             const t = lang === 'es' ? 
-                { avg: "PROMEDIO", save: "ENVIAR AL DOCTOR", fast: "AYUNAS", post: "POST-COMIDA", mode: "TIPO", status: "SISTEMA LISTO", clear: "LIMPIAR HISTORIAL" } : 
-                { avg: "AVG GLU", save: "TRANSMIT GLUCOSE", fast: "FASTING", post: "POST-MEAL", mode: "MODE", status: "LINK READY", clear: "CLEAR LOCAL HISTORY" };
+                { avg: "PROMEDIO", save: "ENVIAR AL DOCTOR", fast: "AYUNAS", post: "POST-COMIDA", mode: "TIPO", status: "SISTEMA LISTO", clear: "LIMPIAR HISTORIAL", wait: "Esperando glucosa..." } : 
+                { avg: "AVG GLU", save: "TRANSMIT GLUCOSE", fast: "FASTING", post: "POST-MEAL", mode: "MODE", status: "LINK READY", clear: "CLEAR LOCAL HISTORY", wait: "Waiting for entry..." };
 
             document.querySelector('.lang-avg').innerText = t.avg;
             document.querySelector('.lang-save').innerText = t.save;
@@ -111,6 +109,7 @@
             document.querySelector('.lang-mode').innerText = t.mode;
             document.querySelector('.lang-clear').innerText = t.clear;
             document.getElementById('status-text').innerText = t.status;
+            document.getElementById('feedback-text').innerText = `"${t.wait}"`;
 
             document.getElementById('btn-es').style.opacity = lang === 'es' ? '1' : '0.4';
             document.getElementById('btn-en').style.opacity = lang === 'en' ? '1' : '0.4';
@@ -119,53 +118,45 @@
         async function transmitToHub(val) {
             const statusText = document.getElementById('status-text');
             const dot = document.getElementById('status-dot');
-            
-            // --- DATA RETRIEVAL ---
             const providerID = localStorage.getItem('mc_provider_id');
             const patientName = localStorage.getItem('mc_patient_name') || "Anonymous Patient";
 
             if(!providerID) {
-                statusText.innerText = "NO DR LINKED";
+                statusText.innerText = currentLang === 'es' ? "DR NO VINCULADO" : "NO DR LINKED";
                 dot.className = "w-2 h-2 bg-red-500";
                 return;
             }
 
-            statusText.innerText = "TRANSMITTING...";
+            statusText.innerText = currentLang === 'es' ? "TRANSMITIENDO..." : "TRANSMITTING...";
             dot.className = "w-2 h-2 bg-yellow-400 animate-pulse";
 
             try {
-                const response = await fetch(HUB_URL, {
+                await fetch(HUB_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         val: val, 
-                        type: "glucose", // Forzamos tipo glucose para el hub
-                        note: selectedTime, // Guardamos si es ayunas o post en la nota
+                        type: "glucose", 
+                        note: currentMode, 
                         provider: providerID, 
                         patientName: patientName,
-                        timestamp: Date.now() 
+                        timestamp: new Date().toISOString()
                     })
                 });
-
-                if(response.ok) {
-                    statusText.innerText = currentLang === 'es' ? "RECIBIDO ✅" : "DR RECEIVED ✅";
-                    dot.className = "w-2 h-2 bg-green-500";
-                    setTimeout(() => {
-                        statusText.innerText = currentLang === 'es' ? "LISTO" : "READY";
-                        dot.className = "w-2 h-2 bg-[#ccff00] animate-pulse";
-                    }, 3000);
-                }
+                statusText.innerText = currentLang === 'es' ? "RECIBIDO ✅" : "DR RECEIVED ✅";
+                dot.className = "w-2 h-2 bg-green-500";
+                setTimeout(() => setLang(currentLang), 3000);
             } catch(e) {
                 statusText.innerText = "OFFLINE - SAVED";
-                dot.className = "w-2 h-2 bg-red-500";
+                dot.className = "w-2 h-2 bg-orange-500";
             }
         }
 
         function saveGlu() {
-            if(!currentInput) return;
+            if(!currentInput || parseInt(currentInput) < 20) return;
             const val = parseInt(currentInput);
             
-            db.push({ v: val, t: selectedTime, d: new Date().toISOString() });
+            db.push({ v: val, t: currentMode, d: new Date().toISOString() });
             localStorage.setItem('mc_glu_data', JSON.stringify(db));
             
             speakReading(val);
@@ -177,14 +168,10 @@
         }
 
         function speakReading(val) {
-            const timeStr = currentLang === 'es' ? 
-                (selectedTime === 'fasting' ? 'en ayunas' : 'después de comer') : 
-                (selectedTime === 'fasting' ? 'fasting' : 'post meal');
-            const msg = currentLang === 'es' ? 
-                `Glucosa de ${val} ${timeStr}. Registrada.` : 
-                `Glucose of ${val} ${timeStr}. Recorded.`;
+            const modeTxt = currentLang === 'es' ? (currentMode === 'fasting' ? 'en ayunas' : 'después de comer') : currentMode.replace('-', ' ');
+            const msg = currentLang === 'es' ? `Glucosa de ${val} ${modeTxt}. Registrada.` : `Glucose of ${val} ${modeTxt}. Recorded.`;
             const utterance = new SpeechSynthesisUtterance(msg);
-            utterance.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
+            utterance.lang = currentLang === 'es' ? 'es-US' : 'en-US';
             window.speechSynthesis.speak(utterance);
         }
 
@@ -196,7 +183,7 @@
         }
 
         function selectTime(t) {
-            selectedTime = t;
+            currentMode = t;
             document.getElementById('time-fast').classList.toggle('active', t === 'fasting');
             document.getElementById('time-post').classList.toggle('active', t === 'post-meal');
         }
@@ -210,8 +197,7 @@
             
             const lastEntry = db[db.length-1];
             document.getElementById('mode-val').innerText = currentLang === 'es' ? 
-                (lastEntry.t === 'fasting' ? 'AYUNAS' : 'P. COMIDA') : 
-                lastEntry.t.toUpperCase();
+                (lastEntry.t === 'fasting' ? 'AYUNAS' : 'P. COMIDA') : lastEntry.t.toUpperCase();
             
             updateChart();
         }
@@ -221,7 +207,12 @@
             chart = new Chart(ctx, {
                 type: 'line',
                 data: { labels: [], datasets: [{ data: [], borderColor: '#ccff00', tension: 0.4, pointRadius: 3, borderWidth: 2 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { display: false } } }
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } }, 
+                    scales: { y: { display: false, min: 40, max: 300 }, x: { display: false } } 
+                }
             });
         }
 
@@ -233,7 +224,7 @@
         }
 
         function clearData() {
-            if(confirm("Clear history?")) {
+            if(confirm(currentLang === 'es' ? "¿Borrar historial?" : "Clear history?")) {
                 localStorage.removeItem('mc_glu_data');
                 db = [];
                 location.reload();
@@ -241,13 +232,16 @@
         }
 
         function startMic() {
-            const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
-            rec.onresult = (e) => {
-                const v = e.results[0][0].transcript.replace(/\D/g,'');
-                if(v) { currentInput = v.slice(0,3); document.getElementById('display').innerText = currentInput; }
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = currentLang === 'es' ? 'es-US' : 'en-US';
+            recognition.onresult = (event) => {
+                const voiceVal = event.results[0][0].transcript.replace(/\D/g,'');
+                if(voiceVal) {
+                    currentInput = voiceVal.slice(0,3);
+                    document.getElementById('display').innerText = currentInput;
+                }
             };
-            rec.start();
+            recognition.start();
         }
     </script>
 </body>
