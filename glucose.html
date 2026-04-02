@@ -40,6 +40,11 @@
         </div>
     </div>
 
+    <div class="grid grid-cols-2 gap-2 mb-4">
+        <div class="stat-card"><p class="text-[7px] font-bold text-zinc-500 uppercase">AVG GLU</p><p id="avg-val" class="text-lg font-black text-white">--</p></div>
+        <div class="stat-card"><p class="text-[7px] font-bold text-zinc-500 uppercase">EST. A1C</p><p id="a1c-val" class="text-lg font-black text-[#ccff00]">--</p></div>
+    </div>
+
     <div class="flex gap-2 mb-4">
         <div id="time-fast" class="time-btn active" onclick="selectTime('fasting')">FASTING</div>
         <div id="time-post" class="time-btn" onclick="selectTime('post-meal')">POST-MEAL</div>
@@ -62,15 +67,14 @@
         let db = JSON.parse(localStorage.getItem('mc_glu_data')) || [];
         let currentInput = "";
         let currentMode = "fasting";
+        let chart;
         const HUB_URL = "https://montcode-provider.vercelapp/api/hub";
 
         window.onload = () => { initChart(); updateUI(); resetStatus(); };
 
-        // --- EL PUENTE (CLON DE BP) ---
         async function transmitToHub(val) {
             const statusText = document.getElementById('status-text');
             const statusDot = document.getElementById('status-dot');
-
             statusText.innerText = "TRANSMITTING...";
             statusDot.className = "w-2 h-2 bg-yellow-500 animate-pulse";
 
@@ -79,9 +83,8 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        // Usamos exactamente el mismo esquema que tu BP Master
                         sys: parseInt(val), 
-                        dia: currentMode === 'fasting' ? 10 : 20, // Usamos DIA como código de modo (10=ayunas, 20=post)
+                        dia: currentMode === 'fasting' ? 10 : 20, 
                         provider: "MANUEL_MONT",
                         timestamp: Date.now()
                     })
@@ -136,9 +139,47 @@
             window.speechSynthesis.speak(msg);
         }
 
-        // Lógica de Gráfico y UI básica omitida para brevedad pero funcional en tu app
-        function initChart() { /* ... igual que el anterior ... */ }
-        function updateUI() { /* ... igual que el anterior ... */ }
+        function updateUI() {
+            if (db.length === 0) return;
+            const vals = db.map(i => i.v);
+            const avg = Math.round(vals.reduce((a,b)=>a+b)/vals.length);
+            document.getElementById('avg-val').innerText = avg;
+            document.getElementById('a1c-val').innerText = ((46.7 + avg) / 28.7).toFixed(1) + "%";
+            updateChart();
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('gluChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [{ data: [], borderColor: '#ccff00', tension: 0.4, pointRadius: 3, borderWidth: 2 }] },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } }, 
+                    scales: { y: { display: false, min: 40, max: 300 }, x: { display: false } } 
+                }
+            });
+        }
+
+        function updateChart() {
+            const last10 = db.slice(-10);
+            chart.data.labels = last10.map(d => "");
+            chart.data.datasets[0].data = last10.map(d => d.v);
+            chart.update();
+        }
+
+        function startMic() {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.onresult = (event) => {
+                const voiceVal = event.results[0][0].transcript.replace(/\D/g,'');
+                if(voiceVal) {
+                    currentInput = voiceVal.slice(0,3);
+                    document.getElementById('display').innerText = currentInput;
+                }
+            };
+            recognition.start();
+        }
     </script>
 </body>
 </html>
