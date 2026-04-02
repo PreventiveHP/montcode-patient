@@ -43,9 +43,9 @@
             <div>
                 <div class="flex items-center gap-2 mb-1">
                     <div id="status-dot" class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <p id="status-text" class="text-blue-500 font-black uppercase text-[9px] tracking-widest uppercase">DEVICE READY</p>
+                    <p id="status-text" class="text-blue-500 font-black text-[9px] tracking-widest uppercase">DEVICE READY</p>
                 </div>
-                <p id="feedback-text" class="text-[10px] text-zinc-400 italic">"Waiting for clinical entry..."</p>
+                <p id="feedback-text" class="text-[10px] text-zinc-400 italic">"Waiting for entry..."</p>
             </div>
             <span class="neon-heart">❤️</span>
         </div>
@@ -65,7 +65,7 @@
         <div class="key" onclick="press('7')">7</div><div class="key" onclick="press('8')">8</div><div class="key" onclick="press('9')">9</div>
         <div class="key text-red-500" onclick="press('C')">C</div><div class="key" onclick="press('0')">0</div><div class="key" onclick="press('←')">←</div>
         <div class="key key-save lang-save" onclick="saveBP()">TRANSMIT TO DR.</div>
-        <div class="key" onclick="toggleVoice()">🎤</div>
+        <div class="key" onclick="startMic()">🎤</div>
     </div>
 
     <div class="chart-container">
@@ -125,11 +125,11 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        type: "bp", 
-                        sys: sys, 
-                        dia: dia, 
                         provider: providerID,
                         patientName: patientName,
+                        type: "bp", 
+                        sys: parseInt(sys), 
+                        dia: parseInt(dia), 
                         timestamp: new Date().toISOString()
                     })
                 });
@@ -168,8 +168,8 @@
 
         function speakReading(sys, dia) {
             const msg = currentLang === 'es' ? 
-                `Presión ${sys} sobre ${dia}. Registrada y enviada.` : 
-                `Pressure ${sys} over ${dia}. Recorded and transmitted.`;
+                `Presión ${sys} sobre ${dia}. Registrada.` : 
+                `Pressure ${sys} over ${dia}. Recorded.`;
             const utterance = new SpeechSynthesisUtterance(msg);
             utterance.lang = currentLang === 'es' ? 'es-US' : 'en-US';
             window.speechSynthesis.speak(utterance);
@@ -202,7 +202,7 @@
             chart = new Chart(ctx, {
                 type: 'line',
                 data: { labels: [], datasets: [
-                    { label: 'SYS', data: [], borderColor: '#ccff00', tension: 0.4, pointRadius: 3, borderWidth: 2 },
+                    { label: 'SYS', data: [], borderColor: '#ff0000', tension: 0.4, pointRadius: 3, borderWidth: 2 },
                     { label: 'DIA', data: [], borderColor: '#3b82f6', tension: 0.4, pointRadius: 3, borderWidth: 2 }
                 ]},
                 options: { 
@@ -234,10 +234,17 @@
             }
         }
 
-        function toggleVoice() {
-            const msg = currentLang === 'es' ? "Función de voz próximamente" : "Voice entry coming soon";
-            const utterance = new SpeechSynthesisUtterance(msg);
-            window.speechSynthesis.speak(utterance);
+        function startMic() {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = currentLang === 'es' ? 'es-US' : 'en-US';
+            recognition.onresult = (event) => {
+                const voiceVal = event.results[0][0].transcript.replace(/\D/g,'');
+                if(voiceVal && voiceVal.length >= 5) {
+                    currentInput = voiceVal.slice(0,6);
+                    updateDisplay();
+                }
+            };
+            recognition.start();
         }
     </script>
 </body>
