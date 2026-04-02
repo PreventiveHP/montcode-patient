@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -6,6 +6,7 @@
     <title>MontCode™ Patient Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { background: #000; color: white; font-family: 'Inter', sans-serif; padding: 20px; }
@@ -27,6 +28,10 @@
 
         #reader { width: 100%; border-radius: 20px; overflow: hidden; border: none !important; }
         #reader__dashboard_section_csr button { background: #ccff00 !important; color: black !important; border-radius: 8px; padding: 10px; font-weight: bold; }
+        
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .dot-online { background: #ccff00; box-shadow: 0 0 10px #ccff00; }
+        .dot-offline { background: #ff4444; }
     </style>
 </head>
 <body>
@@ -46,7 +51,10 @@
         <div class="flex justify-between items-center mb-4">
             <div>
                 <p id="lang-sync-title" class="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Provider Connection</p>
-                <p id="sync-status" class="text-xs font-bold text-red-500 uppercase italic">Not Linked</p>
+                <div class="flex items-center gap-2">
+                    <div id="bridge-dot" class="status-dot dot-offline"></div>
+                    <p id="sync-status" class="text-xs font-bold text-red-500 uppercase italic text-zinc-400">Not Linked</p>
+                </div>
             </div>
             <button id="btn-scan-action" onclick="openScanner()" class="bg-[#ccff00] text-black text-[10px] font-black px-4 py-2 rounded-full uppercase italic">Scan Dr. QR</button>
         </div>
@@ -62,35 +70,24 @@
             <div class="flex items-center gap-4">
                 <div class="icon-circle bg-blue-950 text-blue-400">❤️</div>
                 <div>
-                    <h2 class="font-black text-lg lang-bp-title">Blood Pressure</h2>
-                    <p id="lang-bp-sub" class="text-[10px] text-zinc-500 uppercase">Monitor & Transmit</p>
+                    <h2 class="font-black text-lg lang-bp-title">Clinical Readings</h2>
+                    <p id="lang-bp-sub" class="text-[10px] text-zinc-500 uppercase">BP & Glucose Portal</p>
                 </div>
             </div>
             <span class="text-zinc-700">→</span>
         </div>
 
-        <div onclick="window.location.href='glucose.html'" class="menu-card border-lime-900/30">
-            <div class="flex items-center gap-4">
-                <div class="icon-circle bg-lime-950 text-lime-400">🩸</div>
-                <div>
-                    <h2 class="font-black text-lg lang-glu-title">Glucose Level</h2>
-                    <p id="lang-glu-sub" class="text-[10px] text-zinc-500 uppercase">Diabetes Management</p>
-                </div>
-            </div>
-            <span class="text-zinc-700">→</span>
-        </div>
-
-        <div class="p-4 border border-zinc-900 rounded-2xl">
+        <div class="p-4 border border-zinc-900 rounded-2xl bg-zinc-950/50">
             <p id="lang-name-label" class="text-[8px] font-black text-zinc-600 uppercase mb-2">Patient Identification</p>
             <input type="text" id="patient-name" oninput="savePatientInfo()" placeholder="Enter Full Name" 
-                   class="w-full bg-transparent border-b border-zinc-800 text-sm font-bold p-1 outline-none text-[#ccff00]">
+                   class="w-full bg-transparent border-b border-zinc-800 text-sm font-bold p-1 outline-none text-[#ccff00] placeholder:text-zinc-800">
         </div>
     </div>
 
     <div class="mt-10 text-center">
-        <div class="flex justify-center gap-2">
+        <div class="flex justify-center gap-2 items-center">
             <div class="w-1 h-1 bg-green-500 rounded-full animate-ping"></div>
-            <span class="text-[8px] text-green-700 font-bold uppercase tracking-widest">Tactical System Active</span>
+            <span class="text-[8px] text-green-700 font-bold uppercase tracking-widest">Pusher Realtime Active</span>
         </div>
     </div>
 
@@ -98,16 +95,18 @@
         let currentLang = localStorage.getItem('mc_lang') || 'en';
         let html5QrCode = null;
 
+        // Configuración de Pusher (Usando tus App Keys del pantallazo)
+        const PUSHER_KEY = '284fc98940a4b6d4c359';
+        const PUSHER_CLUSTER = 'us2';
+
         const translations = {
             es: {
                 sub: "Vínculo de Salud Personal",
                 syncT: "Conexión con Proveedor",
                 notL: "No Vinculado",
-                linked: "Vinculado con:",
-                bpT: "Presión Arterial",
-                bpS: "Monitoreo y Transmisión",
-                gluT: "Nivel de Glucosa",
-                gluS: "Control de Diabetes",
+                linked: "Dr. Activo:",
+                bpT: "Lecturas Clínicas",
+                bpS: "Portal BP y Glucosa",
                 nameL: "Identificación del Paciente",
                 scanBtn: "Escanear QR Dr.",
                 cancel: "Cancelar Escaneo"
@@ -116,11 +115,9 @@
                 sub: "Personal Health Link",
                 syncT: "Provider Connection",
                 notL: "Not Linked",
-                linked: "Linked to:",
-                bpT: "Blood Pressure",
-                bpS: "Monitor & Transmit",
-                gluT: "Glucose Level",
-                gluS: "Diabetes Management",
+                linked: "Active Dr:",
+                bpT: "Clinical Readings",
+                bpS: "BP & Glucose Portal",
                 nameL: "Patient Identification",
                 scanBtn: "Scan Dr. QR",
                 cancel: "Cancel Scan"
@@ -136,8 +133,6 @@
             document.getElementById('lang-sync-title').innerText = t.syncT;
             document.querySelector('.lang-bp-title').innerText = t.bpT;
             document.getElementById('lang-bp-sub').innerText = t.bpS;
-            document.querySelector('.lang-glu-title').innerText = t.gluT;
-            document.getElementById('lang-glu-sub').innerText = t.gluS;
             document.getElementById('lang-name-label').innerText = t.nameL;
             document.getElementById('btn-scan-action').innerText = t.scanBtn;
 
@@ -150,19 +145,21 @@
         function updateSyncStatusDisplay() {
             const storedID = localStorage.getItem('mc_provider_id');
             const statusEl = document.getElementById('sync-status');
+            const bridgeDot = document.getElementById('bridge-dot');
             const t = translations[currentLang];
             
             if(storedID) {
                 statusEl.innerText = `${t.linked} ${storedID}`;
-                statusEl.classList.remove('text-red-500');
-                statusEl.classList.add('text-[#ccff00]');
+                statusEl.classList.replace('text-red-500', 'text-[#ccff00]');
+                bridgeDot.classList.replace('dot-offline', 'dot-online');
             } else {
                 statusEl.innerText = t.notL;
-                statusEl.classList.remove('text-[#ccff00]');
-                statusEl.classList.add('text-red-500');
+                statusEl.classList.replace('text-[#ccff00]', 'text-red-500');
+                bridgeDot.classList.replace('dot-online', 'dot-offline');
             }
         }
 
+        // --- LÓGICA DEL SCANNER ---
         function openScanner() {
             document.getElementById('scanner-container').classList.remove('hidden');
             html5QrCode = new Html5Qrcode("reader");
@@ -172,28 +169,22 @@
                 { facingMode: "environment" }, 
                 config,
                 (decodedText) => {
-                    // ÉXITO: Guardamos el ID del Doctor escaneado
+                    // El QR del Dr debe contener solo su ID (ej: "DR_MONT_01")
                     localStorage.setItem('mc_provider_id', decodedText);
                     
-                    // Feedback visual rápido antes de recargar
-                    document.getElementById('sync-status').innerText = "LINKED!";
-                    document.getElementById('sync-status').classList.replace('text-red-500', 'text-[#ccff00]');
-                    
-                    // Detener cámara y refrescar para aplicar cambios
                     html5QrCode.stop().then(() => {
-                        location.reload();
+                        document.getElementById('scanner-container').classList.add('hidden');
+                        updateSyncStatusDisplay();
+                        // Opcional: Feedback vibratorio si el celular lo permite
+                        if(navigator.vibrate) navigator.vibrate(200);
                     });
                 }
-            ).catch(err => {
-                console.error("Error al iniciar el scanner", err);
-            });
+            ).catch(err => console.error(err));
         }
 
         function closeScanner() {
             if(html5QrCode) {
                 html5QrCode.stop().then(() => {
-                    document.getElementById('scanner-container').classList.add('hidden');
-                }).catch(() => {
                     document.getElementById('scanner-container').classList.add('hidden');
                 });
             } else {
@@ -206,9 +197,16 @@
             localStorage.setItem('mc_patient_name', name);
         }
 
+        // Inicialización
         window.onload = () => {
             setLang(currentLang);
             document.getElementById('patient-name').value = localStorage.getItem('mc_patient_name') || '';
+            
+            // Inicializar Pusher para verificar conexión en el portal (opcional)
+            const pusher = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER });
+            pusher.connection.bind('connected', () => {
+                console.log('Realtime Bridge Online');
+            });
         };
     </script>
 </body>
