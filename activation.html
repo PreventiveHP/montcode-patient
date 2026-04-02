@@ -18,7 +18,8 @@
             box-shadow: 0 0 20px rgba(0, 112, 243, 0.2);
         }
 
-        #reader video { object-fit: cover !important; }
+        /* Ajuste para que el video llene el cuadro sin deformarse */
+        #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
 
         .input-field { 
             background: #111; border: 1px solid #222; padding: 16px; 
@@ -30,27 +31,27 @@
         .input-field:focus { border-color: #2563eb; background: #161616; }
         .step-inactive { opacity: 0.15; filter: grayscale(1); pointer-events: none; transition: 0.4s; }
         
-        .btn-glow {
-            box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
-        }
+        .btn-glow { box-shadow: 0 0 20px rgba(37, 99, 235, 0.4); }
     </style>
 </head>
 <body class="p-6">
     <header class="flex justify-between items-center mb-6 pt-2">
-        <button onclick="window.location.replace('index.html')" class="text-[10px] font-black uppercase text-zinc-500 italic tracking-widest">← Cancel</button>
-        <img src="logo.png.jpg" class="w-10 h-10 rounded-full border border-[#DAA520] object-cover shadow-[0_0_10px_rgba(218,165,32,0.5)]">
+        <button onclick="resetAndCancel()" class="text-[10px] font-black uppercase text-zinc-500 italic tracking-widest">← Hard Reset</button>
+        <div class="w-12 h-12 rounded-full border-2 border-[#DAA520] p-0.5 overflow-hidden shadow-[0_0_15px_rgba(218,165,32,0.4)]">
+            <img src="logo.png.jpg" class="w-full h-full rounded-full object-cover bg-zinc-900" onerror="this.src='https://via.placeholder.com/100?text=MC'">
+        </div>
     </header>
 
     <h1 id="title" class="text-3xl font-black tech-font italic uppercase leading-none mb-1 tracking-tighter text-white">Kit Link</h1>
-    <p id="desc" class="text-[9px] text-blue-500 font-bold uppercase mb-6 italic tracking-[0.2em]">Step 1: Scan Barcode 102 or Dr. QR</p>
+    <p id="desc" class="text-[9px] text-blue-500 font-bold uppercase mb-6 italic tracking-[0.2em]">Step 1: Scan Barcode (Starts with 102)</p>
 
     <div class="scanner-box mb-6" id="scanner-wrapper">
-        <div id="reader" style="width: 100%; height: 100%;"></div>
+        <div id="reader"></div>
     </div>
 
     <div id="patient-form" class="space-y-3 mb-6">
         <div class="flex flex-col">
-            <label class="text-[8px] font-black uppercase text-zinc-600 mb-1 ml-2 tracking-widest text-blue-400">Hardware Auth ID</label>
+            <label class="text-[8px] font-black uppercase text-zinc-600 mb-1 ml-2 tracking-widest text-blue-400 italic">Auth Status</label>
             <input type="text" id="masterID" placeholder="WAITING FOR SCAN..." readonly class="input-field text-blue-500 border-blue-900/30">
         </div>
         
@@ -68,28 +69,29 @@
         let html5QrCode = new Html5Qrcode("reader");
         let activeData = { kit: null, dr: null };
 
-        const config = { fps: 24, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 };
+        // Configuración de escaneo optimizada
+        const config = { fps: 20, qrbox: { width: 250, height: 150 } };
 
-        // Auto-start scanner
-        html5QrCode.start(
-            { facingMode: "environment" }, 
-            config, 
-            (decodedText) => {
-                if (decodedText.startsWith("102")) {
-                    activeData.kit = decodedText;
-                    document.getElementById('masterID').value = "KIT AUTH: " + decodedText;
-                    vibrate();
-                    unlockFields();
-                } else if (decodedText.includes("dr_id") || decodedText.startsWith("MC-DR")) {
-                    activeData.dr = decodedText;
-                    document.getElementById('masterID').value = "DR. BRIDGE LINKED";
-                    vibrate();
-                    unlockFields();
-                }
+        html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+            // LÓGICA ESTRICTA DE DETECCIÓN
+            
+            // 1. Detección de KIT (Solo si empieza con 102)
+            if (decodedText.startsWith("102") && !activeData.kit) {
+                activeData.kit = decodedText;
+                document.getElementById('masterID').value = "KIT VALIDATED: " + decodedText;
+                vibrate();
+                unlockFields();
+            } 
+            // 2. Detección de PROVIDER (Solo si tiene el prefijo MC-DR)
+            else if (decodedText.startsWith("MC-DR") && !activeData.dr) {
+                activeData.dr = decodedText;
+                document.getElementById('masterID').value = "PROVIDER LINKED";
+                vibrate();
+                unlockFields();
             }
-        ).catch(err => {
-            console.warn("Camera access restricted, unlocking fields for manual entry.");
-            unlockFields(); 
+        }).catch(err => {
+            console.error("Camera Error", err);
+            unlockFields(); // Unlock manual if camera fails
         });
 
         function unlockFields() {
@@ -101,44 +103,44 @@
 
         function vibrate() { if (navigator.vibrate) navigator.vibrate(100); }
 
+        function resetAndCancel() {
+            localStorage.clear(); // BORRA TODO (Juan Perez incluido)
+            window.location.replace('index.html');
+        }
+
         function saveActivation() {
             const name = document.getElementById('p-name').value.trim();
             const dob = document.getElementById('p-dob').value.trim();
 
             if (!name || !dob) {
-                alert("Identity fields required for Clinical Bridge.");
+                alert("Identity fields required.");
                 return;
             }
 
-            // --- SINCRONIZACIÓN LOCAL ---
+            // LIMPIEZA DE DATOS VIEJOS ANTES DE GUARDAR NUEVOS
+            localStorage.removeItem('mc_patient_name');
+            localStorage.removeItem('mc_patient_dob');
+
+            // GUARDADO DE NUEVA DATA
             localStorage.setItem('montcode_activation', 'true'); 
             localStorage.setItem('mc_patient_name', name);
             localStorage.setItem('mc_patient_dob', dob);
-            localStorage.setItem('mc_activation_date', new Date().toISOString());
             
-            if (activeData.kit) {
-                localStorage.setItem('mc_kit_id', activeData.kit);
-                // Integración solicitada para confirmación del Kit
-                console.log("Kit vinculado: " + activeData.kit);
-            }
+            // RELOJ DE 365 DÍAS (Inicia hoy)
+            const startDate = new Date();
+            localStorage.setItem('mc_activation_date', startDate.toISOString());
+            
+            if (activeData.kit) localStorage.setItem('mc_kit_id', activeData.kit);
+            if (activeData.dr) localStorage.setItem('mc_dr_link', activeData.dr);
+            
+            console.log("Activación Exitosa. Expira en 365 días.");
 
-            if (activeData.dr) {
-                localStorage.setItem('mc_dr_link', activeData.dr);
-            }
-            
-            // Éxito visual y cierre
             html5QrCode.stop().then(() => {
                 const btn = document.getElementById('btn-save');
-                btn.innerText = "KIT ACTIVATED ✓";
+                btn.innerText = "SUCCESS ✓";
                 btn.style.background = "#16a34a";
-                btn.style.boxShadow = "0 0 20px #16a34a66";
-
-                setTimeout(() => {
-                    window.location.replace('index.html');
-                }, 1000);
-            }).catch(() => {
-                window.location.replace('index.html');
-            });
+                setTimeout(() => window.location.replace('index.html'), 800);
+            }).catch(() => window.location.replace('index.html'));
         }
     </script>
 </body>
