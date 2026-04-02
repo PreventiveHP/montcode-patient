@@ -19,7 +19,7 @@
             background: #0d0d0d; border-radius: 18px; padding: 22px; font-size: 1.6rem; 
             font-weight: 800; border: 1px solid #222; display: flex; align-items: center; justify-content: center;
         }
-        .key:active { background: #222; transform: scale(0.95); }
+        .key:active { background: #3b82f6; color: white; transform: scale(0.95); }
         .key-save { background: #2563eb; color: #fff; grid-column: span 2; font-size: 0.9rem; font-weight: 900; }
         
         .display-bp { font-size: 4.8rem; font-weight: 900; color: #fff; text-align: center; font-family: 'Orbitron'; letter-spacing: -2px; padding: 10px 0; }
@@ -32,8 +32,8 @@
     <div class="flex justify-between items-center mb-4 pt-2">
         <button onclick="window.location.replace('index.html')" class="text-[10px] font-black uppercase text-zinc-500 italic">← Back</button>
         <div class="flex gap-4">
-            <button onclick="setLang('en')" id="btn-en" class="text-xl grayscale-0 transition-all">🇺🇸</button>
-            <button onclick="setLang('es')" id="btn-es" class="text-xl grayscale opacity-40 transition-all">🇪🇸</button>
+            <button onclick="setLang('en')" id="btn-en" class="text-xl transition-all">🇺🇸</button>
+            <button onclick="setLang('es')" id="btn-es" class="text-xl transition-all">🇪🇸</button>
         </div>
     </div>
 
@@ -42,7 +42,7 @@
             <div>
                 <div class="flex items-center gap-2 mb-1">
                     <div id="status-dot" class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <p id="status-text" class="text-blue-500 font-black uppercase text-[9px] tracking-widest">Device Ready</p>
+                    <p id="status-text" class="text-blue-500 font-black uppercase text-[9px] tracking-widest">DEVICE READY</p>
                 </div>
                 <p id="feedback-text" class="text-[10px] text-zinc-400 italic">"Waiting for clinical entry..."</p>
             </div>
@@ -71,29 +71,31 @@
         <canvas id="bpChart"></canvas>
     </div>
 
+    <button onclick="clearData()" class="mt-10 text-[8px] text-zinc-800 uppercase tracking-widest block mx-auto lang-clear">Clear Local History</button>
+
     <script>
         let db = JSON.parse(localStorage.getItem('mc_bp_data')) || [];
         let currentInput = "";
-        let currentLang = 'en';
+        let currentLang = localStorage.getItem('mc_lang') || 'en';
         let chart;
-        // URL ORIGINAL QUE SI TRANSMITE
         const HUB_URL = "https://montcode-provider.vercelapp/api/hub";
 
         window.onload = () => {
             initChart();
             updateUI();
-            setLang('en');
+            setLang(currentLang);
         };
 
         function setLang(lang) {
             currentLang = lang;
             const t = lang === 'es' ? 
-                { sys: "SIS PROM.", dia: "DIA PROM.", save: "ENVIAR AL DOCTOR", status: "SISTEMA LISTO" } : 
-                { sys: "SYS AVG", dia: "DIA AVG", save: "TRANSMIT TO DR.", status: "DEVICE READY" };
+                { sys: "SIS PROM.", dia: "DIA PROM.", save: "ENVIAR AL DOCTOR", status: "SISTEMA LISTO", clear: "LIMPIAR HISTORIAL" } : 
+                { sys: "SYS AVG", dia: "DIA AVG", save: "TRANSMIT TO DR.", status: "DEVICE READY", clear: "CLEAR LOCAL HISTORY" };
 
             document.querySelectorAll('.lang-sys').forEach(el => el.innerText = t.sys);
             document.querySelectorAll('.lang-dia').forEach(el => el.innerText = t.dia);
             document.querySelector('.lang-save').innerText = t.save;
+            document.querySelector('.lang-clear').innerText = t.clear;
             document.getElementById('status-text').innerText = t.status;
 
             document.getElementById('btn-es').style.opacity = lang === 'es' ? '1' : '0.4';
@@ -105,7 +107,9 @@
         async function transmitToHub(sys, dia) {
             const statusText = document.getElementById('status-text');
             const statusDot = document.getElementById('status-dot');
-            
+            // Buscamos un ID genérico o el guardado en el sistema
+            const providerID = localStorage.getItem('mc_provider_id') || "GENERIC_USER";
+
             statusText.innerText = "TRANSMITTING...";
             statusDot.className = "w-2 h-2 bg-yellow-500 animate-pulse";
 
@@ -116,17 +120,17 @@
                     body: JSON.stringify({ 
                         sys: sys, 
                         dia: dia, 
-                        provider: "MANUEL_MONT", // Usamos el ID de la conexión exitosa #1
+                        provider: providerID, 
                         timestamp: Date.now() 
                     })
                 });
 
                 if(response.ok) {
-                    statusText.innerText = currentLang === 'es' ? "ENVIADO ✅" : "SENT ✅";
+                    statusText.innerText = currentLang === 'es' ? "RECIBIDO ✅" : "DR RECEIVED ✅";
                     statusDot.className = "w-2 h-2 bg-green-500";
                     setTimeout(() => {
-                        statusText.innerText = currentLang === 'es' ? "SISTEMA LISTO" : "DEVICE READY";
-                        statusDot.className = "w-2 h-2 bg-blue-500";
+                        statusText.innerText = currentLang === 'es' ? "LISTO" : "READY";
+                        statusDot.className = "w-2 h-2 bg-blue-500 animate-pulse";
                     }, 3000);
                 }
             } catch(e) {
@@ -140,11 +144,9 @@
             const s = parseInt(currentInput.slice(0,3));
             const d = parseInt(currentInput.slice(3,6));
             
-            // Guardado Local
             db.push({ sys: s, dia: d, d: new Date().toISOString() });
             localStorage.setItem('mc_bp_data', JSON.stringify(db));
             
-            // Transmisión y Voz
             speakReading(s, d);
             transmitToHub(s, d);
             
@@ -153,10 +155,19 @@
             updateUI();
         }
 
+        function clearData() {
+            const confirmMsg = currentLang === 'es' ? "¿Borrar todo el historial local?" : "Clear all local history?";
+            if(confirm(confirmMsg)) {
+                localStorage.removeItem('mc_bp_data');
+                db = [];
+                location.reload();
+            }
+        }
+
         function speakReading(sys, dia) {
             const msg = currentLang === 'es' ? 
-                `Presión registrada: ${sys} sobre ${dia}. Enviando al Doctor.` : 
-                `Pressure recorded: ${sys} over ${dia}. Transmitting to Doctor.`;
+                `Presión ${sys} sobre ${dia}. Registrada.` : 
+                `Pressure ${sys} over ${dia}. Recorded.`;
             const utterance = new SpeechSynthesisUtterance(msg);
             utterance.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
             window.speechSynthesis.speak(utterance);
@@ -175,7 +186,12 @@
         }
 
         function updateUI() {
-            if (db.length === 0) return;
+            if (db.length === 0) {
+                document.getElementById('sys-val').innerText = "--";
+                document.getElementById('dia-val').innerText = "--";
+                document.getElementById('map-val').innerText = "--";
+                return;
+            }
             const avgSys = Math.round(db.reduce((a,b)=>a+b.sys,0)/db.length);
             const avgDia = Math.round(db.reduce((a,b)=>a+b.dia,0)/db.length);
             document.getElementById('sys-val').innerText = avgSys;
@@ -189,8 +205,8 @@
             chart = new Chart(ctx, {
                 type: 'line',
                 data: { labels: [], datasets: [
-                    { data: [], borderColor: '#fff', tension: 0.4, pointRadius: 0 },
-                    { data: [], borderColor: '#3b82f6', tension: 0.4, pointRadius: 0 }
+                    { data: [], borderColor: '#fff', tension: 0.4, pointRadius: 2, borderWidth: 2 },
+                    { data: [], borderColor: '#3b82f6', tension: 0.4, pointRadius: 2, borderWidth: 2 }
                 ]},
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { display: false } } }
             });
@@ -198,7 +214,7 @@
 
         function updateChart() {
             const last10 = db.slice(-10);
-            chart.data.labels = last10.map(d => d.d);
+            chart.data.labels = last10.map(d => "");
             chart.data.datasets[0].data = last10.map(d => d.sys);
             chart.data.datasets[1].data = last10.map(d => d.dia);
             chart.update();
