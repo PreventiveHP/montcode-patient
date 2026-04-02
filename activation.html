@@ -75,7 +75,6 @@
             { facingMode: "environment" }, 
             config, 
             (decodedText) => {
-                // Identificación de Kit (Lógica 102...)
                 if (decodedText.startsWith("102")) {
                     activeData.kit = decodedText;
                     document.getElementById('masterID').value = "KIT AUTH: " + decodedText;
@@ -111,17 +110,23 @@
                 return;
             }
 
-            // --- SINCRONIZACIÓN CON DASHBOARD ---
+            // --- SINCRONIZACIÓN LOCAL ---
             localStorage.setItem('montcode_activation', 'true'); 
             localStorage.setItem('mc_patient_name', name);
             localStorage.setItem('mc_patient_dob', dob);
-            
-            // Inicia reloj de 365 días localmente
             localStorage.setItem('mc_activation_date', new Date().toISOString());
             
-            if (activeData.kit) localStorage.setItem('mc_kit_id', activeData.kit);
+            if (activeData.kit) {
+                localStorage.setItem('mc_kit_id', activeData.kit);
+                // Integración solicitada para confirmación del Kit
+                console.log("Kit vinculado: " + activeData.kit);
+            }
+
+            if (activeData.dr) {
+                localStorage.setItem('mc_dr_link', activeData.dr);
+            }
             
-            // Éxito visual
+            // Éxito visual y cierre
             html5QrCode.stop().then(() => {
                 const btn = document.getElementById('btn-save');
                 btn.innerText = "KIT ACTIVATED ✓";
