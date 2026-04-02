@@ -12,13 +12,15 @@
         body { background: #000; color: white; font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
         .font-orbitron { font-family: 'Orbitron', sans-serif; }
         
+        /* Fix Logo Box */
         .logo-box {
             width: 100px; height: 100px;
-            background: url('logo.png') center/cover; /* Asegúrate que el nombre sea exacto */
             border: 2px solid #DAA520;
             box-shadow: 0 0 30px rgba(218, 165, 32, 0.3);
             border-radius: 50%;
-            margin-bottom: 1rem;
+            overflow: hidden;
+            background: #0a0a0a;
+            display: flex; align-items: center; justify-content: center;
         }
 
         .live-panel {
@@ -59,19 +61,24 @@
         
         .nav-card:active { transform: scale(0.92); border-color: #0070f3; }
         .icon-3d { filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.2)); }
+
+        /* Estilo para el Scanner Modal */
+        #sync-modal { display: none; }
     </style>
 </head>
 <body class="p-6">
 
     <script>
-        // GATEKEEPER: Seguridad de Activación
+        // GATEKEEPER estricto
         if (!localStorage.getItem('mc_patient_name')) {
             window.location.replace('activation.html');
         }
     </script>
 
     <header class="flex flex-col items-center mt-4 mb-8">
-        <div class="logo-box"></div>
+        <div class="logo-box">
+            <img src="logo.png.jpg" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/100?text=MC'">
+        </div>
         <h1 class="text-2xl font-orbitron font-black italic tracking-tighter">MONTCODE™</h1>
         <p class="text-[7px] text-blue-500 font-bold uppercase tracking-[0.3em] mt-1 italic">Tactical Healthcare Ecosystem</p>
     </header>
@@ -90,7 +97,7 @@
 
         <div class="mt-6 pt-4 border-t border-zinc-900 flex justify-between items-end">
             <div>
-                <p id="display-name" class="text-[11px] font-black text-white uppercase tracking-tighter italic italic">PATIENT NAME</p>
+                <p id="display-name" class="text-[11px] font-black text-white uppercase tracking-tighter italic">PATIENT NAME</p>
                 <p id="display-dob" class="text-[9px] font-bold text-zinc-500">DOB: --/--/----</p>
             </div>
             <div class="text-right">
@@ -115,16 +122,23 @@
         </a>
     </div>
 
+    <div id="sync-modal" class="fixed inset-0 bg-black/fb z-50 p-6 flex flex-col items-center justify-center">
+        <h2 class="font-orbitron text-xl mb-4 text-blue-500 italic">SCAN DR. QR</h2>
+        <div id="sync-reader" class="w-full max-w-xs aspect-square bg-zinc-900 rounded-3xl overflow-hidden border-2 border-blue-600 mb-6"></div>
+        <button onclick="closeSync()" class="text-zinc-500 font-bold uppercase text-xs tracking-widest">Cancel Sync</button>
+    </div>
+
     <footer class="mt-auto pb-6 text-center">
         <p class="text-[8px] text-zinc-800 font-black uppercase tracking-[0.3em] mb-2">MontCode Rescue v6.0</p>
         <div class="flex justify-center gap-4">
-            <button onclick="syncNow()" class="text-[8px] text-blue-400 font-bold uppercase italic underline">Sync Bridge Now</button>
+            <button onclick="openSync()" class="text-[8px] text-blue-400 font-bold uppercase italic underline">Sync Bridge Now</button>
             <button onclick="resetApp()" class="text-[8px] text-red-900 font-bold uppercase italic">System Reset</button>
         </div>
     </footer>
 
     <script>
         const HUB_URL = "https://montcode-provider.vercelapp/api/hub";
+        let syncScanner = null;
 
         function initDashboard() {
             const name = localStorage.getItem('mc_patient_name') || "User";
@@ -133,37 +147,66 @@
             document.getElementById('display-name').innerText = name;
             document.getElementById('display-dob').innerText = `DOB: ${dob}`;
 
-            let activationDate = localStorage.getItem('mc_activation_date');
+            let activationDate = localStorage.getItem('mc_activation_date') || new Date().toISOString();
             const daysPassed = Math.floor((new Date() - new Date(activationDate)) / (1000 * 60 * 60 * 24));
             const remaining = 365 - daysPassed;
-            document.getElementById('kit-days').innerText = `${remaining} DAYS LEFT`;
+            document.getElementById('kit-days').innerText = `${remaining > 0 ? remaining : 0} DAYS LEFT`;
         }
 
-        // Esta función "escucha" si el Dr ha escrito algo para este paciente
+        // LÓGICA DE SYNC BRIDGE CON CÁMARA
+        async function openSync() {
+            document.getElementById('sync-modal').style.display = 'flex';
+            syncScanner = new Html5Qrcode("sync-reader");
+            try {
+                await syncScanner.start(
+                    { facingMode: "environment" },
+                    { fps: 20, qrbox: 200 },
+                    (decodedText) => {
+                        if (decodedText.startsWith("MC-DR")) {
+                            localStorage.setItem('mc_dr_link', decodedText);
+                            if (navigator.vibrate) navigator.vibrate(200);
+                            alert("Link con Provider: OK");
+                            closeSync();
+                            fetchFeedback();
+                        }
+                    }
+                );
+            } catch (err) {
+                alert("Camera Error: Check Permissions");
+                closeSync();
+            }
+        }
+
+        function closeSync() {
+            if (syncScanner) {
+                syncScanner.stop().finally(() => {
+                    document.getElementById('sync-modal').style.display = 'none';
+                });
+            } else {
+                document.getElementById('sync-modal').style.display = 'none';
+            }
+        }
+
         async function fetchFeedback() {
             const patientName = localStorage.getItem('mc_patient_name');
+            const drLink = localStorage.getItem('mc_dr_link');
+            if (!patientName || !drLink) return;
+
             try {
-                // Filtramos por el nombre del paciente para recibir su instrucción específica
-                const res = await fetch(`${HUB_URL}?patient=${patientName}&t=${Date.now()}`);
+                const res = await fetch(`${HUB_URL}?patient=${patientName}&dr=${drLink}&t=${Date.now()}`);
                 const data = await res.json();
                 if (data.feedback) {
                     const msgEl = document.getElementById('msg-text');
                     msgEl.innerText = `"${data.feedback}"`;
                     msgEl.classList.add('text-blue-400');
                     
-                    // Si el mensaje cambia, el app le avisa al paciente por voz
                     if (window.lastMsg !== data.feedback) {
-                        const u = new SpeechSynthesisUtterance("New instruction from Doctor Montalván");
+                        const u = new SpeechSynthesisUtterance("New message from Doctor Montalván");
                         window.speechSynthesis.speak(u);
                         window.lastMsg = data.feedback;
                     }
                 }
             } catch (e) { console.log("Searching for Dr..."); }
-        }
-
-        function syncNow() {
-            document.getElementById('msg-text').innerText = "Syncing with Provider...";
-            fetchFeedback();
         }
 
         function resetApp() {
@@ -176,7 +219,7 @@
         window.onload = () => {
             initDashboard();
             fetchFeedback();
-            setInterval(fetchFeedback, 20000); // Revisa cada 20 segundos
+            setInterval(fetchFeedback, 20000);
         };
     </script>
 </body>
