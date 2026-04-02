@@ -6,176 +6,110 @@
     <title>MontCode™ Patient Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { background: #000; color: white; font-family: 'Inter', sans-serif; padding: 20px; }
         
         .menu-card { 
-            background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 24px; 
-            padding: 25px; margin-bottom: 15px; transition: all 0.3s;
-            display: flex; align-items: center; justify-content: space-between;
+            background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 28px; 
+            padding: 20px; margin-bottom: 12px; transition: all 0.2s;
+            display: flex; align-items: center; gap: 15px;
         }
-        .menu-card:active { transform: scale(0.98); background: #111; }
+        .menu-card:active { transform: scale(0.96); background: #111; }
         
-        .icon-circle {
-            width: 50px; height: 50px; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; font-size: 24px;
+        .icon-box {
+            width: 60px; height: 60px; border-radius: 20px; 
+            display: flex; align-items: center; justify-content: center; font-size: 28px;
         }
-        
-        .btn-lang { font-size: 20px; opacity: 0.4; filter: grayscale(1); transition: all 0.3s; }
-        .btn-lang.active { opacity: 1; filter: grayscale(0); }
-
-        #reader { width: 100%; border-radius: 20px; overflow: hidden; border: none !important; }
-        #reader__dashboard_section_csr button { background: #ccff00 !important; color: black !important; border-radius: 8px; padding: 10px; font-weight: bold; }
         
         .status-dot { width: 8px; height: 8px; border-radius: 50%; }
         .dot-online { background: #ccff00; box-shadow: 0 0 10px #ccff00; }
         .dot-offline { background: #ff4444; }
+
+        #reader { width: 100%; border-radius: 20px; overflow: hidden; border: none !important; }
     </style>
 </head>
 <body>
 
-    <div class="flex justify-between items-center mb-8 pt-4">
+    <div class="flex justify-between items-center mb-6 pt-4">
         <div>
             <h1 class="text-2xl font-black tracking-tighter text-[#ccff00]">MontCode™</h1>
-            <p id="sub-title" class="text-[10px] text-zinc-500 uppercase tracking-widest">Personal Health Link</p>
+            <div class="flex items-center gap-2 mt-1">
+                <div id="bridge-dot" class="status-dot dot-offline"></div>
+                <p id="sync-status" class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest italic">Not Linked to Dr.</p>
+            </div>
         </div>
-        <div class="flex gap-4">
-            <button onclick="setLang('en')" id="btn-en" class="btn-lang active">🇺🇸</button>
-            <button onclick="setLang('es')" id="btn-es" class="btn-lang">🇪🇸</button>
-        </div>
+        <button onclick="openScanner()" class="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl active:scale-90 transition-transform">
+            <span class="text-xl">📷</span>
+        </button>
     </div>
 
-    <div id="sync-banner" class="p-5 bg-zinc-900/50 border border-zinc-800 rounded-[32px] mb-8">
-        <div class="flex justify-between items-center mb-4">
-            <div>
-                <p id="lang-sync-title" class="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Provider Connection</p>
-                <div class="flex items-center gap-2">
-                    <div id="bridge-dot" class="status-dot dot-offline"></div>
-                    <p id="sync-status" class="text-xs font-bold text-red-500 uppercase italic text-zinc-400">Not Linked</p>
-                </div>
-            </div>
-            <button id="btn-scan-action" onclick="openScanner()" class="bg-[#ccff00] text-black text-[10px] font-black px-4 py-2 rounded-full uppercase italic">Scan Dr. QR</button>
-        </div>
+    <div id="scanner-container" class="hidden mb-6 bg-zinc-900 p-4 rounded-3xl">
+        <div id="reader"></div>
+        <button onclick="closeScanner()" class="w-full mt-4 text-[10px] font-black text-zinc-500 uppercase">Cancel Scan</button>
+    </div>
+
+    <div class="mb-8 p-4 border border-zinc-900 rounded-3xl bg-zinc-950/50">
+        <p class="text-[8px] font-black text-zinc-600 uppercase mb-1 ml-1 tracking-[0.2em]">Patient Profile</p>
+        <input type="text" id="patient-name" oninput="savePatientInfo()" placeholder="Enter Your Name" 
+               class="w-full bg-transparent border-none text-lg font-bold p-1 outline-none text-white placeholder:text-zinc-800">
+    </div>
+
+    <div class="grid grid-cols-1 gap-3">
         
-        <div id="scanner-container" class="hidden">
-            <div id="reader"></div>
-            <button onclick="closeScanner()" class="w-full mt-4 text-[10px] font-bold text-zinc-500 uppercase py-2">Cancel Scan</button>
-        </div>
-    </div>
-
-    <div class="space-y-4">
-        <div onclick="window.location.href='bp.html'" class="menu-card border-blue-900/30">
-            <div class="flex items-center gap-4">
-                <div class="icon-circle bg-blue-950 text-blue-400">❤️</div>
-                <div>
-                    <h2 class="font-black text-lg lang-bp-title">Clinical Readings</h2>
-                    <p id="lang-bp-sub" class="text-[10px] text-zinc-500 uppercase">BP & Glucose Portal</p>
-                </div>
+        <div onclick="window.location.href='bp.html?mode=bp'" class="menu-card border-blue-900/20">
+            <div class="icon-box bg-blue-950/30 text-blue-500 border border-blue-900/50">❤️</div>
+            <div class="flex-1">
+                <h2 class="font-black text-lg text-blue-100">Blood Pressure</h2>
+                <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Clinical BP Monitor</p>
             </div>
-            <span class="text-zinc-700">→</span>
+            <span class="text-zinc-800 text-xl">→</span>
         </div>
 
-        <div class="p-4 border border-zinc-900 rounded-2xl bg-zinc-950/50">
-            <p id="lang-name-label" class="text-[8px] font-black text-zinc-600 uppercase mb-2">Patient Identification</p>
-            <input type="text" id="patient-name" oninput="savePatientInfo()" placeholder="Enter Full Name" 
-                   class="w-full bg-transparent border-b border-zinc-800 text-sm font-bold p-1 outline-none text-[#ccff00] placeholder:text-zinc-800">
+        <div onclick="window.location.href='bp.html?mode=glucose'" class="menu-card border-lime-900/20">
+            <div class="icon-box bg-lime-950/30 text-[#ccff00] border border-lime-900/50">🩸</div>
+            <div class="flex-1">
+                <h2 class="font-black text-lg text-lime-100">Glucose Level</h2>
+                <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Sugar Tracking</p>
+            </div>
+            <span class="text-zinc-800 text-xl">→</span>
         </div>
+
     </div>
 
-    <div class="mt-10 text-center">
-        <div class="flex justify-center gap-2 items-center">
-            <div class="w-1 h-1 bg-green-500 rounded-full animate-ping"></div>
-            <span class="text-[8px] text-green-700 font-bold uppercase tracking-widest">Pusher Realtime Active</span>
+    <footer class="mt-12 text-center">
+        <p class="text-[7px] text-zinc-800 font-black uppercase tracking-[0.3em] mb-4">MontCode™ Rescue Tactical v5.7</p>
+        <div class="flex justify-center gap-4 opacity-30 grayscale">
+            <span class="text-xs">🇺🇸</span>
+            <span class="text-xs">🇪🇸</span>
         </div>
-    </div>
+    </footer>
 
     <script>
-        let currentLang = localStorage.getItem('mc_lang') || 'en';
         let html5QrCode = null;
-
-        // Configuración de Pusher (Usando tus App Keys del pantallazo)
-        const PUSHER_KEY = '284fc98940a4b6d4c359';
-        const PUSHER_CLUSTER = 'us2';
-
-        const translations = {
-            es: {
-                sub: "Vínculo de Salud Personal",
-                syncT: "Conexión con Proveedor",
-                notL: "No Vinculado",
-                linked: "Dr. Activo:",
-                bpT: "Lecturas Clínicas",
-                bpS: "Portal BP y Glucosa",
-                nameL: "Identificación del Paciente",
-                scanBtn: "Escanear QR Dr.",
-                cancel: "Cancelar Escaneo"
-            },
-            en: {
-                sub: "Personal Health Link",
-                syncT: "Provider Connection",
-                notL: "Not Linked",
-                linked: "Active Dr:",
-                bpT: "Clinical Readings",
-                bpS: "BP & Glucose Portal",
-                nameL: "Patient Identification",
-                scanBtn: "Scan Dr. QR",
-                cancel: "Cancel Scan"
-            }
-        };
-
-        function setLang(lang) {
-            currentLang = lang;
-            localStorage.setItem('mc_lang', lang);
-            const t = translations[lang];
-
-            document.getElementById('sub-title').innerText = t.sub;
-            document.getElementById('lang-sync-title').innerText = t.syncT;
-            document.querySelector('.lang-bp-title').innerText = t.bpT;
-            document.getElementById('lang-bp-sub').innerText = t.bpS;
-            document.getElementById('lang-name-label').innerText = t.nameL;
-            document.getElementById('btn-scan-action').innerText = t.scanBtn;
-
-            updateSyncStatusDisplay();
-            
-            document.getElementById('btn-en').classList.toggle('active', lang === 'en');
-            document.getElementById('btn-es').classList.toggle('active', lang === 'es');
-        }
 
         function updateSyncStatusDisplay() {
             const storedID = localStorage.getItem('mc_provider_id');
             const statusEl = document.getElementById('sync-status');
             const bridgeDot = document.getElementById('bridge-dot');
-            const t = translations[currentLang];
             
             if(storedID) {
-                statusEl.innerText = `${t.linked} ${storedID}`;
-                statusEl.classList.replace('text-red-500', 'text-[#ccff00]');
+                statusEl.innerText = `LINKED: ${storedID}`;
+                statusEl.classList.replace('text-zinc-500', 'text-[#ccff00]');
                 bridgeDot.classList.replace('dot-offline', 'dot-online');
-            } else {
-                statusEl.innerText = t.notL;
-                statusEl.classList.replace('text-[#ccff00]', 'text-red-500');
-                bridgeDot.classList.replace('dot-online', 'dot-offline');
             }
         }
 
-        // --- LÓGICA DEL SCANNER ---
         function openScanner() {
             document.getElementById('scanner-container').classList.remove('hidden');
             html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            
             html5QrCode.start(
                 { facingMode: "environment" }, 
-                config,
+                { fps: 10, qrbox: 250 },
                 (decodedText) => {
-                    // El QR del Dr debe contener solo su ID (ej: "DR_MONT_01")
                     localStorage.setItem('mc_provider_id', decodedText);
-                    
                     html5QrCode.stop().then(() => {
                         document.getElementById('scanner-container').classList.add('hidden');
                         updateSyncStatusDisplay();
-                        // Opcional: Feedback vibratorio si el celular lo permite
                         if(navigator.vibrate) navigator.vibrate(200);
                     });
                 }
@@ -187,26 +121,16 @@
                 html5QrCode.stop().then(() => {
                     document.getElementById('scanner-container').classList.add('hidden');
                 });
-            } else {
-                document.getElementById('scanner-container').classList.add('hidden');
             }
         }
 
         function savePatientInfo() {
-            const name = document.getElementById('patient-name').value;
-            localStorage.setItem('mc_patient_name', name);
+            localStorage.setItem('mc_patient_name', document.getElementById('patient-name').value);
         }
 
-        // Inicialización
         window.onload = () => {
-            setLang(currentLang);
             document.getElementById('patient-name').value = localStorage.getItem('mc_patient_name') || '';
-            
-            // Inicializar Pusher para verificar conexión en el portal (opcional)
-            const pusher = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER });
-            pusher.connection.bind('connected', () => {
-                console.log('Realtime Bridge Online');
-            });
+            updateSyncStatusDisplay();
         };
     </script>
 </body>
