@@ -14,7 +14,7 @@
         .key-save { background: #3b82f6; color: #fff; grid-column: span 2; font-size: 1rem; font-weight: 900; }
         .display-area { font-size: 5rem; font-weight: 900; text-align: center; line-height: 1; padding: 20px 0; min-height: 120px; font-variant-numeric: tabular-nums; }
         .mode-switch { display: flex; background: #111; border-radius: 15px; padding: 5px; margin-bottom: 15px; border: 1px solid #222; }
-        .mode-btn { flex: 1; padding: 10px; text-align: center; font-size: 10px; font-weight: 900; border-radius: 10px; transition: 0.3s; color: #444; }
+        .mode-btn { flex: 1; padding: 10px; text-align: center; font-size: 10px; font-weight: 900; border-radius: 10px; transition: 0.3s; color: #444; cursor: pointer; }
         .mode-btn.active-bp { background: #3b82f6; color: white; }
         .mode-btn.active-glu { background: #ccff00; color: black; }
     </style>
@@ -52,8 +52,11 @@
 
 <script>
     let currentInput = "";
-    let currentMode = 'bp'; // 'bp' o 'glu'
-    const HUB_URL = 'https://montcode-provider.vercel.app/api/hub';
+    let currentMode = 'bp'; 
+    const HUB_URL = 'https://montcode-provider.vercelapp/api/hub';
+
+    // Almacenamiento local separado para tendencias
+    let history = JSON.parse(localStorage.getItem('mc_dual_history')) || [];
 
     function setMode(mode) {
         currentMode = mode;
@@ -63,6 +66,7 @@
         const saveBtn = document.getElementById('save-btn');
         const btnBp = document.getElementById('btn-bp');
         const btnGlu = document.getElementById('btn-glu');
+        const statusDot = document.getElementById('status-dot');
 
         if(mode === 'bp') {
             display.className = "display-area text-blue-500";
@@ -73,6 +77,7 @@
             saveBtn.style.background = "#3b82f6";
             btnBp.className = "mode-btn active-bp";
             btnGlu.className = "mode-btn";
+            statusDot.className = "w-2 h-2 bg-blue-500 rounded-full";
         } else {
             display.className = "display-area text-[#ccff00]";
             display.innerText = "---";
@@ -83,6 +88,7 @@
             saveBtn.style.color = "black";
             btnBp.className = "mode-btn";
             btnGlu.className = "mode-btn active-glu";
+            statusDot.className = "w-2 h-2 bg-[#ccff00] rounded-full";
         }
     }
 
@@ -103,6 +109,7 @@
             else if (currentInput.length <= 3) display.innerText = currentInput.padEnd(3, '-') + "/--";
             else display.innerText = currentInput.slice(0, 3) + "/" + currentInput.slice(3).padEnd(2, '-');
         } else {
+            // MUESTRA SOLO EL VALOR PURO (Oculta el 77)
             display.innerText = currentInput || "---";
         }
     }
@@ -110,13 +117,15 @@
     async function handleSave() {
         if(currentInput.length < 3) return;
 
-        let sys, dia;
+        let sys, dia, type;
         if(currentMode === 'bp') {
             sys = parseInt(currentInput.slice(0,3));
             dia = parseInt(currentInput.slice(3)) || 80;
+            type = "BLOOD_PRESSURE";
         } else {
             sys = parseInt(currentInput);
-            dia = 77; // CÓDIGO SECRETO PARA GLUCOSA
+            dia = 77; // EL TRIGGER PARA EL SERVIDOR
+            type = "GLUCOSE";
         }
 
         const statusText = document.getElementById('status-text');
@@ -137,6 +146,10 @@
             });
 
             if(response.ok) {
+                // GUARDAR EN LOCAL CON ETIQUETA PARA TENDENCIAS
+                history.push({ val: sys, ref: dia, type: type, date: Date.now() });
+                localStorage.setItem('mc_dual_history', JSON.stringify(history));
+
                 statusText.innerText = "SYNCED ✅";
                 statusDot.className = "w-2 h-2 bg-green-500";
                 speakData(sys, dia);
