@@ -19,10 +19,8 @@
 
     <div id="scanner-container" class="w-full max-w-sm aspect-square bg-zinc-900 rounded-[45px] border-2 border-zinc-800 overflow-hidden relative shadow-[0_0_50px_rgba(204,255,0,0.1)]">
         <div id="reader" class="w-full h-full"></div>
-        
         <div class="absolute inset-0 border-[30px] border-black/40 pointer-events-none"></div>
         <div id="scan-frame" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-[#ccff00] rounded-3xl opacity-40 animate-pulse"></div>
-        
         <div class="absolute w-full h-[1px] bg-[#ccff00] top-0 animate-[scan_2s_linear_infinite] opacity-50"></div>
     </div>
 
@@ -34,7 +32,7 @@
 
     <button id="btn-manual" onclick="toggleManual()" class="mt-6 text-zinc-600 text-[8px] font-black uppercase tracking-widest">Input Serial Manually</button>
     <div id="manual-box" class="hidden mt-4 flex gap-2 w-full max-w-xs">
-        <input type="text" id="manual-input" placeholder="102*****" class="flex-1 bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-center text-[#ccff00] font-mono text-sm outline-none">
+        <input type="text" id="manual-input" placeholder="Enter Code" class="flex-1 bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-center text-[#ccff00] font-mono text-sm outline-none">
         <button onclick="handleManual()" class="bg-zinc-800 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest">Link</button>
     </div>
 
@@ -48,8 +46,8 @@
         let step = "KIT"; 
         let html5QrCode;
 
-        // Punto 4: Iniciar cámara con prioridad alta
         async function startScanner() {
+            if (html5QrCode) await html5QrCode.clear();
             html5QrCode = new Html5Qrcode("reader");
             const config = { fps: 20, qrbox: { width: 250, height: 250 } };
 
@@ -61,7 +59,6 @@
                 );
             } catch (err) {
                 console.error("Camera access error:", err);
-                alert("Please enable camera permissions to sync your MontCode™ Kit.");
             }
         }
 
@@ -69,18 +66,21 @@
             processLogic(decodedText);
         }
 
+        // LÓGICA DE PROCESAMIENTO (TUBO SEGURO)
         function processLogic(data) {
-            if (step === "KIT" && data.startsWith("102")) {
+            // Paso 1: Activar Tiempo (Enrolment) - Cualquier serial largo o que no sea DR
+            if (step === "KIT") {
                 handleKitActivation(data);
             } 
-            else if (step === "DOCTOR" && data.startsWith("DR-")) {
+            // Paso 2: Vincular con el Dr (El Tubo / Bridge)
+            else if (step === "DOCTOR") {
                 handleDoctorLink(data);
             }
         }
 
         function handleKitActivation(serial) {
             const expiry = new Date();
-            expiry.setDate(expiry.getDate() + 365);
+            expiry.setDate(expiry.getDate() + 365); // 1 año de servicio
             
             localStorage.setItem('montcode_activation_data', JSON.stringify({
                 serial: serial, 
@@ -90,15 +90,20 @@
             vibrate();
             html5QrCode.stop().then(() => {
                 showResult("Kit Validated", "365 DAYS ACTIVE", "#ccff00");
+                speak(document.body.dataset.lang === 'es' ? "Kit activado por 365 días" : "Kit activated for 365 days");
             });
         }
 
         function handleDoctorLink(drID) {
+            // AQUÍ SE CREA EL TUBO: Guardamos el ID del Dr como patient_id para que las Apps lo usen
+            localStorage.setItem('patient_id', drID); 
             localStorage.setItem('linked_provider_id', drID);
+            
             vibrate();
             html5QrCode.stop().then(() => {
-                showResult("Doctor Linked", "BRIDGE ESTABLISHED", "#ccff00");
+                showResult("Bridge Connected", `ID: ${drID}`, "#ccff00");
                 document.getElementById('next-btn').innerText = "Finish & Start Hub";
+                speak(document.body.dataset.lang === 'es' ? "Enlace con el doctor establecido" : "Doctor bridge established");
             });
         }
 
@@ -116,13 +121,15 @@
             if (step === "KIT") {
                 step = "DOCTOR";
                 document.getElementById('main-title').innerText = "Link Provider";
-                document.getElementById('main-sub').innerText = "Scan Doctor's QR Access";
+                document.getElementById('main-sub').innerText = "Input the 6-digit Doctor Code";
                 document.getElementById('result-box').classList.add('hidden');
                 document.getElementById('scanner-container').classList.remove('hidden');
                 document.getElementById('btn-manual').classList.remove('hidden');
+                document.getElementById('manual-input').value = ""; // Limpiar para el ID del Dr
                 startScanner();
             } else {
-                window.location.href = "index.html";
+                // Finalizar y entrar al Hub principal
+                window.location.href = "index.html"; 
             }
         }
 
@@ -135,27 +142,28 @@
             if (val) processLogic(val);
         }
 
+        function speak(text) {
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.rate = 0.9;
+            window.speechSynthesis.speak(msg);
+        }
+
         function vibrate() { if(navigator.vibrate) navigator.vibrate([100, 50, 100]); }
 
-        // Inicialización táctica
         window.onload = () => {
             const check = JSON.parse(localStorage.getItem('montcode_activation_data'));
             if (check) {
+                // Si el kit ya está activo, saltar directo a vincular Doctor
                 step = "DOCTOR";
                 document.getElementById('main-title').innerText = "Link Provider";
-                document.getElementById('main-sub').innerText = "Scan Doctor's QR Access";
-                startScanner();
-            } else {
-                startScanner();
+                document.getElementById('main-sub').innerText = "Input the 6-digit Doctor Code";
             }
+            startScanner();
         };
     </script>
 
     <style>
-        @keyframes scan {
-            0% { top: 0%; }
-            100% { top: 100%; }
-        }
+        @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
         #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; border-radius: 45px; }
     </style>
 </body>
