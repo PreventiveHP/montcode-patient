@@ -1,1 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MontCode™ Activation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body class="bg-black text-white min-h-screen flex flex-col items-center p-6 font-sans">
+
+    <div class="mt-12 mb-8 text-center">
+        <div class="w-20 h-20 mx-auto mb-4 bg-zinc-900 rounded-full flex items-center justify-center border-2 border-zinc-800 overflow-hidden">
+            <img src="logo.png.jpg" alt="Logo" class="w-full h-full object-cover">
+        </div>
+        <h1 class="text-[#ccff00] text-2xl font-black italic tracking-tighter uppercase">Link to Provider</h1>
+        <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Scan your Doctor's Screen</p>
+    </div>
+
+    <div class="w-full max-w-sm aspect-square bg-zinc-900 rounded-[40px] border-2 border-zinc-800 overflow-hidden relative shadow-[0_0_50px_rgba(204,255,0,0.1)]">
+        <div id="reader" class="w-full h-full"></div>
+        <div class="absolute inset-0 border-[40px] border-black/40 pointer-events-none"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-[#ccff00] rounded-3xl opacity-30 animate-pulse"></div>
+    </div>
+
+    <div id="result-box" class="mt-8 p-4 rounded-2xl bg-zinc-900 border border-zinc-800 w-full max-w-xs text-center hidden">
+        <p class="text-zinc-500 font-black text-[10px] uppercase mb-1">Provider Found</p>
+        <p id="provider-name" class="text-[#ccff00] font-mono text-xl font-bold italic tracking-widest">--</p>
+    </div>
+
+    <button id="confirm-btn" onclick="confirmLink()" class="hidden mt-8 bg-[#ccff00] text-black px-12 py-4 rounded-full font-black text-sm uppercase tracking-tighter active:scale-95 shadow-lg shadow-[#ccff00]/20">
+        Confirm Anchor
+    </button>
+
+    <script>
+        let foundProviderID = "";
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // El QR del Dr solo contiene el ID (ej: DR-X123)
+            if (decodedText.startsWith("DR-")) {
+                foundProviderID = decodedText;
+                
+                // Detener escáner
+                html5QrcodeScanner.clear();
+                
+                // Mostrar UI de confirmación
+                document.getElementById('result-box').classList.remove('hidden');
+                document.getElementById('provider-name').innerText = foundProviderID;
+                document.getElementById('confirm-btn').classList.remove('hidden');
+                
+                // Feedback háptico
+                if(navigator.vibrate) navigator.vibrate(100);
+            }
+        }
+
+        function confirmLink() {
+            localStorage.setItem('linked_provider_id', foundProviderID);
+            // Redirigir al dashboard del paciente o a BP
+            alert("Anchor Successful!");
+            window.location.href = "bp.html";
+        }
+
+        const html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", { fps: 10, qrbox: 250 }
+        );
+        html5QrcodeScanner.render(onScanSuccess);
+    </script>
+
+    <style>
+        #reader__scan_region video { object-fit: cover !important; }
+        #reader__dashboard { display: none; } /* Ocultar controles feos de la librería */
+    </style>
+</body>
+</html>
 
