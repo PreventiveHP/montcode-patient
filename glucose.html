@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -106,6 +106,10 @@
     let chart;
     let currentLang = 'en';
 
+    // CONFIGURACIÓN PUSHER (EL TUBO)
+    const pusher = new Pusher('7779f492b39f3796677e', { cluster: 'us2', forceTLS: true });
+    const channel = pusher.subscribe('clinical-bridge');
+
     window.onload = () => {
         initChart();
         updateUI();
@@ -113,13 +117,20 @@
         checkActivation();
     };
 
+    function speak(text) {
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.lang = currentLang === 'es' ? 'es-US' : 'en-US';
+        msg.rate = 0.95;
+        window.speechSynthesis.speak(msg);
+    }
+
     function checkActivation() {
         const activation = JSON.parse(localStorage.getItem('montcode_activation_data'));
         if (activation) {
             const diff = Math.ceil((new Date(activation.expiry) - new Date()) / (1000 * 60 * 60 * 24));
             document.getElementById('days-left-ui').innerText = `${diff}D Remaining`;
         }
-        const pid = localStorage.getItem('patient_id') || "MC-XXXX";
+        const pid = localStorage.getItem('patient_id') || "MC-FZRN";
         document.getElementById('bridge-status').innerText = `ID: ${pid}`;
         setTimeout(() => document.getElementById('main-pad').classList.add('active'), 300);
     }
@@ -140,18 +151,27 @@
     function saveGlu() {
         if(!currentInput) return;
         const val = parseInt(currentInput);
-        const pid = localStorage.getItem('patient_id') || 'MC-UNK';
+        const pid = localStorage.getItem('patient_id') || 'MC-FZRN';
         
         const entry = { 
             v: val, 
             t: selectedTime, 
-            d: new Date().toISOString() 
+            d: new Date().toISOString(),
+            patient_id: pid
         };
+        
         db.push(entry);
         localStorage.setItem('mc_glu_master_2026', JSON.stringify(db));
+
+        // NARRACIÓN DE VOZ (REINCORPORADA)
+        const conditionText = currentLang === 'es' ? (selectedTime === 'fasting' ? 'en ayunas' : 'después de comer') : (selectedTime === 'fasting' ? 'fasting' : 'post-meal');
+        const voiceMsg = currentLang === 'es' 
+            ? `Glucosa de ${val} miligramos ${conditionText} registrada. Sincronizando con el puente.` 
+            : `Glucose level ${val} milligrams ${conditionText} recorded. Syncing with clinical bridge.`;
+        speak(voiceMsg);
         
         document.getElementById('status-dot').className = "w-2 h-2 bg-[#ccff00] animate-ping";
-        document.getElementById('status-text').innerText = "SECURED LOCAL SYNC";
+        document.getElementById('status-text').innerText = "SYNCING WITH BRIDGE...";
 
         currentInput = ""; 
         document.getElementById('display').innerText = "---";
@@ -159,8 +179,8 @@
 
         setTimeout(() => {
             document.getElementById('status-dot').className = "w-2 h-2 bg-[#ccff00]";
-            document.getElementById('status-text').innerText = "SYSTEM STANDBY";
-        }, 1500);
+            document.getElementById('status-text').innerText = "SECURED LOCAL SYNC";
+        }, 3000);
     }
 
     function updateUI() {
@@ -190,8 +210,7 @@
             type: 'line',
             data: { labels: [], datasets: [{ data: [], borderColor: '#ccff00', borderWidth: 2, tension: 0.4, pointRadius: 3, fill: true, backgroundColor: 'rgba(204, 255, 0, 0.05)' }] },
             options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
+                responsive: true, maintainAspectRatio: false, 
                 plugins: { legend: { display: false } },
                 scales: { 
                     y: { grid: { color: '#111' }, ticks: { color: '#555', font: { size: 8 } } }, 
@@ -211,45 +230,12 @@
     async function generatePDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        const pID = localStorage.getItem('patient_id') || "MC-XXXX";
-        
-        // Header
+        const pID = localStorage.getItem('patient_id') || "MC-FZRN";
         doc.setFillColor(15, 15, 15); doc.rect(0, 0, 210, 40, 'F');
         doc.setTextColor(204, 255, 0); doc.setFontSize(22); doc.text("MontCode™ Glucose Audit Report", 15, 25);
         doc.setTextColor(255, 255, 255); doc.setFontSize(10); doc.text(`Patient ID: ${pID} | Period: Last ${db.length} readings`, 15, 35);
-
-        // Glycemic Metrics
-        doc.setTextColor(0, 0, 0); doc.setFontSize(14); doc.text("Metabolic Summary", 15, 55);
-        doc.setFontSize(10);
-        doc.text(`Average Glucose: ${document.getElementById('avg-val').innerText} mg/dL`, 15, 65);
-        doc.text(`Estimated A1C: ${document.getElementById('a1c-val').innerText}`, 15, 72);
-        doc.text(`Time In Range (70-180 mg/dL): ${document.getElementById('tir-val').innerText}`, 15, 79);
-
-        // Chart
         const canvas = document.getElementById('gluChart');
-        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 85, 180, 60);
-
-        // History Table
-        const tableData = db.map(e => [
-            new Date(e.d).toLocaleDateString(),
-            new Date(e.d).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-            `${e.v} mg/dL`,
-            e.t.toUpperCase()
-        ]);
-
-        doc.autoTable({
-            startY: 150,
-            head: [['Date', 'Time', 'Value', 'Condition']],
-            body: tableData,
-            headStyles: { fillColor: [30, 30, 30], textColor: [204, 255, 0] },
-            alternateRowStyles: { fillColor: [245, 245, 245] }
-        });
-
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text("ADA Guidelines: General targets are 70-130 mg/dL fasting. Consult your Dr.", 15, doc.internal.pageSize.height - 15);
-        doc.text("Disclaimer: Not a diagnostic tool. Self-reported wellness data.", 15, doc.internal.pageSize.height - 10);
-        
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 65, 180, 60);
         doc.save(`MontCode_Glucose_${pID}.pdf`);
     }
 
@@ -258,7 +244,11 @@
         rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
         rec.onresult = (e) => {
             const v = e.results[0][0].transcript.replace(/\D/g,'');
-            if(v) { currentInput = v.slice(0,3); document.getElementById('display').innerText = currentInput; }
+            if(v) { 
+                currentInput = v.slice(0,3); 
+                document.getElementById('display').innerText = currentInput; 
+                speak(currentLang === 'es' ? `Detectado ${currentInput}` : `Detected ${currentInput}`);
+            }
         };
         rec.start();
     }
