@@ -13,63 +13,101 @@
         <div class="w-20 h-20 mx-auto mb-4 bg-zinc-900 rounded-full flex items-center justify-center border-2 border-zinc-800 overflow-hidden">
             <img src="logo.png.jpg" alt="Logo" class="w-full h-full object-cover">
         </div>
-        <h1 class="text-[#ccff00] text-2xl font-black italic tracking-tighter uppercase">Link to Provider</h1>
-        <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Scan your Doctor's Screen</p>
+        <h1 id="main-title" class="text-[#ccff00] text-2xl font-black italic tracking-tighter uppercase">Activate Kit</h1>
+        <p id="main-sub" class="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Scan Barcode 102*****</p>
     </div>
 
-    <div class="w-full max-w-sm aspect-square bg-zinc-900 rounded-[40px] border-2 border-zinc-800 overflow-hidden relative shadow-[0_0_50px_rgba(204,255,0,0.1)]">
+    <div id="scanner-container" class="w-full max-w-sm aspect-square bg-zinc-900 rounded-[40px] border-2 border-zinc-800 overflow-hidden relative shadow-[0_0_50px_rgba(204,255,0,0.1)]">
         <div id="reader" class="w-full h-full"></div>
         <div class="absolute inset-0 border-[40px] border-black/40 pointer-events-none"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-[#ccff00] rounded-3xl opacity-30 animate-pulse"></div>
+        <div id="scan-frame" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-white rounded-3xl opacity-30 animate-pulse"></div>
     </div>
 
-    <div id="result-box" class="mt-8 p-4 rounded-2xl bg-zinc-900 border border-zinc-800 w-full max-w-xs text-center hidden">
-        <p class="text-zinc-500 font-black text-[10px] uppercase mb-1">Provider Found</p>
-        <p id="provider-name" class="text-[#ccff00] font-mono text-xl font-bold italic tracking-widest">--</p>
+    <div id="result-box" class="hidden mt-8 p-6 rounded-[30px] bg-zinc-900 border border-zinc-800 w-full max-w-xs text-center">
+        <p id="result-label" class="text-zinc-500 font-black text-[10px] uppercase mb-1">Status</p>
+        <p id="result-value" class="text-[#ccff00] font-mono text-xl font-bold italic tracking-widest">--</p>
+        <button id="next-btn" onclick="goToNextStep()" class="mt-6 w-full bg-[#ccff00] text-black py-4 rounded-2xl font-black uppercase text-xs tracking-widest">Continue</button>
     </div>
-
-    <button id="confirm-btn" onclick="confirmLink()" class="hidden mt-8 bg-[#ccff00] text-black px-12 py-4 rounded-full font-black text-sm uppercase tracking-tighter active:scale-95 shadow-lg shadow-[#ccff00]/20">
-        Confirm Anchor
-    </button>
 
     <script>
-        let foundProviderID = "";
+        let step = "KIT"; // Pasos: KIT -> DOCTOR
+        let html5QrcodeScanner;
 
-        function onScanSuccess(decodedText, decodedResult) {
-            // El QR del Dr solo contiene el ID (ej: DR-X123)
-            if (decodedText.startsWith("DR-")) {
-                foundProviderID = decodedText;
-                
-                // Detener escáner
-                html5QrcodeScanner.clear();
-                
-                // Mostrar UI de confirmación
-                document.getElementById('result-box').classList.remove('hidden');
-                document.getElementById('provider-name').innerText = foundProviderID;
-                document.getElementById('confirm-btn').classList.remove('hidden');
-                
-                // Feedback háptico
-                if(navigator.vibrate) navigator.vibrate(100);
+        function startScanner() {
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 15, qrbox: 250 });
+            html5QrcodeScanner.render(onScanSuccess);
+        }
+
+        function onScanSuccess(decodedText) {
+            if (step === "KIT" && decodedText.startsWith("102")) {
+                handleKitActivation(decodedText);
+            } 
+            else if (step === "DOCTOR" && decodedText.startsWith("DR-")) {
+                handleDoctorLink(decodedText);
             }
         }
 
-        function confirmLink() {
-            localStorage.setItem('linked_provider_id', foundProviderID);
-            // Redirigir al dashboard del paciente o a BP
-            alert("Anchor Successful!");
-            window.location.href = "bp.html";
+        function handleKitActivation(serial) {
+            const expiry = new Date();
+            expiry.setDate(expiry.getDate() + 365);
+            
+            const data = { serial: serial, expiry: expiry.toISOString() };
+            localStorage.setItem('montcode_activation_data', JSON.stringify(data));
+            
+            vibrate();
+            html5QrcodeScanner.clear();
+            
+            showResult("Kit Validated", "365 DAYS ACTIVE", "#ccff00");
         }
 
-        const html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader", { fps: 10, qrbox: 250 }
-        );
-        html5QrcodeScanner.render(onScanSuccess);
+        function handleDoctorLink(drID) {
+            localStorage.setItem('linked_provider_id', drID);
+            
+            vibrate();
+            html5QrcodeScanner.clear();
+            
+            showResult("Doctor Linked", drID, "#00ccff");
+            document.getElementById('next-btn').innerText = "Finish & Start";
+        }
+
+        function showResult(label, value, color) {
+            document.getElementById('scanner-container').classList.add('hidden');
+            document.getElementById('result-box').classList.remove('hidden');
+            document.getElementById('result-label').innerText = label;
+            document.getElementById('result-value').innerText = value;
+            document.getElementById('result-value').style.color = color;
+        }
+
+        function goToNextStep() {
+            if (step === "KIT") {
+                step = "DOCTOR";
+                document.getElementById('main-title').innerText = "Link to Provider";
+                document.getElementById('main-sub').innerText = "Scan Doctor's Screen QR";
+                document.getElementById('scan-frame').style.borderColor = "#ccff00";
+                document.getElementById('result-box').classList.add('hidden');
+                document.getElementById('scanner-container').classList.remove('hidden');
+                startScanner();
+            } else {
+                window.location.href = "bp.html";
+            }
+        }
+
+        function vibrate() { if(navigator.vibrate) navigator.vibrate(100); }
+
+        // Iniciar al cargar
+        const check = JSON.parse(localStorage.getItem('montcode_activation_data'));
+        if (check) {
+            // Si ya tiene kit, saltar al paso del Doctor
+            step = "KIT"; 
+            goToNextStep();
+        } else {
+            startScanner();
+        }
     </script>
 
     <style>
-        #reader__scan_region video { object-fit: cover !important; }
-        #reader__dashboard { display: none; } /* Ocultar controles feos de la librería */
+        #reader__scan_region video { object-fit: cover !important; border-radius: 40px; }
+        #reader__dashboard { display: none; }
     </style>
 </body>
 </html>
-
