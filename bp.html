@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -85,9 +85,9 @@
     let chart;
     let currentLang = 'en';
 
-    // PUSHER CONFIG
-    const pusher = new Pusher('284fc98940a4b6d4c359', { cluster: 'us2' });
-    const channel = pusher.subscribe('blood-pressure');
+    // CONFIGURACIÓN PUSHER
+    const PUSHER_KEY = '284fc98940a4b6d4c359';
+    const PUSHER_CLUSTER = 'us2';
 
     window.onload = () => {
         initChart();
@@ -97,11 +97,38 @@
     };
 
     function checkBridge() {
-        const dr = localStorage.getItem('assigned_dr_id');
+        const dr = localStorage.getItem('assigned_dr_id') || "102001";
         const indicator = document.getElementById('bridge-indicator');
-        if(dr) {
-            indicator.innerText = `Bridge: Linked to DR-${dr}`;
-            indicator.classList.replace('text-zinc-600', 'text-blue-500');
+        indicator.innerText = `Bridge: Linked to DR-${dr}`;
+        indicator.classList.replace('text-zinc-600', 'text-blue-500');
+    }
+
+    // TRANSMISIÓN AL DASHBOARD DEL DR
+    async function transmitToDr(payload) {
+        const drId = localStorage.getItem('assigned_dr_id') || "102001";
+        const pId = localStorage.getItem('patient_id') || "PX-7788";
+        
+        const tacticalData = {
+            ...payload,
+            patient_id: pId,
+            target_dr: drId,
+            timestamp: new Date().toISOString()
+        };
+
+        try {
+            // Usamos el relay para que el Dr reciba la data en tiempo real
+            await fetch(`https://slingshot-relay.vercel.app/api/broadcast`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    channel: 'provider-' + drId,
+                    event: 'vital-update',
+                    data: tacticalData
+                })
+            });
+            console.log("Transmisión Exitosa");
+        } catch (e) {
+            console.error("Error de Transmisión", e);
         }
     }
 
@@ -144,20 +171,21 @@
         const s = parseInt(currentInput.slice(0,3));
         const d = parseInt(currentInput.slice(3,6));
         const medTaken = document.getElementById('med-toggle').classList.contains('active');
+        
         const entry = { 
+            type: 'bp',
+            val: `${s}/${d}`,
             sys: s, 
             dia: d, 
             med: medTaken, 
-            d: new Date().toISOString(),
-            pid: localStorage.getItem('patient_id') || "MC-GHOST",
-            dr: localStorage.getItem('assigned_dr_id') || "UNLINKED"
+            d: new Date().toISOString()
         };
 
         db.push(entry);
         localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
         
-        // TRANSMISIÓN POR EL TUBO
-        channel.trigger('client-bp-update', entry);
+        // TRANSMITIR AL DOCTOR
+        transmitToDr(entry);
 
         speakReading(s, d);
         currentInput = ""; 
@@ -230,26 +258,22 @@
         if (db.length === 0) return;
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        const pid = localStorage.getItem('patient_id') || "NOT_SET";
+        const pid = localStorage.getItem('patient_id') || "PX-7788";
         const date = new Date().toLocaleString();
 
-        // Estilo Médico
         doc.setFillColor(10, 10, 10); doc.rect(0, 0, 210, 45, 'F');
         doc.setTextColor(255, 255, 255); doc.setFontSize(20); doc.text("MONTCODE™ HEMODYNAMIC REPORT", 15, 25);
         doc.setFontSize(9); doc.text(`PATIENT ID: ${pid} | GENERATED: ${date}`, 15, 35);
 
-        // Resumen Clínico
         doc.setTextColor(0); doc.setFontSize(14); doc.text("Clinical Summary (Averages)", 15, 60);
         doc.setFontSize(11);
         doc.text(`AVG Pressure: ${document.getElementById('sys-val').innerText}/${document.getElementById('dia-val').innerText} mmHg`, 15, 70);
         doc.text(`AVG MAP (PAM): ${document.getElementById('map-val').innerText} mmHg`, 15, 77);
         doc.text(`Status: ${document.getElementById('bp-status').innerText}`, 15, 84);
 
-        // Gráfico
         const canvas = document.getElementById('bpChart');
         doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 95, 180, 60);
 
-        // Tabla de Datos Full
         doc.text("Reading Logs (Last 20)", 15, 170);
         let y = 180;
         doc.setFontSize(8);
