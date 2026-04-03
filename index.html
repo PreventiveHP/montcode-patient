@@ -111,22 +111,25 @@
     </footer>
 
     <script>
-        // Inicialización
         function initHub() {
-            // ID de Paciente
+            // Lógica de ID de Paciente (Prioriza kit activo)
             let pid = localStorage.getItem('patient_id');
-            if (!pid) {
+            const activation = JSON.parse(localStorage.getItem('montcode_activation_data'));
+            
+            if (activation && activation.pid) {
+                pid = activation.pid;
+                localStorage.setItem('patient_id', pid);
+            } else if (!pid) {
                 pid = "MC-" + Math.random().toString(36).substr(2, 4).toUpperCase();
                 localStorage.setItem('patient_id', pid);
             }
             document.getElementById('display-pid').innerText = pid;
 
             // Validación de Kit y Bloqueo
-            const activation = JSON.parse(localStorage.getItem('montcode_activation_data'));
             const daysUI = document.getElementById('days-left-ui');
             const glow = document.getElementById('status-glow');
 
-            if (activation) {
+            if (activation && activation.expiry) {
                 const diff = Math.ceil((new Date(activation.expiry) - new Date()) / (1000 * 60 * 60 * 24));
                 if (diff > 0) {
                     daysUI.innerText = `${diff}D Remaining`;
@@ -139,7 +142,7 @@
                 lockApp();
             }
 
-            // Iniciar Bridge
+            // Iniciar Bridge Seguro
             setupBridge(pid);
         }
 
@@ -149,21 +152,38 @@
             document.getElementById('tool-bp').classList.add('locked-tool');
             document.getElementById('tool-glucose').classList.add('locked-tool');
             document.getElementById('tool-food').classList.add('locked-tool');
+            document.getElementById('status-glow').className = "absolute -bottom-1 -right-1 w-4 h-4 bg-red-600 rounded-full border-2 border-black";
         }
 
         function setupBridge(pid) {
-            const pusher = new Pusher('284fc98940a4b6d4c359', { cluster: 'us2' });
-            const channel = pusher.subscribe('feedback-' + pid);
+            // Credenciales Pusher (us2)
+            const pusher = new Pusher('284fc98940a4b6d4c359', { 
+                cluster: 'us2',
+                forceTLS: true 
+            });
+
+            // Suscripción a canal PRIVADO (requerido para Client Events)
+            const channel = pusher.subscribe('private-feedback-' + pid);
             
-            channel.bind('new-message', function(data) {
+            // Escucha de evento CLIENT (sin pasar por servidor)
+            channel.bind('client-new-message', function(data) {
                 const box = document.getElementById('feedback-box');
                 const text = document.getElementById('feedback-text');
+                
                 text.innerText = data.message;
                 text.classList.remove('opacity-60', 'text-zinc-500');
                 text.classList.add('text-[#ccff00]', 'opacity-100');
+                
                 box.classList.remove('vital-pulse');
                 box.classList.add('border-[#ccff00]', 'shadow-[0_0_30px_rgba(204,255,0,0.2)]');
+                
+                // Feedback Háptico
                 if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                
+                // Anuncio por voz
+                const speech = new SpeechSynthesisUtterance(data.message);
+                speech.lang = 'es-US'; 
+                window.speechSynthesis.speak(speech);
             });
         }
 
