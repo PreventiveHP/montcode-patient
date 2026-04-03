@@ -6,6 +6,7 @@
     <title>MontCode™ Activation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
 </head>
 <body class="bg-black text-white min-h-screen flex flex-col items-center p-6 font-sans overflow-hidden">
 
@@ -43,6 +44,10 @@
     </footer>
 
     <script>
+        // TUS LLAVES ACTUALIZADAS
+        const PUSHER_KEY = '284fc98940a4b6d4c359';
+        const PUSHER_CLUSTER = 'us2';
+        
         let step = "KIT"; 
         let html5QrCode;
 
@@ -52,11 +57,7 @@
             const config = { fps: 20, qrbox: { width: 250, height: 250 } };
 
             try {
-                await html5QrCode.start(
-                    { facingMode: "environment" }, 
-                    config, 
-                    onScanSuccess
-                );
+                await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
             } catch (err) {
                 console.error("Camera access error:", err);
             }
@@ -66,21 +67,17 @@
             processLogic(decodedText);
         }
 
-        // LÓGICA DE PROCESAMIENTO (TUBO SEGURO)
         function processLogic(data) {
-            // Paso 1: Activar Tiempo (Enrolment) - Cualquier serial largo o que no sea DR
             if (step === "KIT") {
                 handleKitActivation(data);
-            } 
-            // Paso 2: Vincular con el Dr (El Tubo / Bridge)
-            else if (step === "DOCTOR") {
+            } else if (step === "DOCTOR") {
                 handleDoctorLink(data);
             }
         }
 
         function handleKitActivation(serial) {
             const expiry = new Date();
-            expiry.setDate(expiry.getDate() + 365); // 1 año de servicio
+            expiry.setDate(expiry.getDate() + 365); 
             
             localStorage.setItem('montcode_activation_data', JSON.stringify({
                 serial: serial, 
@@ -88,23 +85,28 @@
             }));
             
             vibrate();
-            html5QrCode.stop().then(() => {
-                showResult("Kit Validated", "365 DAYS ACTIVE", "#ccff00");
-                speak(document.body.dataset.lang === 'es' ? "Kit activado por 365 días" : "Kit activated for 365 days");
-            });
+            if(html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    showResult("Kit Validated", "365 DAYS ACTIVE", "#ccff00");
+                    speak("Kit activated");
+                });
+            }
         }
 
         function handleDoctorLink(drID) {
-            // AQUÍ SE CREA EL TUBO: Guardamos el ID del Dr como patient_id para que las Apps lo usen
-            localStorage.setItem('patient_id', drID); 
+            // AQUÍ VINCULAMOS AL PACIENTE CON EL DOCTOR
+            // drID debe ser un número (ej: 102001) que coincida con lo que el Dr busca
             localStorage.setItem('linked_provider_id', drID);
+            localStorage.setItem('patient_id', drID); // Lo usamos como ID de transmisión
             
             vibrate();
-            html5QrCode.stop().then(() => {
-                showResult("Bridge Connected", `ID: ${drID}`, "#ccff00");
-                document.getElementById('next-btn').innerText = "Finish & Start Hub";
-                speak(document.body.dataset.lang === 'es' ? "Enlace con el doctor establecido" : "Doctor bridge established");
-            });
+            if(html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    showResult("Bridge Connected", `ID: ${drID}`, "#ccff00");
+                    document.getElementById('next-btn').innerText = "Finish & Start Hub";
+                    speak("Doctor bridge established");
+                });
+            }
         }
 
         function showResult(label, value, color) {
@@ -125,10 +127,8 @@
                 document.getElementById('result-box').classList.add('hidden');
                 document.getElementById('scanner-container').classList.remove('hidden');
                 document.getElementById('btn-manual').classList.remove('hidden');
-                document.getElementById('manual-input').value = ""; // Limpiar para el ID del Dr
                 startScanner();
             } else {
-                // Finalizar y entrar al Hub principal
                 window.location.href = "index.html"; 
             }
         }
@@ -153,10 +153,8 @@
         window.onload = () => {
             const check = JSON.parse(localStorage.getItem('montcode_activation_data'));
             if (check) {
-                // Si el kit ya está activo, saltar directo a vincular Doctor
                 step = "DOCTOR";
                 document.getElementById('main-title').innerText = "Link Provider";
-                document.getElementById('main-sub').innerText = "Input the 6-digit Doctor Code";
             }
             startScanner();
         };
