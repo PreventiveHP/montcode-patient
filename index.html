@@ -4,8 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MontCode™ Patient Hub</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="logo.png.jpg">
+    <link rel="manifest" href="manifest.json">
+    
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <style>
         .neon-pulse { animation: neon-respiration 3s infinite ease-in-out; }
         @keyframes neon-respiration {
@@ -13,6 +20,10 @@
             50% { box-shadow: 0 0 25px rgba(204, 255, 0, 0.6); border-color: rgba(204, 255, 0, 1); }
         }
         .bg-grid { background-image: radial-gradient(circle, #1a1a1a 1px, transparent 1px); background-size: 30px 30px; }
+        
+        /* Bloqueo visual para botones inactivos */
+        .locked-tool { opacity: 0.4; filter: grayscale(1); pointer-events: none; position: relative; }
+        .locked-tool::after { content: '🔒'; position: absolute; top: 10px; right: 15px; font-size: 12px; }
     </style>
 </head>
 <body class="bg-black text-white min-h-screen flex flex-col p-6 font-sans bg-grid">
@@ -26,18 +37,21 @@
             </div>
         </div>
         <div class="text-right">
-            <div id="connection-dot" class="inline-block w-2 h-2 bg-[#ccff00] rounded-full mr-1"></div>
-            <span class="text-[9px] font-black uppercase text-zinc-500 tracking-tighter">Live Bridge</span>
+            <p id="days-left-ui" class="text-[8px] font-black text-[#ccff00] uppercase italic">Checking Kit...</p>
+            <div class="flex items-center justify-end gap-1">
+                <div id="connection-dot" class="w-1.5 h-1.5 bg-zinc-700 rounded-full"></div>
+                <span class="text-[8px] font-black uppercase text-zinc-500 tracking-tighter">Bridge</span>
+            </div>
         </div>
     </div>
 
     <div class="grid grid-cols-2 gap-4 mb-8">
-        <a href="bp.html" class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-[35px] flex flex-col items-center justify-center gap-3 active:scale-95 transition-all">
+        <a href="bp.html" id="tool-bp" class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-[35px] flex flex-col items-center justify-center gap-3 active:scale-95 transition-all">
             <span class="text-3xl">❤️</span>
             <span class="text-[10px] font-black uppercase tracking-widest text-zinc-400">Blood Pressure</span>
         </a>
 
-        <a href="glucose.html" class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-[35px] flex flex-col items-center justify-center gap-3 active:scale-95 transition-all">
+        <a href="glucose.html" id="tool-glucose" class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-[35px] flex flex-col items-center justify-center gap-3 active:scale-95 transition-all">
             <span class="text-3xl">🩸</span>
             <span class="text-[10px] font-black uppercase tracking-widest text-zinc-400">Glucose</span>
         </a>
@@ -47,14 +61,14 @@
             <span class="text-[10px] font-black uppercase tracking-widest text-zinc-400">Food Scan</span>
         </a>
 
-        <a href="activation.html" class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-[35px] flex flex-col items-center justify-center gap-3 active:scale-95 transition-all">
+        <a href="activation.html" class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-[35px] flex flex-col items-center justify-center gap-3 active:scale-95 transition-all ring-1 ring-[#ccff00]/20">
             <span class="text-3xl">⚙️</span>
-            <span class="text-[10px] font-black uppercase tracking-widest text-zinc-400">Sync Provider</span>
+            <span class="text-[10px] font-black uppercase tracking-widest text-[#ccff00]">Sync Kit</span>
         </a>
     </div>
 
     <div id="feedback-container" class="mt-auto">
-        <p class="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-3 ml-2">Provider Messages</p>
+        <p class="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-3 ml-2">Provider Feedback</p>
         <div id="feedback-box" class="bg-zinc-900 border-2 border-zinc-800 p-6 rounded-[40px] transition-all duration-1000 min-h-[100px] flex items-center justify-center">
             <p id="feedback-text" class="text-zinc-700 font-bold italic text-sm text-center uppercase tracking-tighter">
                 Awaiting Doctor's instructions...
@@ -63,33 +77,64 @@
     </div>
 
     <script>
-        // Cargar Datos Locales
-        const pid = localStorage.getItem('patient_id') || ("MC-" + Math.random().toString(36).substr(2, 4).toUpperCase());
-        localStorage.setItem('patient_id', pid); // Asegurar permanencia
-        document.getElementById('display-pid').innerText = pid;
+        // 1. Registro de Service Worker para Instalar App
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
 
-        const providerID = localStorage.getItem('linked_provider_id');
+        // 2. Lógica de Identidad y Bloqueo de Kit
+        function initApp() {
+            const pid = localStorage.getItem('patient_id') || ("MC-" + Math.random().toString(36).substr(2, 4).toUpperCase());
+            localStorage.setItem('patient_id', pid);
+            document.getElementById('display-pid').innerText = pid;
 
-        // Inicializar Pusher para escuchar al Dr.
-        const pusher = new Pusher('284fc98940a4b6d4c359', { cluster: 'us2' });
-        
-        // El paciente se suscribe a SU PROPIO canal para recibir feedback
-        const feedbackChannel = pusher.subscribe('feedback-' + pid);
-
-        feedbackChannel.bind('new-message', function(data) {
-            const box = document.getElementById('feedback-box');
-            const text = document.getElementById('feedback-text');
-
-            // Actualizar texto y aplicar efecto Neón "Latiendo"
-            text.innerText = data.message;
-            text.classList.remove('text-zinc-700');
-            text.classList.add('text-[#ccff00]');
-            box.classList.add('neon-pulse', 'border-[#ccff00]');
+            const activation = JSON.parse(localStorage.getItem('montcode_activation_data'));
+            const daysUI = document.getElementById('days-left-ui');
             
-            // Sonido o Vibración
-            if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
-        });
+            if (activation) {
+                const diff = Math.ceil((new Date(activation.expiry) - new Date()) / (1000 * 60 * 60 * 24));
+                if (diff > 0) {
+                    daysUI.innerText = `${diff}D Remaining`;
+                    daysUI.classList.add('text-[#ccff00]');
+                } else {
+                    lockMedicalTools();
+                }
+            } else {
+                lockMedicalTools();
+            }
+            
+            initBridge(pid);
+        }
+
+        function lockMedicalTools() {
+            document.getElementById('days-left-ui').innerText = "Kit Inactive";
+            document.getElementById('days-left-ui').className = "text-[8px] font-black text-red-600 uppercase italic";
+            document.getElementById('tool-bp').classList.add('locked-tool');
+            document.getElementById('tool-glucose').classList.add('locked-tool');
+        }
+
+        // 3. Puente de Feedback
+        function initBridge(pid) {
+            const pusher = new Pusher('284fc98940a4b6d4c359', { cluster: 'us2' });
+            const dot = document.getElementById('connection-dot');
+
+            const channel = pusher.subscribe('feedback-' + pid);
+            
+            pusher.connection.bind('connected', () => {
+                dot.className = "w-1.5 h-1.5 bg-[#ccff00] rounded-full shadow-[0_0_5px_#ccff00]";
+            });
+
+            channel.bind('new-message', function(data) {
+                const box = document.getElementById('feedback-box');
+                const text = document.getElementById('feedback-text');
+                text.innerText = data.message;
+                text.classList.replace('text-zinc-700', 'text-[#ccff00]');
+                box.classList.add('neon-pulse', 'border-[#ccff00]');
+                if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            });
+        }
+
+        window.onload = initApp;
     </script>
 </body>
 </html>
-
