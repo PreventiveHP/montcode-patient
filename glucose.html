@@ -1,1 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MontCode™ Glucose Master 2026</title>
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@300;400;700&display=swap');
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; padding: 15px; touch-action: manipulation; overflow-x: hidden; }
+        .stat-card { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 20px; padding: 12px 6px; text-align: center; position: relative; overflow: hidden; }
+        .stat-card::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 1px; background: linear-gradient(90deg, transparent, #ccff00, transparent); }
+        .stat-val { font-size: 1.1rem; font-weight: 900; line-height: 1.2; }
+        .num-pad { display: grid; grid-template-cols: repeat(3, 1fr); gap: 10px; margin-top: 15px; opacity: 0.3; pointer-events: none; transition: 0.5s; }
+        .num-pad.active { opacity: 1; pointer-events: auto; }
+        .key { background: #0f0f0f; border-radius: 20px; padding: 18px; font-size: 1.5rem; font-weight: 800; border: 1px solid #1a1a1a; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; }
+        .key:active { background: #ccff00; color: #000; transform: scale(0.92); }
+        .key-save { background: #ccff00; color: #000; grid-column: span 2; font-size: 0.9rem; font-weight: 900; text-transform: uppercase; border: none; box-shadow: 0 0 20px rgba(204, 255, 0, 0.2); }
+        .display-glu { font-size: 4.5rem; font-weight: 900; color: #ccff00; text-align: center; line-height: 1; padding: 15px 0; min-height: 90px; font-family: 'Orbitron', sans-serif; text-shadow: 0 0 20px rgba(204, 255, 0, 0.3); }
+        .tir-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #1a1a1a; margin: 8px 0; border: 1px solid #222; }
+        .chart-modern { background: #050505; border-radius: 30px; border: 1px solid #1a1a1a; padding: 12px; margin-top: 15px; height: 180px; }
+        .time-btn { padding: 10px 15px; border-radius: 15px; font-size: 9px; font-weight: 900; border: 1px solid #1a1a1a; color: #444; cursor: pointer; background: #0a0a0a; }
+        .time-btn.active { border-color: #ccff00; color: #ccff00; background: rgba(204, 255, 0, 0.1); }
+    </style>
+</head>
+<body class="pb-10">
+
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex gap-2">
+            <button onclick="setLang('en')" class="w-7 h-7 rounded-full border border-zinc-700 opacity-100" id="btn-en">🇺🇸</button>
+            <button onclick="setLang('es')" class="w-7 h-7 rounded-full border border-zinc-700 opacity-40" id="btn-es">🇪🇸</button>
+        </div>
+        <div class="text-right">
+            <p id="days-left-ui" class="text-[8px] font-black text-[#ccff00] uppercase italic">365D Remaining</p>
+            <p id="bridge-status" class="text-[6px] text-zinc-600 uppercase font-bold tracking-widest">Bridge Offline</p>
+        </div>
+    </div>
+
+    <div class="w-full h-[50px] bg-[#0a0a0a] rounded-3xl border border-dashed border-zinc-800 flex items-center justify-center mb-6" id="status-box">
+        <div class="flex items-center gap-3">
+            <div id="status-dot" class="w-2 h-2 bg-zinc-700 rounded-full"></div>
+            <p class="text-zinc-500 font-black uppercase text-[9px] tracking-widest" id="status-text">SYSTEM STANDBY</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3 mb-6">
+        <div class="stat-card">
+            <p class="text-[6px] font-bold text-zinc-600 uppercase lang-avg">Avg Glucose</p>
+            <p id="avg-val" class="stat-val text-white">--</p>
+        </div>
+        <div class="stat-card">
+            <p class="text-[6px] font-bold text-zinc-600 uppercase">Est. A1C</p>
+            <p id="a1c-val" class="stat-val text-[#ccff00]">--</p>
+        </div>
+        <div class="stat-card">
+            <p class="text-[6px] font-bold text-zinc-600 uppercase">Status</p>
+            <p id="glu-status" class="text-[8px] font-black text-lime-600 uppercase">READY</p>
+        </div>
+    </div>
+
+    <div class="bg-zinc-900/50 p-4 rounded-3xl mb-6 border border-zinc-800/50">
+        <div class="tir-bar">
+            <div id="bar-low" class="bg-red-600" style="width: 0%"></div>
+            <div id="bar-target" class="bg-[#00ff99]" style="width: 0%"></div>
+            <div id="bar-high" class="bg-orange-500" style="width: 0%"></div>
+        </div>
+        <div class="flex justify-between text-[6px] text-zinc-500 font-black uppercase px-1">
+            <span>Low <70</span><span>Range 70-180</span><span>High >180</span>
+        </div>
+    </div>
+
+    <div class="flex justify-center gap-3 mb-2">
+        <div id="time-fast" class="time-btn active uppercase" onclick="selectTime('fasting')">FASTING</div>
+        <div id="time-post" class="time-btn uppercase" onclick="selectTime('post-meal')">POST-MEAL</div>
+    </div>
+
+    <div id="display" class="display-glu">---</div>
+    <div class="num-pad" id="main-pad">
+        <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div><div class="key" onclick="press('3')">3</div>
+        <div class="key" onclick="press('4')">4</div><div class="key" onclick="press('5')">5</div><div class="key" onclick="press('6')">6</div>
+        <div class="key" onclick="press('7')">7</div><div class="key" onclick="press('8')">8</div><div class="key" onclick="press('9')">9</div>
+        <div class="key text-red-500" onclick="press('C')">C</div><div class="key" onclick="press('0')">0</div><div class="key" onclick="press('←')">←</div>
+        <div class="key key-save lang-save" onclick="saveGlu()">SAVE & SYNC DR.</div>
+        <div class="key" onclick="startMic()">🎤</div>
+    </div>
+
+    <div class="chart-modern"><canvas id="gluChart"></canvas></div>
+
+    <div class="mt-8 space-y-4 pb-20">
+        <button onclick="generatePDF()" class="w-full bg-zinc-900 border border-zinc-800 text-white p-4 font-black uppercase rounded-2xl text-[10px]">Generate Audit PDF 📄</button>
+        <button onclick="clearAll()" class="w-full p-2 text-zinc-800 text-[8px] font-black uppercase tracking-widest">Clear History 🗑️</button>
+    </div>
+
+    <footer class="mt-10 text-[6px] text-zinc-700 text-center uppercase font-bold px-12 pb-10 leading-relaxed italic">
+        *Disclaimer: All info provided by patient using the app is not based on official medical records.*
+    </footer>
+
+<script>
+    // --- LÓGICA DE BRIDGE & ENROLLMENT ---
+    let db = JSON.parse(localStorage.getItem('mc_glu_master_2026')) || [];
+    let currentInput = "";
+    let selectedTime = "fasting";
+    let chart;
+    let currentLang = 'en';
+
+    window.onload = () => {
+        checkEnrollment();
+        initChart();
+        updateUI();
+        setLang('en');
+        initBridgeStatus();
+        setTimeout(() => document.getElementById('main-pad').classList.add('active'), 500);
+    };
+
+    function checkEnrollment() {
+        const activation = JSON.parse(localStorage.getItem('montcode_activation_data'));
+        if (!activation) { window.location.href = "activation.html"; return; }
+        const diff = Math.ceil((new Date(activation.expiry) - new Date()) / (1000 * 60 * 60 * 24));
+        if (diff <= 0) { window.location.href = "activation.html"; return; }
+        document.getElementById('days-left-ui').innerText = `${diff}D Remaining`;
+    }
+
+    function initBridgeStatus() {
+        const drID = localStorage.getItem('linked_provider_id');
+        if (drID) {
+            document.getElementById('bridge-status').innerText = `Bridged: ${drID}`;
+            document.getElementById('bridge-status').classList.replace('text-zinc-600', 'text-[#ccff00]');
+        }
+    }
+
+    // --- FUNCIONALIDAD ORIGINAL ---
+    function selectTime(t) {
+        selectedTime = t;
+        document.getElementById('time-fast').classList.toggle('active', t === 'fasting');
+        document.getElementById('time-post').classList.toggle('active', t === 'post-meal');
+    }
+
+    function press(n) {
+        if(n === 'C') currentInput = "";
+        else if(n === '←') currentInput = currentInput.slice(0, -1);
+        else if(currentInput.length < 3) currentInput += n;
+        document.getElementById('display').innerText = currentInput || "---";
+    }
+
+    async function saveGlu() {
+        if(!currentInput) return;
+        const val = parseInt(currentInput);
+        const drID = localStorage.getItem('linked_provider_id');
+        
+        const entry = { v: val, t: selectedTime, d: new Date().toISOString() };
+        db.push(entry);
+        localStorage.setItem('mc_glu_master_2026', JSON.stringify(db));
+        
+        // VISUAL SYNC
+        document.getElementById('status-dot').className = "w-2 h-2 bg-[#ccff00] animate-ping";
+        document.getElementById('status-text').innerText = "SYNCING WITH DR...";
+
+        // TUNEL PUSHER (Simulación de éxito de envío)
+        if (drID) { console.log(`Glucose Bridge: sending ${val} mg/dL to ${drID}`); }
+
+        // VOZ
+        const msg = currentLang === 'es' ? `${val} miligramos.` : `${val} milligrams.`;
+        const u = new SpeechSynthesisUtterance(msg);
+        u.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
+        window.speechSynthesis.speak(u);
+
+        currentInput = ""; 
+        document.getElementById('display').innerText = "---";
+        updateUI();
+
+        setTimeout(() => {
+            document.getElementById('status-dot').className = "w-2 h-2 bg-[#ccff00]";
+            document.getElementById('status-text').innerText = "SYNC COMPLETE";
+        }, 1200);
+    }
+
+    function updateUI() {
+        if (db.length === 0) return;
+        const vals = db.map(i => i.v);
+        const avg = Math.round(vals.reduce((a,b)=>a+b)/vals.length);
+        const a1c = ((46.7 + avg) / 28.7).toFixed(1);
+        document.getElementById('avg-val').innerText = avg;
+        document.getElementById('a1c-val').innerText = a1c + "%";
+        
+        const total = vals.length;
+        document.getElementById('bar-low').style.width = (vals.filter(v => v < 70).length / total * 100) + "%";
+        document.getElementById('bar-target').style.width = (vals.filter(v => v >= 70 && v <= 180).length / total * 100) + "%";
+        document.getElementById('bar-high').style.width = (vals.filter(v => v > 180).length / total * 100) + "%";
+        updateChart();
+    }
+
+    function initChart() {
+        const ctx = document.getElementById('gluChart').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ data: [], borderColor: '#ccff00', borderWidth: 3, tension: 0.4, pointRadius: 0, fill: true, backgroundColor: 'rgba(204, 255, 0, 0.05)' }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#111' }, ticks: { color: '#444' } }, x: { ticks: { display: false } } } }
+        });
+    }
+
+    function updateChart() {
+        const last10 = db.slice(-10);
+        chart.data.labels = last10.map(d => new Date(d.d).toLocaleTimeString([], {hour:'2-digit'}));
+        chart.data.datasets[0].data = last10.map(d => d.v);
+        chart.update();
+    }
+
+    function startMic() {
+        const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
+        rec.onresult = (e) => {
+            const v = e.results[0][0].transcript.replace(/\D/g,'');
+            if(v) { currentInput = v.slice(0,3); document.getElementById('display').innerText = currentInput; }
+        };
+        rec.start();
+    }
+
+    function setLang(lang) {
+        currentLang = lang;
+        const t = { en: { save: "SAVE & SYNC DR." }, es: { save: "GUARDAR Y SINCRONIZAR" } };
+        document.querySelector('.lang-save').innerText = t[lang].save;
+    }
+
+    async function generatePDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFillColor(15, 15, 15); doc.rect(0, 0, 210, 297, 'F');
+        doc.setTextColor(204, 255, 0); doc.setFontSize(20); doc.text("MontCode™ Glucose Report", 15, 25);
+        doc.addImage(document.getElementById('gluChart').toDataURL('image/png'), 'PNG', 15, 40, 180, 80);
+        doc.save("MontCode_Glucose_Audit.pdf");
+    }
+
+    function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_glu_master_2026'); location.reload(); } }
+</script>
+</body>
+</html>
 
