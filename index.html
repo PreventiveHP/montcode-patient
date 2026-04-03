@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -29,6 +29,13 @@
             50% { opacity: 1; transform: scale(1.01); border-color: rgba(204, 255, 0, 0.4); box-shadow: 0 0 20px rgba(204, 255, 0, 0.1); }
         }
         .locked-tool { opacity: 0.2; filter: grayscale(1); pointer-events: none; }
+        
+        /* Animación para mensaje nuevo */
+        .new-message-alert { animation: alert-glow 1.5s infinite alternate; }
+        @keyframes alert-glow {
+            from { border-color: #ccff00; box-shadow: 0 0 10px #ccff00; }
+            to { border-color: #ffffff; box-shadow: 0 0 30px #ccff00; }
+        }
     </style>
 </head>
 <body class="bg-grid min-h-screen flex flex-col p-6">
@@ -73,11 +80,15 @@
     </div>
 
     <div id="feedback-container" class="mb-12">
-        <div class="flex items-center gap-2 mb-3 ml-2">
-            <div id="ping-indicator" class="w-1 h-1 bg-zinc-500 rounded-full"></div>
-            <p class="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-500">Provider Connection</p>
+        <div class="flex items-center justify-between mb-3 px-2">
+            <div class="flex items-center gap-2">
+                <div id="ping-indicator" class="w-1 h-1 bg-zinc-500 rounded-full"></div>
+                <p class="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-500">Provider Connection</p>
+            </div>
+            <p id="dr-active-name" class="text-[7px] font-bold text-zinc-600 uppercase tracking-widest">DR: NOT LINKED</p>
         </div>
-        <div id="feedback-box" class="glass-3d vital-pulse p-8 rounded-[45px] flex items-center justify-center min-h-[120px]">
+        
+        <div id="feedback-box" class="glass-3d vital-pulse p-8 rounded-[45px] flex items-center justify-center min-h-[140px] relative overflow-hidden">
             <p id="feedback-text" class="text-zinc-500 font-bold italic text-xs text-center uppercase tracking-tighter leading-tight opacity-60">
                 Awaiting Doctor's instructions...
             </p>
@@ -87,22 +98,24 @@
     <script>
         const PUSHER_KEY = '284fc98940a4b6d4c359';
         const PUSHER_CLUSTER = 'us2';
+        let currentPID = "";
 
         function initHub() {
-            // 1. Obtener PID
-            let pid = localStorage.getItem('patient_id');
+            // 1. Prioridad a ID de activación (ej. 102001)
             const activation = JSON.parse(localStorage.getItem('montcode_activation_data'));
+            let pid = localStorage.getItem('patient_id');
             
             if (activation && activation.pid) {
                 pid = activation.pid;
-                localStorage.setItem('patient_id', pid);
             } else if (!pid) {
                 pid = "MC-" + Math.random().toString(36).substr(2, 4).toUpperCase();
-                localStorage.setItem('patient_id', pid);
             }
+            
+            currentPID = pid;
+            localStorage.setItem('patient_id', pid);
             document.getElementById('display-pid').innerText = pid;
 
-            // 2. Validación de Kit
+            // 2. Validación de Kit y Bloqueo
             const daysUI = document.getElementById('days-left-ui');
             const glow = document.getElementById('status-glow');
 
@@ -111,15 +124,11 @@
                 if (diff > 0) {
                     daysUI.innerText = `${diff}D Remaining`;
                     glow.className = "absolute -bottom-1 -right-1 w-4 h-4 bg-[#ccff00] rounded-full border-2 border-black shadow-[0_0_10px_#ccff00]";
-                } else {
-                    lockApp();
-                }
-            } else {
-                lockApp();
-            }
+                } else { lockApp(); }
+            } else { lockApp(); }
 
-            // 3. Iniciar Bridge con Canal Público para evitar error de Auth
-            setupBridge(pid);
+            // 3. Iniciar Tubería de Feedback
+            setupFeedbackBridge(pid);
         }
 
         function lockApp() {
@@ -129,12 +138,10 @@
             document.getElementById('status-glow').className = "absolute -bottom-1 -right-1 w-4 h-4 bg-red-600 rounded-full border-2 border-black";
         }
 
-        function setupBridge(pid) {
+        function setupFeedbackBridge(pid) {
+            // Pusher modo receptor (Escucha su propio canal de feedback)
             const pusher = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER, forceTLS: true });
-
-            // USAMOS UN CANAL PÚBLICO para que funcione sin servidor de autenticación (Auth)
-            // El nombre del canal es 'feedback-ID' para que sea único para cada paciente
-            const channel = pusher.subscribe('feedback-' + pid);
+            const feedbackChannel = pusher.subscribe('feedback-' + pid);
             
             pusher.connection.bind('connected', () => {
                 document.getElementById('bridge-status').innerText = "Status: Bridge Ready";
@@ -142,27 +149,38 @@
                 document.getElementById('ping-indicator').classList.add('bg-[#ccff00]', 'animate-ping');
             });
 
-            // Escuchar el evento de feedback que envía el doctor
-            channel.bind('doctor-message', function(data) {
-                const box = document.getElementById('feedback-box');
-                const text = document.getElementById('feedback-text');
-                
-                text.innerText = data.message;
-                text.className = "text-[#ccff00] font-black italic text-sm text-center uppercase tracking-tighter leading-tight animate-bounce";
-                
-                box.classList.remove('vital-pulse');
-                box.style.borderColor = "#ccff00";
-                box.style.boxShadow = "0 0 40px rgba(204,255,0,0.3)";
-                
-                // Audio y Vibración
-                if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                const speech = new SpeechSynthesisUtterance(data.message);
-                speech.lang = 'en-US'; 
-                window.speechSynthesis.speak(speech);
+            // ESCUCHAR INSTRUCCIONES DEL DOCTOR
+            feedbackChannel.bind('doctor-message', function(data) {
+                console.log("Feedback recibido del Dr:", data);
+                displayFeedback(data.message, data.drName || "Provider");
             });
+        }
+
+        function displayFeedback(msg, drName) {
+            const box = document.getElementById('feedback-box');
+            const text = document.getElementById('feedback-text');
+            const drDisplay = document.getElementById('dr-active-name');
+            
+            // Actualizar UI
+            drDisplay.innerText = "DR: " + drName.toUpperCase();
+            text.innerText = msg;
+            
+            // Estilos de Alerta
+            text.className = "text-[#ccff00] font-black italic text-lg text-center uppercase tracking-tighter leading-tight animate-pulse";
+            box.classList.remove('vital-pulse');
+            box.classList.add('new-message-alert');
+            box.style.borderColor = "#ccff00";
+            
+            // Feedback Sensorial (Vibración y Voz)
+            if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            
+            const speech = new SpeechSynthesisUtterance(msg);
+            speech.lang = 'en-US';
+            speech.rate = 0.9; // Más lento para pacientes mayores
+            window.speechSynthesis.speak(speech);
         }
 
         window.onload = initHub;
     </script>
 </body>
-</html> 
+</html>
