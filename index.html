@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -22,25 +22,30 @@
         .bg-grid { background-image: radial-gradient(circle, #1a1a1a 1px, transparent 1px); background-size: 30px 30px; }
         
         /* Bloqueo visual para botones inactivos */
-        .locked-tool { opacity: 0.4; filter: grayscale(1); pointer-events: none; position: relative; }
-        .locked-tool::after { content: '🔒'; position: absolute; top: 10px; right: 15px; font-size: 12px; }
+        .locked-tool { opacity: 0.3; filter: grayscale(1); pointer-events: none; position: relative; cursor: not-allowed; }
+        .locked-tool::after { content: '🔒'; position: absolute; top: 10px; right: 15px; font-size: 10px; opacity: 0.5; }
     </style>
 </head>
 <body class="bg-black text-white min-h-screen flex flex-col p-6 font-sans bg-grid">
 
-    <div class="flex justify-between items-center mb-10">
-        <div class="flex items-center gap-3">
-            <img src="logo.png.jpg" class="w-10 h-10 rounded-full border border-zinc-800">
-            <div>
-                <h1 class="text-xs font-black uppercase tracking-widest text-zinc-500">Patient ID</h1>
+    <div class="flex flex-col items-center mb-10 text-center">
+        <img src="logo.png.jpg" class="w-16 h-16 rounded-full border-2 border-zinc-800 shadow-lg mb-3">
+        <h1 class="text-2xl font-black italic tracking-tighter text-white">MONTCODE™</h1>
+        <p class="text-[7px] font-bold tracking-[0.2em] text-[#ccff00] uppercase opacity-80">
+            Created by Providers • Tested by Patients • Trusted for Life
+        </p>
+        
+        <div class="mt-6 flex justify-between items-center w-full px-2">
+            <div class="text-left">
+                <h2 class="text-[8px] font-black uppercase tracking-widest text-zinc-500">Patient ID</h2>
                 <p id="display-pid" class="text-white font-mono text-sm font-bold">MC-XXXX</p>
             </div>
-        </div>
-        <div class="text-right">
-            <p id="days-left-ui" class="text-[8px] font-black text-[#ccff00] uppercase italic">Checking Kit...</p>
-            <div class="flex items-center justify-end gap-1">
-                <div id="connection-dot" class="w-1.5 h-1.5 bg-zinc-700 rounded-full"></div>
-                <span class="text-[8px] font-black uppercase text-zinc-500 tracking-tighter">Bridge</span>
+            <div class="text-right">
+                <p id="days-left-ui" class="text-[8px] font-black text-[#ccff00] uppercase italic">Checking Kit...</p>
+                <div class="flex items-center justify-end gap-1">
+                    <div id="connection-dot" class="w-1.5 h-1.5 bg-zinc-700 rounded-full"></div>
+                    <span class="text-[8px] font-black uppercase text-zinc-500 tracking-tighter">Bridge</span>
+                </div>
             </div>
         </div>
     </div>
@@ -56,68 +61,92 @@
             <span class="text-[10px] font-black uppercase tracking-widest text-zinc-400">Glucose</span>
         </a>
 
-        <a href="food.html" class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-[35px] flex flex-col items-center justify-center gap-3 active:scale-95 transition-all">
+        <a href="food.html" id="tool-food" class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-[35px] flex flex-col items-center justify-center gap-3 active:scale-95 transition-all">
             <span class="text-3xl">🥗</span>
             <span class="text-[10px] font-black uppercase tracking-widest text-zinc-400">Food Scan</span>
         </a>
 
-        <a href="activation.html" class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-[35px] flex flex-col items-center justify-center gap-3 active:scale-95 transition-all ring-1 ring-[#ccff00]/20">
+        <a href="javascript:void(0)" onclick="handleSyncClick()" id="tool-sync" class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-[35px] flex flex-col items-center justify-center gap-3 active:scale-95 transition-all ring-1 ring-[#ccff00]/20">
             <span class="text-3xl">⚙️</span>
             <span class="text-[10px] font-black uppercase tracking-widest text-[#ccff00]">Sync Kit</span>
         </a>
     </div>
 
-    <div id="feedback-container" class="mt-auto">
+    <div id="feedback-container" class="mb-8">
         <p class="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-3 ml-2">Provider Feedback</p>
         <div id="feedback-box" class="bg-zinc-900 border-2 border-zinc-800 p-6 rounded-[40px] transition-all duration-1000 min-h-[100px] flex items-center justify-center">
-            <p id="feedback-text" class="text-zinc-700 font-bold italic text-sm text-center uppercase tracking-tighter">
+            <p id="feedback-text" class="text-zinc-700 font-bold italic text-sm text-center uppercase tracking-tighter leading-tight">
                 Awaiting Doctor's instructions...
             </p>
         </div>
     </div>
 
+    <footer class="mt-auto px-2 pb-6 border-t border-zinc-900 pt-6 text-center">
+        <p class="text-[7px] text-zinc-600 leading-relaxed uppercase font-bold tracking-tighter">
+            DISCLAIMER: MontCode™ is a wellness assistant for personal data management. Not based on official medical records. Not intended for diagnosis or medical decisions. NEVER use for emergency contact or medical crises. Always consult your physician.
+        </p>
+    </footer>
+
     <script>
-        // 1. Registro de Service Worker para Instalar App
+        // 1. Registro de Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
         }
 
-        // 2. Lógica de Identidad y Bloqueo de Kit
+        // 2. Lógica de Identidad y Bloqueo
         function initApp() {
-            const pid = localStorage.getItem('patient_id') || ("MC-" + Math.random().toString(36).substr(2, 4).toUpperCase());
-            localStorage.setItem('patient_id', pid);
+            // Generar/Recuperar ID Único (Punto 1)
+            let pid = localStorage.getItem('patient_id');
+            if (!pid) {
+                pid = "MC-" + Math.random().toString(36).substr(2, 4).toUpperCase();
+                localStorage.setItem('patient_id', pid);
+            }
             document.getElementById('display-pid').innerText = pid;
 
             const activation = JSON.parse(localStorage.getItem('montcode_activation_data'));
             const daysUI = document.getElementById('days-left-ui');
             
+            // Lógica de bloqueo (Punto 3)
             if (activation) {
                 const diff = Math.ceil((new Date(activation.expiry) - new Date()) / (1000 * 60 * 60 * 24));
                 if (diff > 0) {
                     daysUI.innerText = `${diff}D Remaining`;
-                    daysUI.classList.add('text-[#ccff00]');
+                    daysUI.className = "text-[8px] font-black text-[#ccff00] uppercase italic";
+                    // Habilitados todos
                 } else {
-                    lockMedicalTools();
+                    lockTools();
                 }
             } else {
-                lockMedicalTools();
+                lockTools();
             }
             
             initBridge(pid);
         }
 
-        function lockMedicalTools() {
+        function lockTools() {
             document.getElementById('days-left-ui').innerText = "Kit Inactive";
             document.getElementById('days-left-ui').className = "text-[8px] font-black text-red-600 uppercase italic";
             document.getElementById('tool-bp').classList.add('locked-tool');
             document.getElementById('tool-glucose').classList.add('locked-tool');
+            document.getElementById('tool-food').classList.add('locked-tool'); // Bloqueo Food (Punto 3)
+        }
+
+        // 4. Fix de Cámara (Punto 4)
+        async function handleSyncClick() {
+            try {
+                // Solicitar permiso explícito antes de navegar
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                stream.getTracks().forEach(track => track.stop()); // Cerramos el stream de prueba
+                window.location.href = "activation.html";
+            } catch (err) {
+                alert("Camera Access Required. Please enable camera permissions in your settings to Sync your Kit.");
+            }
         }
 
         // 3. Puente de Feedback
         function initBridge(pid) {
             const pusher = new Pusher('284fc98940a4b6d4c359', { cluster: 'us2' });
             const dot = document.getElementById('connection-dot');
-
             const channel = pusher.subscribe('feedback-' + pid);
             
             pusher.connection.bind('connected', () => {
