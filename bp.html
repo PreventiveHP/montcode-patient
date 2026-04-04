@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -88,22 +88,57 @@
     // CONFIGURACIÓN PUSHER
     const PUSHER_KEY = '284fc98940a4b6d4c359';
     const PUSHER_CLUSTER = 'us2';
+    let pusher;
 
     window.onload = () => {
         initChart();
         updateUI();
         setLang('en');
-        checkBridge();
+        initPusherBridge(); // Iniciar el receptor táctico
     };
 
-    function checkBridge() {
-        const dr = localStorage.getItem('assigned_dr_id') || "102001";
+    // --- NUEVO: RECEPTOR TÁCTICO PUSHER ---
+    function initPusherBridge() {
+        const drId = localStorage.getItem('assigned_dr_id') || "102001";
         const indicator = document.getElementById('bridge-indicator');
-        indicator.innerText = `Bridge: Linked to DR-${dr}`;
-        indicator.classList.replace('text-zinc-600', 'text-blue-500');
+        
+        pusher = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER, forceTLS: true });
+
+        // Suscribirse al canal del doctor asignado
+        const channel = pusher.subscribe('provider-' + drId);
+
+        pusher.connection.bind('connected', () => {
+            indicator.innerText = `Bridge: Online & Linked to DR-${drId}`;
+            indicator.classList.replace('text-zinc-600', 'text-green-500');
+        });
+
+        // Escuchar actualizaciones remotas de BP
+        channel.bind('vital-update', (data) => {
+            if(data.type === 'bp') {
+                console.log("Remote BP Received:", data);
+                // Inyectar en la base de datos local
+                const remoteEntry = {
+                    type: 'bp',
+                    val: data.val,
+                    sys: data.sys,
+                    dia: data.dia,
+                    med: data.med || false,
+                    d: data.timestamp || new Date().toISOString()
+                };
+                db.push(remoteEntry);
+                localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
+                updateUI();
+                speakReading(data.sys, data.dia);
+            }
+        });
+
+        pusher.connection.bind('error', () => {
+            indicator.innerText = `Bridge: Connection Error`;
+            indicator.classList.replace('text-green-500', 'text-red-600');
+        });
     }
 
-    // TRANSMISIÓN AL DASHBOARD DEL DR
+    // TRANSMISIÓN AL DASHBOARD DEL DR (Emisor)
     async function transmitToDr(payload) {
         const drId = localStorage.getItem('assigned_dr_id') || "102001";
         const pId = localStorage.getItem('patient_id') || "PX-7788";
@@ -116,7 +151,6 @@
         };
 
         try {
-            // Usamos el relay para que el Dr reciba la data en tiempo real
             await fetch(`https://slingshot-relay.vercel.app/api/broadcast`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -183,10 +217,7 @@
 
         db.push(entry);
         localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
-        
-        // TRANSMITIR AL DOCTOR
         transmitToDr(entry);
-
         speakReading(s, d);
         currentInput = ""; 
         updateDisplay(); 
