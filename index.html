@@ -33,7 +33,7 @@
         .new-message-alert { 
             animation: alert-glow 1s infinite alternate; 
             border: 2px solid #ccff00 !important;
-            background: rgba(204, 255, 0, 0.05) !important;
+            background: rgba(204, 255, 0, 0.1) !important;
         }
         @keyframes alert-glow {
             from { box-shadow: 0 0 10px rgba(204, 255, 0, 0.2); }
@@ -98,30 +98,69 @@
         </div>
     </div>
 
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVIQ4S-w4Ag40uYuArW3o7Hw2XQwoQV7U",
+            databaseURL: "https://montcode-e02c7-default-rtdb.firebaseio.com",
+            projectId: "montcode-e02c7"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Función para procesar el mensaje (compartida)
+        window.processIncomingMessage = (messageText) => {
+            const box = document.getElementById('feedback-box');
+            const text = document.getElementById('feedback-text');
+            
+            text.innerText = messageText;
+            text.className = "text-[#ccff00] font-black italic text-sm text-center uppercase tracking-tighter leading-tight animate-pulse";
+            
+            box.classList.remove('vital-pulse');
+            box.classList.add('new-message-alert');
+            
+            if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            
+            const speech = new SpeechSynthesisUtterance(messageText);
+            speech.lang = 'en-US';
+            speech.rate = 0.9;
+            window.speechSynthesis.speak(speech);
+        };
+
+        // Escuchar en Firebase usando el ID del paciente
+        const pid = localStorage.getItem('patient_id');
+        if(pid) {
+            onValue(ref(db, `mensaje_dr/${pid}`), (snapshot) => {
+                const data = snapshot.val();
+                if(data && data.texto) {
+                    window.processIncomingMessage(data.texto);
+                }
+            });
+        }
+    </script>
+
     <script>
         const PUSHER_KEY = '284fc98940a4b6d4c359';
         const PUSHER_CLUSTER = 'us2';
 
         function initHub() {
-            // Cargar datos de activación (365 días)
             const activation = JSON.parse(localStorage.getItem('montcode_activation_data'));
             const assignedDr = localStorage.getItem('assigned_dr_id');
             let pid = localStorage.getItem('patient_id');
             
-            // Generar o recuperar ID único de paciente
             if (!pid) {
                 pid = "MC-" + Math.random().toString(36).substr(2, 4).toUpperCase();
                 localStorage.setItem('patient_id', pid);
             }
             document.getElementById('display-pid').innerText = pid;
 
-            // Mostrar Doctor si está asignado
             if(assignedDr) {
                 document.getElementById('dr-active-name').innerText = "UNIT: " + assignedDr;
                 document.getElementById('dr-active-name').classList.replace('text-zinc-600', 'text-[#ccff00]');
             }
 
-            // Lógica de expiración del Kit
             const daysUI = document.getElementById('days-left-ui');
             const glow = document.getElementById('status-glow');
 
@@ -132,8 +171,7 @@
                     glow.className = "absolute -bottom-1 -right-1 w-4 h-4 bg-[#ccff00] rounded-full border-2 border-black shadow-[0_0_10px_#ccff00]";
                 } else { lockApp(); }
             } else { 
-                // En modo desarrollo puedes comentar lockApp() para ver el diseño
-                lockApp(); 
+                // lockApp(); // Comentado para pruebas
             }
 
             setupFeedbackBridge(pid);
@@ -148,8 +186,6 @@
 
         function setupFeedbackBridge(pid) {
             const pusher = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER, forceTLS: true });
-            
-            // Suscribirse al canal personal del paciente
             const feedbackChannel = pusher.subscribe('feedback-' + pid);
             
             pusher.connection.bind('connected', () => {
@@ -159,26 +195,11 @@
                 document.getElementById('ping-indicator').classList.add('animate-ping');
             });
 
-            // RECIBIR MENSAJE DESDE EL DASHBOARD DEL DOCTOR
+            // Mantener soporte para Pusher también
             feedbackChannel.bind('doctor-message', function(data) {
-                const box = document.getElementById('feedback-box');
-                const text = document.getElementById('feedback-text');
-                
-                // Actualizar UI Táctica
-                text.innerText = data.message;
-                text.className = "text-[#ccff00] font-black italic text-sm text-center uppercase tracking-tighter leading-tight animate-pulse";
-                
-                box.classList.remove('vital-pulse');
-                box.classList.add('new-message-alert');
-                
-                // Feedback Háptico (Vibración)
-                if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
-                
-                // Conversión de Texto a Voz (Voice-Over)
-                const speech = new SpeechSynthesisUtterance(data.message);
-                speech.lang = 'en-US';
-                speech.rate = 0.9;
-                window.speechSynthesis.speak(speech);
+                if(data && data.message) {
+                    window.processIncomingMessage(data.message);
+                }
             });
         }
 
