@@ -84,207 +84,209 @@
         <button onclick="clearAll()" class="w-full p-2 text-zinc-800 text-[8px] font-black uppercase tracking-widest">Clear History 🗑️</button>
     </div>
 
-    <footer class="mt-10 text-[6px] text-zinc-700 text-center uppercase font-bold px-12 pb-10">
-        *Disclaimer: Patient-reported data. A1c estimation based on GMI standard formulas.*
-    </footer>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-<script>
-    let db = JSON.parse(localStorage.getItem('mc_glu_master_2026')) || [];
-    let currentInput = "";
-    let selectedTime = "fasting";
-    let chart;
-    let currentLang = 'en';
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVIQ4S-w4Ag40uYuArW3o7Hw2XQwoQV7U",
+            databaseURL: "https://montcode-e02c7-default-rtdb.firebaseio.com",
+            projectId: "montcode-e02c7"
+        };
 
-    // CONFIGURACIÓN PUSHER
-    const PUSHER_KEY = '284fc98940a4b6d4c359';
-    const PUSHER_CLUSTER = 'us2';
-    let pusher;
+        const app = initializeApp(firebaseConfig);
+        const db_firebase = getDatabase(app);
 
-    window.onload = () => {
-        initChart();
-        updateUI();
-        setLang('en');
-        initPusherBridge(); 
-    };
+        // Publicar la función de transmisión en el objeto window para que el HTML la vea
+        window.transmitToFirebase = async (val, mode) => {
+            const pId = localStorage.getItem('patient_id') || "102001";
+            try {
+                await set(ref(db_firebase, `mensaje_dr/${pId}`), {
+                    texto: `GLUCOSE: ${val} MG/DL (${mode.toUpperCase()})`,
+                    v: val,
+                    timestamp: Date.now(),
+                    provider: "PATIENT_GLU"
+                });
+                console.log("Firebase Tube: Sent");
+            } catch (e) { console.error("Firebase Error", e); }
+        };
+    </script>
 
-    // --- NUEVO: RECEPTOR TÁCTICO PUSHER ---
-    function initPusherBridge() {
-        const drId = localStorage.getItem('assigned_dr_id') || "102001";
-        const indicator = document.getElementById('bridge-status');
-        
-        pusher = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER, forceTLS: true });
-        const channel = pusher.subscribe('provider-' + drId);
+    <script>
+        let db = JSON.parse(localStorage.getItem('mc_glu_master_2026')) || [];
+        let currentInput = "";
+        let selectedTime = "fasting";
+        let chart;
+        let currentLang = 'en';
 
-        pusher.connection.bind('connected', () => {
-            indicator.innerText = `Bridge: Active & Linked DR-${drId}`;
-            indicator.classList.replace('text-zinc-600', 'text-[#ccff00]');
-        });
+        const PUSHER_KEY = '284fc98940a4b6d4c359';
+        const PUSHER_CLUSTER = 'us2';
+        let pusher;
 
-        channel.bind('vital-update', (data) => {
-            // Solo procesar si el tipo es glucose
-            if(data.type === 'glucose') {
-                console.log("Remote Glucose Received:", data);
-                const remoteEntry = {
-                    type: 'glucose',
-                    v: parseInt(data.v),
-                    val: `${data.v} mg/dL`,
-                    t: data.t || 'remote',
-                    d: data.timestamp || new Date().toISOString()
-                };
-                db.push(remoteEntry);
-                localStorage.setItem('mc_glu_master_2026', JSON.stringify(db));
-                updateUI();
-                speakValue(remoteEntry.v);
-            }
-        });
+        window.onload = () => {
+            initChart();
+            updateUI();
+            setLang('en');
+            initPusherBridge(); 
+        };
 
-        pusher.connection.bind('error', () => {
-            indicator.innerText = `Bridge: Offline/Error`;
-            indicator.classList.replace('text-[#ccff00]', 'text-red-500');
-        });
-    }
-
-    async function transmitToDr(payload) {
-        const drId = localStorage.getItem('assigned_dr_id') || "102001";
-        const pId = localStorage.getItem('patient_id') || "PX-7788";
-        const tacticalData = { ...payload, patient_id: pId, target_dr: drId, timestamp: new Date().toISOString() };
-
-        try {
-            await fetch(`https://slingshot-relay.vercel.app/api/broadcast`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ channel: 'provider-' + drId, event: 'vital-update', data: tacticalData })
+        function initPusherBridge() {
+            const drId = localStorage.getItem('assigned_dr_id') || "102001";
+            const indicator = document.getElementById('bridge-status');
+            pusher = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER, forceTLS: true });
+            pusher.connection.bind('connected', () => {
+                indicator.innerText = `Bridge: Active & Linked DR-${drId}`;
+                indicator.classList.replace('text-zinc-600', 'text-[#ccff00]');
             });
-        } catch (e) { console.error("Transmission Error", e); }
-    }
+        }
 
-    function selectTime(t) {
-        selectedTime = t;
-        document.getElementById('time-fast').classList.toggle('active', t === 'fasting');
-        document.getElementById('time-post').classList.toggle('active', t === 'post-meal');
-    }
+        async function transmitToDr(payload) {
+            const drId = localStorage.getItem('assigned_dr_id') || "102001";
+            const pId = localStorage.getItem('patient_id') || "102001";
+            const tacticalData = { ...payload, patient_id: pId, target_dr: drId, timestamp: new Date().toISOString() };
 
-    function press(n) {
-        if(n === 'C') currentInput = "";
-        else if(n === '←') currentInput = currentInput.slice(0, -1);
-        else if(currentInput.length < 3) currentInput += n;
-        document.getElementById('display').innerText = currentInput || "---";
-    }
+            // Envío por Relay (Pusher)
+            try {
+                fetch(`https://slingshot-relay.vercel.app/api/broadcast`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channel: 'provider-' + drId, event: 'vital-update', data: tacticalData })
+                });
+            } catch (e) { console.error("Relay Error", e); }
 
-    function saveGlu() {
-        if(!currentInput) return;
-        const val = parseInt(currentInput);
-        const entry = { 
-            type: 'glucose',
-            v: val, 
-            val: `${val} mg/dL`,
-            t: selectedTime, 
-            d: new Date().toISOString()
-        };
-        db.push(entry);
-        localStorage.setItem('mc_glu_master_2026', JSON.stringify(db));
-        transmitToDr(entry);
-        speakValue(val);
-        currentInput = ""; 
-        document.getElementById('display').innerText = "---";
-        updateUI();
-    }
+            // Envío por Firebase (Tubo redundante)
+            if (window.transmitToFirebase) {
+                window.transmitToFirebase(payload.v, payload.t);
+            }
+        }
 
-    function speakValue(val) {
-        let msg = currentLang === 'es' ? `${val} miligramos.` : `${val} milligrams.`;
-        if(val < 70) msg += (currentLang === 'es' ? " Alerta: Glucosa baja." : " Alert: Low glucose.");
-        const u = new SpeechSynthesisUtterance(msg);
-        u.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
-        window.speechSynthesis.speak(u);
-    }
+        function selectTime(t) {
+            selectedTime = t;
+            document.getElementById('time-fast').classList.toggle('active', t === 'fasting');
+            document.getElementById('time-post').classList.toggle('active', t === 'post-meal');
+        }
 
-    function updateUI() {
-        if (db.length === 0) return;
-        const vals = db.map(i => i.v);
-        const avg = Math.round(vals.reduce((a,b)=>a+b)/vals.length);
-        const a1c = ((46.7 + avg) / 28.7).toFixed(1);
-        const total = vals.length;
-        const inRange = vals.filter(v => v >= 70 && v <= 180).length;
-        const tir = Math.round((inRange / total) * 100);
+        function press(n) {
+            if(n === 'C') currentInput = "";
+            else if(n === '←') currentInput = currentInput.slice(0, -1);
+            else if(currentInput.length < 3) currentInput += n;
+            document.getElementById('display').innerText = currentInput || "---";
+        }
 
-        document.getElementById('avg-val').innerText = avg;
-        document.getElementById('a1c-val').innerText = a1c + "%";
-        document.getElementById('tir-val').innerText = tir + "%";
-        
-        document.getElementById('bar-low').style.width = (vals.filter(v => v < 70).length / total * 100) + "%";
-        document.getElementById('bar-target').style.width = (inRange / total * 100) + "%";
-        document.getElementById('bar-high').style.width = (vals.filter(v => v > 180).length / total * 100) + "%";
-        updateChart();
-    }
+        function saveGlu() {
+            if(!currentInput) return;
+            const val = parseInt(currentInput);
+            const entry = { 
+                type: 'glucose',
+                v: val, 
+                val: `${val} mg/dL`,
+                t: selectedTime, 
+                d: new Date().toISOString()
+            };
+            db.push(entry);
+            localStorage.setItem('mc_glu_master_2026', JSON.stringify(db));
+            transmitToDr(entry);
+            speakValue(val);
+            currentInput = ""; 
+            document.getElementById('display').innerText = "---";
+            updateUI();
+        }
 
-    function initChart() {
-        const ctx = document.getElementById('gluChart').getContext('2d');
-        chart = new Chart(ctx, {
-            type: 'line',
-            data: { labels: [], datasets: [{ data: [], borderColor: '#ccff00', borderWidth: 3, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#ccff00', fill: true, backgroundColor: 'rgba(204, 255, 0, 0.05)' }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#111' }, ticks: { color: '#444', font: { size: 9 } } }, x: { ticks: { color: '#444', font: { size: 8 } } } } }
-        });
-    }
+        function speakValue(val) {
+            let msg = currentLang === 'es' ? `${val} miligramos.` : `${val} milligrams.`;
+            if(val < 70) msg += (currentLang === 'es' ? " Alerta: Glucosa baja." : " Alert: Low glucose.");
+            const u = new SpeechSynthesisUtterance(msg);
+            u.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
+            window.speechSynthesis.speak(u);
+        }
 
-    function updateChart() {
-        const last12 = db.slice(-12);
-        chart.data.labels = last12.map(d => new Date(d.d).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
-        chart.data.datasets[0].data = last12.map(d => d.v);
-        chart.update();
-    }
+        function updateUI() {
+            if (db.length === 0) return;
+            const vals = db.map(i => i.v);
+            const avg = Math.round(vals.reduce((a,b)=>a+b)/vals.length);
+            const a1c = ((46.7 + avg) / 28.7).toFixed(1);
+            const total = vals.length;
+            const inRange = vals.filter(v => v >= 70 && v <= 180).length;
+            const tir = Math.round((inRange / total) * 100);
 
-    async function generatePDF() {
-        if (db.length === 0) return;
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const pid = localStorage.getItem('patient_id') || 'PX-7788';
-        doc.setFillColor(15, 15, 15); doc.rect(0, 0, 210, 45, 'F');
-        doc.setTextColor(204, 255, 0); doc.setFontSize(22); doc.text("MONTCODE™ GLUCOSE AUDIT", 15, 25);
-        doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.text(`PATIENT ID: ${pid} | DATE: ${new Date().toLocaleString()}`, 15, 35);
-        doc.setTextColor(0); doc.setFontSize(14); doc.text("Metabolic Trend Summary", 15, 60);
-        doc.setFontSize(11);
-        doc.text(`Estimated A1C (GMI): ${document.getElementById('a1c-val').innerText}`, 15, 70);
-        doc.text(`Time In Range (TIR): ${document.getElementById('tir-val').innerText}`, 15, 77);
-        doc.text(`Average Glucose: ${document.getElementById('avg-val').innerText} mg/dL`, 15, 84);
-        const canvas = document.getElementById('gluChart');
-        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 95, 180, 60);
-        doc.text("Clinical Log (Last 25 Entries)", 15, 170);
-        let y = 180;
-        doc.setFontSize(8); doc.setFont("courier", "bold");
-        doc.text("TIMESTAMP           | VALUE | MODE       | STATUS", 15, y);
-        doc.line(15, y+2, 195, y+2); y += 8;
-        db.slice(-25).reverse().forEach(log => {
-            if(y > 280) { doc.addPage(); y = 20; }
-            const logDate = new Date(log.d).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
-            const status = log.v < 70 ? "LOW" : (log.v > 180 ? "HIGH" : "TARGET");
-            doc.text(`${logDate.padEnd(20)} | ${log.v.toString().padEnd(5)} | ${log.t.toUpperCase().padEnd(10)} | ${status}`, 15, y);
-            y += 6;
-        });
-        doc.setFontSize(7); doc.setTextColor(150);
-        doc.text("*This report is a clinical tool for auditing patient self-entry. Not for diagnostic use.*", 15, 290);
-        doc.save(`MontCode_Glucose_Report_${pid}.pdf`);
-    }
+            document.getElementById('avg-val').innerText = avg;
+            document.getElementById('a1c-val').innerText = a1c + "%";
+            document.getElementById('tir-val').innerText = tir + "%";
+            
+            document.getElementById('bar-low').style.width = (vals.filter(v => v < 70).length / total * 100) + "%";
+            document.getElementById('bar-target').style.width = (inRange / total * 100) + "%";
+            document.getElementById('bar-high').style.width = (vals.filter(v => v > 180).length / total * 100) + "%";
+            updateChart();
+        }
 
-    function setLang(lang) {
-        currentLang = lang;
-        const t = { en: { avg: "Avg Glucose", save: "SAVE & TRANSMIT", fast: "FASTING", post: "POST-MEAL" }, es: { avg: "Promedio", save: "GUARDAR Y ENVIAR", fast: "AYUNAS", post: "POST-COMIDA" } }[lang];
-        document.querySelector('.lang-avg').innerText = t.avg;
-        document.querySelector('.lang-save').innerText = t.save;
-        document.getElementById('time-fast').innerText = t.fast;
-        document.getElementById('time-post').innerText = t.post;
-    }
+        function initChart() {
+            const ctx = document.getElementById('gluChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [{ data: [], borderColor: '#ccff00', borderWidth: 3, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#ccff00', fill: true, backgroundColor: 'rgba(204, 255, 0, 0.05)' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#111' }, ticks: { color: '#444', font: { size: 9 } } }, x: { ticks: { color: '#444', font: { size: 8 } } } } }
+            });
+        }
 
-    function startMic() {
-        const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
-        rec.onresult = (e) => {
-            const v = e.results[0][0].transcript.replace(/\D/g,'');
-            if(v) { currentInput = v.slice(0,3); document.getElementById('display').innerText = currentInput; }
-        };
-        rec.start();
-    }
+        function updateChart() {
+            const last12 = db.slice(-12);
+            chart.data.labels = last12.map(d => new Date(d.d).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+            chart.data.datasets[0].data = last12.map(d => d.v);
+            chart.update();
+        }
 
-    function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_glu_master_2026'); location.reload(); } }
-</script>
+        async function generatePDF() {
+            if (db.length === 0) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const pid = localStorage.getItem('patient_id') || 'PX-7788';
+            doc.setFillColor(15, 15, 15); doc.rect(0, 0, 210, 45, 'F');
+            doc.setTextColor(204, 255, 0); doc.setFontSize(22); doc.text("MONTCODE™ GLUCOSE AUDIT", 15, 25);
+            doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.text(`PATIENT ID: ${pid} | DATE: ${new Date().toLocaleString()}`, 15, 35);
+            doc.setTextColor(0); doc.setFontSize(14); doc.text("Metabolic Trend Summary", 15, 60);
+            doc.setFontSize(11);
+            doc.text(`Estimated A1C (GMI): ${document.getElementById('a1c-val').innerText}`, 15, 70);
+            doc.text(`Time In Range (TIR): ${document.getElementById('tir-val').innerText}`, 15, 77);
+            doc.text(`Average Glucose: ${document.getElementById('avg-val').innerText} mg/dL`, 15, 84);
+            const canvas = document.getElementById('gluChart');
+            doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 95, 180, 60);
+            doc.text("Clinical Log (Last 25 Entries)", 15, 170);
+            let y = 180;
+            doc.setFontSize(8); doc.setFont("courier", "bold");
+            doc.text("TIMESTAMP           | VALUE | MODE       | STATUS", 15, y);
+            doc.line(15, y+2, 195, y+2); y += 8;
+            db.slice(-25).reverse().forEach(log => {
+                if(y > 280) { doc.addPage(); y = 20; }
+                const logDate = new Date(log.d).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+                const status = log.v < 70 ? "LOW" : (log.v > 180 ? "HIGH" : "TARGET");
+                doc.text(`${logDate.padEnd(20)} | ${log.v.toString().padEnd(5)} | ${log.t.toUpperCase().padEnd(10)} | ${status}`, 15, y);
+                y += 6;
+            });
+            doc.setFontSize(7); doc.setTextColor(150);
+            doc.text("*This report is a clinical tool for auditing patient self-entry. Not for diagnostic use.*", 15, 290);
+            doc.save(`MontCode_Glucose_Report_${pid}.pdf`);
+        }
+
+        function setLang(lang) {
+            currentLang = lang;
+            const t = { en: { avg: "Avg Glucose", save: "SAVE & TRANSMIT", fast: "FASTING", post: "POST-MEAL" }, es: { avg: "Promedio", save: "GUARDAR Y ENVIAR", fast: "AYUNAS", post: "POST-COMIDA" } }[lang];
+            document.querySelector('.lang-avg').innerText = t.avg;
+            document.querySelector('.lang-save').innerText = t.save;
+            document.getElementById('time-fast').innerText = t.fast;
+            document.getElementById('time-post').innerText = t.post;
+        }
+
+        function startMic() {
+            const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
+            rec.onresult = (e) => {
+                const v = e.results[0][0].transcript.replace(/\D/g,'');
+                if(v) { currentInput = v.slice(0,3); document.getElementById('display').innerText = currentInput; }
+            };
+            rec.start();
+        }
+
+        function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_glu_master_2026'); location.reload(); } }
+    </script>
 </body>
 </html>
