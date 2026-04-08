@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -12,7 +12,7 @@
         .num-pad { display: grid; grid-template-cols: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
         .key { background: #111; border-radius: 20px; padding: 22px; font-size: 1.6rem; font-weight: 800; border: 1px solid #222; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .key:active { background: #222; transform: scale(0.95); }
-        .key-save { background: #3b82f6; color: #fff; grid-column: span 2; font-size: 1rem; }
+        .key-save { background: #3b82f6; color: #fff; grid-column: span 2; font-size: 1rem; font-weight: 900; }
         .display-bp { font-size: 5rem; font-weight: 900; color: #3b82f6; text-align: center; line-height: 1; padding: 15px 0; min-height: 100px; }
         .chart-modern { background: #050505; border-radius: 30px; border: 1px solid #1a1a1a; padding: 15px; margin-top: 20px; height: 200px; }
         .status-banner { width: 100%; height: 50px; background: #0a0a0a; border-radius: 20px; border: 1px dashed #333; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; }
@@ -40,22 +40,31 @@
         <div class="key" onclick="press('7')">7</div><div class="key" onclick="press('8')">8</div><div class="key" onclick="press('9')">9</div>
         <div class="key text-red-600" onclick="press('C')">C</div><div class="key" onclick="press('0')">0</div><div class="key" onclick="press('←')">←</div>
         
-        <div class="key key-save" onclick="saveBP()">SAVE BP READING</div>
-        <div class="key" onclick="location.href='vinculacion.html'">📲</div>
+        <div class="key key-save" onclick="saveBP()">SAVE & TRANSMIT</div>
+        <div class="key" onclick="location.href='activation.html'">📲</div>
     </div>
 
     <div class="chart-modern">
         <canvas id="bpChart"></canvas>
     </div>
 
-<script>
-    let db = JSON.parse(localStorage.getItem('mc_bp_master_2026')) || [];
-    let currentInput = "";
-    let lastSyncTime = 0;
+<script type="module">
+    // --- INTEGRACIÓN FIREBASE ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // --- 1. FUNCIÓN DE TRANSMISIÓN (EL PUENTE) ---
-    async function transmitToHub(sys, dia) {
-        const bridgeUrl = 'https://montcode-provider.vercel.app/api/hub';
+    const firebaseConfig = {
+        apiKey: "AIzaSyDVIQ4S-w4Ag40uYuArW3o7Hw2XQwoQV7U",
+        databaseURL: "https://montcode-e02c7-default-rtdb.firebaseio.com",
+        projectId: "montcode-e02c7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db_fire = getDatabase(app);
+
+    // Hacer la función de transmisión accesible globalmente
+    window.transmitToFirebase = async (sys, dia) => {
+        const pId = localStorage.getItem('patient_id') || "102001";
         const statusText = document.getElementById('status-text');
         const statusDot = document.getElementById('status-dot');
 
@@ -63,34 +72,31 @@
         statusDot.className = "w-2 h-2 bg-yellow-500 animate-pulse";
 
         try {
-            const response = await fetch(bridgeUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sys: sys,
-                    dia: dia,
-                    provider: "MANUEL_MONT",
-                    timestamp: Date.now()
-                })
+            await set(ref(db_fire, `mensaje_dr/${pId}`), {
+                sys: sys,
+                dia: dia,
+                texto: `BP REPORT: ${sys}/${dia} mmHg`,
+                timestamp: Date.now(),
+                provider: "PATIENT_BP" // Identificador para la consola del Dr
             });
-
-            if(response.ok) {
-                statusText.innerText = "BRIDGE SYNCED ✅";
-                statusDot.className = "w-2 h-2 bg-green-500";
-                setTimeout(resetStatus, 3000);
-            }
-        } catch(e) {
-            statusText.innerText = "LINK ERROR - SAVED LOCAL";
+            
+            statusText.innerText = "BRIDGE SYNCED ✅";
+            statusDot.className = "w-2 h-2 bg-green-500";
+            setTimeout(() => {
+                statusText.innerText = "BRIDGE ACTIVE";
+                statusDot.className = "w-2 h-2 bg-blue-500";
+            }, 3000);
+        } catch (e) {
+            statusText.innerText = "LINK ERROR";
             statusDot.className = "w-2 h-2 bg-red-500";
         }
-    }
+    };
+</script>
 
-    function resetStatus() {
-        document.getElementById('status-text').innerText = "BRIDGE ACTIVE";
-        document.getElementById('status-dot').className = "w-2 h-2 bg-blue-500";
-    }
+<script>
+    let db = JSON.parse(localStorage.getItem('mc_bp_master_2026')) || [];
+    let currentInput = "";
 
-    // --- 2. LÓGICA DE GUARDADO ---
     function saveBP() {
         if(currentInput.length < 5) {
             alert("Enter full reading (e.g. 12080)");
@@ -100,22 +106,20 @@
         const s = parseInt(currentInput.slice(0,3));
         const d = parseInt(currentInput.slice(3));
         
-        // Guardar localmente
+        // 1. Guardar local
         db.push({ sys: s, dia: d, d: new Date().toISOString() });
         localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
         
-        // INTEGRACIÓN: Lanzar la data al Hub de Vercel
-        transmitToHub(s, d);
+        // 2. Transmitir (Llama a la función del módulo superior)
+        if (window.transmitToFirebase) {
+            window.transmitToFirebase(s, d);
+        }
         
-        // Feedback auditivo (Triage Speak)
         speakBP(s, d);
-        
-        // Reset UI
         currentInput = ""; 
         updateDisplay();
     }
 
-    // --- FUNCIONES AUXILIARES DE TECLADO ---
     function press(n) {
         if(n === 'C') currentInput = "";
         else if(n === '←') currentInput = currentInput.slice(0, -1);
@@ -141,4 +145,3 @@
 
 </body>
 </html>
-
