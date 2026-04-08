@@ -19,7 +19,7 @@
         .display-glu { font-size: 5rem; font-weight: 900; color: #ccff00; text-align: center; line-height: 1; padding: 15px 0; font-family: 'Orbitron', sans-serif; }
         .tir-bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: #111; margin: 10px 0; border: 1px solid #222; }
         .chart-modern { background: #050505; border-radius: 24px; border: 1px solid #1a1a1a; padding: 12px; height: 180px; }
-        .time-btn { padding: 10px; border-radius: 12px; font-size: 9px; font-weight: 900; border: 1px solid #1a1a1a; color: #444; cursor: pointer; text-align: center; }
+        .time-btn { padding: 10px; border-radius: 12px; font-size: 9px; font-weight: 900; border: 1px solid #1a1a1a; color: #444; cursor: pointer; text-align: center; width: 100px; }
         .time-btn.active { border-color: #ccff00; color: #ccff00; background: rgba(204, 255, 0, 0.1); }
     </style>
 </head>
@@ -97,7 +97,7 @@
         const app = initializeApp(firebaseConfig);
         const db_firebase = getDatabase(app);
 
-        // Publicar la función de transmisión en el objeto window para que el HTML la vea
+        // TRANSMISIÓN FILTRADA: Para que el Dashboard lo vea pero la App del Paciente no lo "eco"
         window.transmitToFirebase = async (val, mode) => {
             const pId = localStorage.getItem('patient_id') || "102001";
             try {
@@ -105,9 +105,9 @@
                     texto: `GLUCOSE: ${val} MG/DL (${mode.toUpperCase()})`,
                     v: val,
                     timestamp: Date.now(),
-                    provider: "PATIENT_GLU"
+                    provider: "PATIENT_GLU" // IDENTIFICADOR CLAVE
                 });
-                console.log("Firebase Tube: Sent");
+                console.log("Firebase Tube: Sent to Doctor");
             } catch (e) { console.error("Firebase Error", e); }
         };
     </script>
@@ -145,7 +145,7 @@
             const pId = localStorage.getItem('patient_id') || "102001";
             const tacticalData = { ...payload, patient_id: pId, target_dr: drId, timestamp: new Date().toISOString() };
 
-            // Envío por Relay (Pusher)
+            // 1. Relay Pusher (Instant)
             try {
                 fetch(`https://slingshot-relay.vercel.app/api/broadcast`, {
                     method: 'POST',
@@ -154,7 +154,7 @@
                 });
             } catch (e) { console.error("Relay Error", e); }
 
-            // Envío por Firebase (Tubo redundante)
+            // 2. Firebase Tube (Persistence)
             if (window.transmitToFirebase) {
                 window.transmitToFirebase(payload.v, payload.t);
             }
@@ -244,8 +244,7 @@
             doc.setTextColor(204, 255, 0); doc.setFontSize(22); doc.text("MONTCODE™ GLUCOSE AUDIT", 15, 25);
             doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.text(`PATIENT ID: ${pid} | DATE: ${new Date().toLocaleString()}`, 15, 35);
             doc.setTextColor(0); doc.setFontSize(14); doc.text("Metabolic Trend Summary", 15, 60);
-            doc.setFontSize(11);
-            doc.text(`Estimated A1C (GMI): ${document.getElementById('a1c-val').innerText}`, 15, 70);
+            doc.text(`Estimated A1C: ${document.getElementById('a1c-val').innerText}`, 15, 70);
             doc.text(`Time In Range (TIR): ${document.getElementById('tir-val').innerText}`, 15, 77);
             doc.text(`Average Glucose: ${document.getElementById('avg-val').innerText} mg/dL`, 15, 84);
             const canvas = document.getElementById('gluChart');
@@ -262,8 +261,6 @@
                 doc.text(`${logDate.padEnd(20)} | ${log.v.toString().padEnd(5)} | ${log.t.toUpperCase().padEnd(10)} | ${status}`, 15, y);
                 y += 6;
             });
-            doc.setFontSize(7); doc.setTextColor(150);
-            doc.text("*This report is a clinical tool for auditing patient self-entry. Not for diagnostic use.*", 15, 290);
             doc.save(`MontCode_Glucose_Report_${pid}.pdf`);
         }
 
