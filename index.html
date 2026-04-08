@@ -63,7 +63,7 @@
     <div class="grid grid-cols-2 gap-5 mb-10">
         <a href="bp.html" class="glass-3d p-6 rounded-[35px] flex flex-col items-center justify-center gap-3">
             <div class="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center text-2xl">❤️</div>
-            <span class="text-[9px] font-black uppercase tracking-widest text-zinc-400">Pressure</span>
+            <span class="text-[9px] font-black uppercase tracking-widest text-zinc-400">BP Master</span>
         </a>
         <a href="glucose.html" class="glass-3d p-6 rounded-[35px] flex flex-col items-center justify-center gap-3">
             <div class="w-12 h-12 bg-[#ccff00]/10 rounded-2xl flex items-center justify-center text-2xl">🩸</div>
@@ -107,15 +107,13 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // --- LÓGICA DE FILTRO DE MENSAJES (SÓLO DR, NO AUTO-REPORTE) ---
         window.processIncomingMessage = (data) => {
-            // REGLA DE ORO: Si el mensaje proviene del propio paciente (reporte auto-generado), NO mostrar ni hablar.
+            // FILTRO TÁCTICO: Si el mensaje viene marcado como reporte de paciente, se ignora en la pantalla del paciente.
             if(data.provider === "PATIENT_GLUCOSE" || data.provider === "PATIENT_BP") return;
 
             const box = document.getElementById('feedback-box');
             const text = document.getElementById('feedback-text');
             
-            // Actualizar UI
             text.innerText = data.texto;
             text.className = "text-[#ccff00] font-black italic text-sm text-center uppercase tracking-tighter leading-tight animate-pulse";
             
@@ -124,14 +122,12 @@
             
             if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
             
-            // Voz (Solo habla si es instrucción del Dr)
             const speech = new SpeechSynthesisUtterance(data.texto);
             speech.lang = 'en-US';
             speech.rate = 0.9;
             window.speechSynthesis.speak(speech);
         };
 
-        // Escuchar cambios según el ID dinámico
         const pid = localStorage.getItem('patient_id');
         if(pid) {
             document.getElementById('display-pid').innerText = pid;
