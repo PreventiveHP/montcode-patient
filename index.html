@@ -3,174 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MontCode™ Patient Hub</title>
-    
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="logo.png.jpg">
-    
+    <title>MontCode™ Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { background: #000; color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
-        .bg-grid { background-image: radial-gradient(circle, #1a1a1a 1px, transparent 1px); background-size: 30px 30px; }
-        .glass-3d {
-            background: linear-gradient(145deg, rgba(30, 30, 30, 0.9), rgba(10, 10, 10, 0.95));
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .glass-3d { 
+            background: linear-gradient(145deg, #0f0f0f, #050505);
+            border: 1px solid #1a1a1a;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
         }
-        .glass-3d:active { transform: scale(0.96); }
-        .vital-pulse { animation: breathe 4s infinite ease-in-out; border: 1px solid rgba(204, 255, 0, 0.1); }
-        @keyframes breathe {
-            0%, 100% { opacity: 0.6; transform: scale(1); border-color: rgba(204, 255, 0, 0.1); }
-            50% { opacity: 1; transform: scale(1.01); border-color: rgba(204, 255, 0, 0.4); box-shadow: 0 0 20px rgba(204, 255, 0, 0.1); }
-        }
-        .new-message-alert { 
-            animation: alert-glow 1s infinite alternate; 
-            border: 2px solid #ccff00 !important;
-            background: rgba(204, 255, 0, 0.1) !important;
-        }
-        @keyframes alert-glow {
-            from { box-shadow: 0 0 10px rgba(204, 255, 0, 0.2); }
-            to { box-shadow: 0 0 30px rgba(204, 255, 0, 0.6); }
+        .glass-3d:active { transform: scale(0.95); border-color: #3b82f6; }
+        .hero-gradient {
+            background: linear-gradient(to bottom, #003366 0%, #000000 100%);
+            height: 220px;
         }
     </style>
 </head>
-<body class="bg-grid min-h-screen flex flex-col p-6">
+<body class="pb-20">
 
-    <div class="flex flex-col items-center mb-10 text-center">
-        <div class="relative">
-            <img src="logo.png.jpg" class="w-16 h-16 rounded-full border-2 border-zinc-800 shadow-[0_0_20px_rgba(0,0,0,0.8)] mb-3 object-cover">
-            <div id="status-glow" class="absolute -bottom-1 -right-1 w-4 h-4 bg-zinc-800 rounded-full border-2 border-black"></div>
-        </div>
-        <h1 class="text-2xl font-black italic tracking-tighter text-white">MONTCODE™</h1>
-        <p class="text-[7px] font-bold tracking-[0.2em] text-[#ccff00] uppercase opacity-70">Provider Defined Clinical Logic</p>
+    <div class="hero-gradient flex flex-col items-center justify-center px-6 text-center border-b border-zinc-900">
+        <h1 class="text-4xl font-[900] tracking-tighter italic uppercase mb-1">MONTCODE™</h1>
+        <p class="text-[9px] font-black tracking-[0.2em] text-blue-400 uppercase">
+            Clinical Wellness Intelligence • Tactical Health Management
+        </p>
     </div>
 
-    <div class="flex justify-between items-end w-full px-2 mb-8">
-        <div>
-            <h2 class="text-[7px] font-black uppercase tracking-[0.3em] text-zinc-600 italic">Secure Patient ID</h2>
-            <p id="display-pid" class="text-white font-mono text-sm font-bold tracking-widest uppercase">WAITING SYNC...</p>
-        </div>
-        <div class="text-right">
-            <p id="days-left-ui" class="text-[8px] font-black text-[#ccff00] uppercase italic tracking-tighter">Sync Required</p>
-            <p id="bridge-status" class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest mt-1 italic">Status: Offline</p>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-2 gap-5 mb-10">
-        <a href="bp.html" class="glass-3d p-6 rounded-[35px] flex flex-col items-center justify-center gap-3">
-            <div class="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center text-2xl">❤️</div>
-            <span class="text-[9px] font-black uppercase tracking-widest text-zinc-400">BP Master</span>
-        </a>
-        <a href="glucose.html" class="glass-3d p-6 rounded-[35px] flex flex-col items-center justify-center gap-3">
-            <div class="w-12 h-12 bg-[#ccff00]/10 rounded-2xl flex items-center justify-center text-2xl">🩸</div>
-            <span class="text-[9px] font-black uppercase tracking-widest text-zinc-400">Glucose</span>
-        </a>
-        <a href="food.html" class="glass-3d p-6 rounded-[35px] flex flex-col items-center justify-center gap-3">
-            <div class="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-2xl">🥗</div>
-            <span class="text-[9px] font-black uppercase tracking-widest text-zinc-400">Food Log</span>
-        </a>
-        <a href="activation.html" class="glass-3d p-6 rounded-[35px] flex flex-col items-center justify-center gap-3 border-[#ccff00]/20">
-            <div class="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-2xl">⚙️</div>
-            <span class="text-[9px] font-black uppercase tracking-widest text-[#ccff00]">Sync Kit</span>
-        </a>
-    </div>
-
-    <div id="feedback-container" class="mb-12">
-        <div class="flex items-center justify-between mb-3 px-2">
-            <div class="flex items-center gap-2">
-                <div id="ping-indicator" class="w-1.5 h-1.5 bg-zinc-700 rounded-full"></div>
-                <p class="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Provider Connection</p>
+    <div class="px-6 -mt-8">
+        <div class="bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl p-4 flex justify-between items-center mb-6">
+            <div>
+                <p class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest">Active Patient ID</p>
+                <p id="display-id" class="text-xl font-black text-[#ccff00]">------</p>
             </div>
-            <p id="dr-active-name" class="text-[7px] font-bold text-zinc-600 uppercase tracking-widest italic">DR: UNLINKED</p>
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-[8px] font-bold text-zinc-400 uppercase">Secure Local Link</span>
+            </div>
         </div>
-        
-        <div id="feedback-box" class="glass-3d vital-pulse p-8 rounded-[45px] flex items-center justify-center min-h-[140px] relative overflow-hidden">
-            <p id="feedback-text" class="text-zinc-600 font-bold italic text-xs text-center uppercase tracking-tighter leading-tight opacity-60">
-                Awaiting Provider Instructions...
+
+        <div class="grid grid-cols-2 gap-4">
+            
+            <a href="bp.html" class="glass-3d p-6 rounded-[35px] flex flex-col items-center gap-3">
+                <div class="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center text-2xl">❤️</div>
+                <span class="text-[9px] font-black uppercase tracking-widest text-zinc-400">BP Master</span>
+            </a>
+
+            <a href="glucose.html" class="glass-3d p-6 rounded-[35px] flex flex-col items-center gap-3">
+                <div class="w-12 h-12 bg-[#ccff00]/10 rounded-2xl flex items-center justify-center text-2xl">🩸</div>
+                <span class="text-[9px] font-black uppercase tracking-widest text-zinc-400">Glucose</span>
+            </a>
+
+            <a href="food.html" class="glass-3d p-6 rounded-[35px] flex flex-col items-center gap-3">
+                <div class="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-2xl">🥗</div>
+                <span class="text-[9px] font-black uppercase tracking-widest text-zinc-400">Food Log</span>
+            </a>
+
+            <a href="activation.html" class="glass-3d p-6 rounded-[35px] flex flex-col items-center gap-3 border-blue-900/30">
+                <div class="w-12 h-12 bg-blue-500/5 rounded-2xl flex items-center justify-center text-2xl">📲</div>
+                <span class="text-[9px] font-black uppercase tracking-widest text-blue-500 italic">Sync Kit</span>
+            </a>
+
+        </div>
+
+        <div class="mt-10 p-5 bg-zinc-950 border border-zinc-900 rounded-3xl">
+            <p class="text-[7px] text-zinc-600 font-bold uppercase mb-3 leading-relaxed tracking-tight">
+                <span class="text-zinc-400">LEGAL NOTICE:</span> This application is a clinical wellness assistant designed for the management of chronic conditions. It is NOT based on official medical records.
             </p>
+            <div class="border-t border-zinc-900 pt-3">
+                <p class="text-[8px] text-red-900 font-black uppercase leading-tight italic">
+                    ⚠️ CRITICAL: THIS APP IS NOT FOR EMERGENCY USE. IF YOU ARE EXPERIENCING A MEDICAL EMERGENCY, CALL 911 IMMEDIATELY. DO NOT ATTEMPT TO CONTACT PROVIDERS THROUGH THIS SYSTEM FOR URGENT CARE.
+                </p>
+            </div>
         </div>
     </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDVIQ4S-w4Ag40uYuArW3o7Hw2XQwoQV7U",
-            databaseURL: "https://montcode-e02c7-default-rtdb.firebaseio.com",
-            projectId: "montcode-e02c7"
-        };
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        window.processIncomingMessage = (data) => {
-            // SOLUCIÓN PUNTO 2: Bloqueo total de auto-mensajes.
-            // Si el mensaje viene de PATIENT_GLUCOSE o PATIENT_BP, salimos sin hacer nada.
-            if(data.provider === "PATIENT_GLUCOSE" || data.provider === "PATIENT_BP") return;
-
-            const box = document.getElementById('feedback-box');
-            const text = document.getElementById('feedback-text');
-            
-            text.innerText = data.texto;
-            text.className = "text-[#ccff00] font-black italic text-sm text-center uppercase tracking-tighter leading-tight animate-pulse";
-            box.classList.remove('vital-pulse');
-            box.classList.add('new-message-alert');
-            
-            if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
-            
-            const speech = new SpeechSynthesisUtterance(data.texto);
-            speech.lang = 'en-US';
-            speech.rate = 0.9;
-            window.speechSynthesis.speak(speech);
-        };
-
-        // SOLUCIÓN PUNTO 1: Persistencia del ID dinámico
-        const pid = localStorage.getItem('patient_id');
-        if(pid) {
-            document.getElementById('display-pid').innerText = pid;
-            document.getElementById('bridge-status').innerText = "Status: Bridge Online";
-            document.getElementById('bridge-status').classList.replace('text-zinc-500', 'text-[#ccff00]');
-            document.getElementById('ping-indicator').classList.replace('bg-zinc-700', 'bg-[#ccff00]');
-            document.getElementById('ping-indicator').classList.add('animate-ping');
-
-            // Escuchar el túnel
-            onValue(ref(db, `mensaje_dr/${pid}`), (snapshot) => {
-                const data = snapshot.val();
-                if(data && data.texto) {
-                    window.processIncomingMessage(data);
-                }
-            });
-        }
-    </script>
 
     <script>
-        function initDashboard() {
-            const activation = JSON.parse(localStorage.getItem('montcode_activation_data'));
-            const assignedDr = localStorage.getItem('assigned_dr_id');
-            const glow = document.getElementById('status-glow');
-            const daysUI = document.getElementById('days-left-ui');
-
-            if(assignedDr) {
-                document.getElementById('dr-active-name').innerText = "UNIT: " + assignedDr;
-                document.getElementById('dr-active-name').classList.replace('text-zinc-600', 'text-[#ccff00]');
-            }
-
-            if (activation && activation.expiry) {
-                const diff = Math.ceil((new Date(activation.expiry) - new Date()) / (1000 * 60 * 60 * 24));
-                if (diff > 0) {
-                    daysUI.innerText = `${diff}D Remaining`;
-                    glow.className = "absolute -bottom-1 -right-1 w-4 h-4 bg-[#ccff00] rounded-full border-2 border-black shadow-[0_0_10px_#ccff00]";
-                } else {
-                    daysUI.innerText = "Kit Expired";
-                    glow.className = "absolute -bottom-1 -right-1 w-4 h-4 bg-red-600 rounded-full border-2 border-black";
-                }
+        // Lógica para recuperar el ID real del LocalStorage
+        function syncPatientID() {
+            const storedID = localStorage.getItem('patient_id');
+            const display = document.getElementById('display-id');
+            if (storedID) {
+                display.innerText = storedID;
+            } else {
+                display.innerText = "NO ID SET";
+                display.classList.add('text-red-500');
             }
         }
-        window.onload = initDashboard;
+
+        // Ejecutar al cargar
+        window.onload = syncPatientID;
     </script>
 </body>
 </html>
