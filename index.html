@@ -1,10 +1,11 @@
- <!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MontCode™ Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { background: #000; color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
@@ -19,13 +20,13 @@
             background: linear-gradient(to bottom, #003366 0%, #000000 100%);
             height: 240px;
         }
+        .dr-msg-glow { border-left: 3px solid #ccff00; background: rgba(204, 255, 0, 0.05); }
     </style>
 </head>
 <body class="pb-20">
 
     <div class="hero-gradient flex flex-col items-center justify-center px-6 text-center border-b border-zinc-900">
         <img src="https://raw.githubusercontent.com/PreventiveHP/montcode-patient/main/Logo/logo.png.jpg" alt="MontCode Logo" class="h-12 mb-4 opacity-90">
-        
         <h1 class="text-3xl font-[900] tracking-tighter italic uppercase mb-1">MONTCODE™</h1>
         <p class="text-[9px] font-black tracking-[0.2em] text-blue-400 uppercase">
             Clinical Wellness Intelligence • Tactical Health Management
@@ -33,19 +34,28 @@
     </div>
 
     <div class="px-6 -mt-8">
-        <div class="bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl p-4 flex justify-between items-center mb-6">
+        <div class="bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl p-4 flex justify-between items-center mb-4">
             <div>
                 <p class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest">Active Patient ID</p>
                 <p id="display-id" class="text-xl font-black text-[#ccff00]">------</p>
             </div>
             <div class="flex items-center gap-2">
-                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span class="text-[8px] font-bold text-zinc-400 uppercase">Secure Local Link</span>
+                <div id="status-dot" class="w-2 h-2 bg-zinc-700 rounded-full"></div>
+                <span id="status-text" class="text-[8px] font-bold text-zinc-400 uppercase">Offline</span>
             </div>
         </div>
 
+        <div id="dr-bridge" class="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 mb-6 dr-msg-glow hidden">
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-[7px] font-black text-[#ccff00] uppercase tracking-widest">Incoming Provider Note</span>
+                <span id="msg-time" class="text-[7px] text-zinc-500 font-bold">JUST NOW</span>
+            </div>
+            <p id="dr-display" class="text-xs font-bold text-zinc-200 leading-relaxed italic">
+                Waiting for clinical instructions...
+            </p>
+        </div>
+
         <div class="grid grid-cols-2 gap-4">
-            
             <a href="bp.html" class="glass-3d p-6 rounded-[35px] flex flex-col items-center gap-3">
                 <div class="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center text-2xl">❤️</div>
                 <span class="text-[9px] font-black uppercase tracking-widest text-zinc-400">BP Master</span>
@@ -65,7 +75,6 @@
                 <div class="w-12 h-12 bg-blue-500/5 rounded-2xl flex items-center justify-center text-2xl">📲</div>
                 <span class="text-[9px] font-black uppercase tracking-widest text-blue-500 italic">Sync Kit</span>
             </a>
-
         </div>
 
         <div class="mt-10 p-5 bg-zinc-950 border border-zinc-900 rounded-3xl">
@@ -74,25 +83,64 @@
             </p>
             <div class="border-t border-zinc-900 pt-3">
                 <p class="text-[8px] text-red-900 font-black uppercase leading-tight italic">
-                    ⚠️ CRITICAL: THIS APP IS NOT FOR EMERGENCY USE. IF YOU ARE EXPERIENCING A MEDICAL EMERGENCY, CALL 911 IMMEDIATELY. DO NOT ATTEMPT TO CONTACT PROVIDERS THROUGH THIS SYSTEM FOR URGENT CARE.
+                    ⚠️ CRITICAL: THIS APP IS NOT FOR EMERGENCY USE. CALL 911 IMMEDIATELY FOR URGENT CARE.
                 </p>
             </div>
         </div>
     </div>
 
     <script>
-        function syncPatientID() {
+        const PUSHER_KEY = '284fc98940a4b6d4c359';
+        const PUSHER_CLUSTER = 'us2';
+
+        function initDashboard() {
+            // 1. CAPTURAR ID DE LA URL (Para el Sync Kit)
+            const urlParams = new URLSearchParams(window.location.search);
+            const idFromUrl = urlParams.get('id');
+            
+            if (idFromUrl) {
+                localStorage.setItem('patient_id', idFromUrl);
+            }
+
+            // 2. MOSTRAR ID
             const storedID = localStorage.getItem('patient_id');
             const display = document.getElementById('display-id');
+            
             if (storedID) {
                 display.innerText = storedID;
+                setupPusher(storedID);
             } else {
                 display.innerText = "NO ID SET";
                 display.classList.add('text-red-500');
             }
         }
 
-        window.onload = syncPatientID;
+        function setupPusher(pid) {
+            const pusher = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER });
+            const channel = pusher.subscribe('patient-' + pid);
+            
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+
+            pusher.connection.bind('connected', () => {
+                statusDot.classList.replace('bg-zinc-700', 'bg-green-500');
+                statusDot.classList.add('animate-pulse');
+                statusText.innerText = "Secure Local Link";
+            });
+
+            channel.bind('dr-note', function(data) {
+                const bridge = document.getElementById('dr-bridge');
+                const display = document.getElementById('dr-display');
+                
+                bridge.classList.remove('hidden');
+                display.innerText = data.text || data.mensaje;
+                
+                // Alerta sonora opcional
+                window.speechSynthesis.speak(new SpeechSynthesisUtterance("New message from provider"));
+            });
+        }
+
+        window.onload = initDashboard;
     </script>
 </body>
 </html>
