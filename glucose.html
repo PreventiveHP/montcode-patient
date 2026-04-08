@@ -27,6 +27,7 @@
 
     <div class="flex justify-between items-center mb-6">
         <div class="flex gap-2">
+            <a href="index.html" class="w-8 h-8 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-800 text-zinc-400">←</a>
             <button onclick="setLang('en')" class="w-8 h-8 rounded-full border border-zinc-800 bg-zinc-900">🇺🇸</button>
             <button onclick="setLang('es')" class="w-8 h-8 rounded-full border border-zinc-800 bg-zinc-900 opacity-40" id="btn-es">🇪🇸</button>
         </div>
@@ -97,17 +98,15 @@
         const app = initializeApp(firebaseConfig);
         const db_firebase = getDatabase(app);
 
-        // TRANSMISIÓN CORREGIDA: Objeto limpio sin rastro de errores de endpoint
         window.transmitToFirebase = async (val, mode) => {
             const pId = localStorage.getItem('patient_id') || "102001";
             try {
                 await set(ref(db_firebase, `mensaje_dr/${pId}`), {
-                    texto: `GLUCOSE: ${val} MG/DL (${mode.toUpperCase()})`,
                     v: val,
+                    texto: `GLUCOSE: ${val} MG/DL (${mode.toUpperCase()})`,
                     timestamp: Date.now(),
-                    provider: "PATIENT_GLU" // Filtro clave para que la otra App ignore este mensaje
+                    provider: "PATIENT_GLU" 
                 });
-                console.log("Firebase: Clinical data sent to Dashboard");
             } catch (e) { console.error("Firebase Error", e); }
         };
     </script>
@@ -144,7 +143,6 @@
             const drId = localStorage.getItem('assigned_dr_id') || "102001";
             const pId = localStorage.getItem('patient_id') || "102001";
             
-            // 1. Relay Pusher: Enviamos solo los datos técnicos, no objetos circulares
             try {
                 fetch(`https://slingshot-relay.vercel.app/api/broadcast`, {
                     method: 'POST',
@@ -157,7 +155,6 @@
                 });
             } catch (e) { console.error("Relay Error", e); }
 
-            // 2. Firebase
             if (window.transmitToFirebase) {
                 window.transmitToFirebase(payload.v, payload.t);
             }
@@ -242,7 +239,7 @@
             if (db.length === 0) return;
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            const pid = localStorage.getItem('patient_id') || 'PX-7788';
+            const pid = localStorage.getItem('patient_id') || 'PX-102001';
             doc.setFillColor(15, 15, 15); doc.rect(0, 0, 210, 45, 'F');
             doc.setTextColor(204, 255, 0); doc.setFontSize(22); doc.text("MONTCODE™ GLUCOSE AUDIT", 15, 25);
             doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.text(`PATIENT ID: ${pid} | DATE: ${new Date().toLocaleString()}`, 15, 35);
@@ -255,7 +252,7 @@
             doc.text("Clinical Log (Last 25 Entries)", 15, 170);
             let y = 180;
             doc.setFontSize(8); doc.setFont("courier", "bold");
-            doc.text("TIMESTAMP            | VALUE | MODE       | STATUS", 15, y);
+            doc.text("TIMESTAMP             | VALUE | MODE       | STATUS", 15, y);
             doc.line(15, y+2, 195, y+2); y += 8;
             db.slice(-25).reverse().forEach(log => {
                 if(y > 280) { doc.addPage(); y = 20; }
