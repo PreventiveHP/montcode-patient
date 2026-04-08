@@ -97,7 +97,7 @@
         const app = initializeApp(firebaseConfig);
         const db_firebase = getDatabase(app);
 
-        // TRANSMISIÓN FILTRADA: Para que el Dashboard lo vea pero la App del Paciente no lo "eco"
+        // TRANSMISIÓN CORREGIDA: Objeto limpio sin rastro de errores de endpoint
         window.transmitToFirebase = async (val, mode) => {
             const pId = localStorage.getItem('patient_id') || "102001";
             try {
@@ -105,9 +105,9 @@
                     texto: `GLUCOSE: ${val} MG/DL (${mode.toUpperCase()})`,
                     v: val,
                     timestamp: Date.now(),
-                    provider: "PATIENT_GLU" // IDENTIFICADOR CLAVE
+                    provider: "PATIENT_GLU" // Filtro clave para que la otra App ignore este mensaje
                 });
-                console.log("Firebase Tube: Sent to Doctor");
+                console.log("Firebase: Clinical data sent to Dashboard");
             } catch (e) { console.error("Firebase Error", e); }
         };
     </script>
@@ -143,18 +143,21 @@
         async function transmitToDr(payload) {
             const drId = localStorage.getItem('assigned_dr_id') || "102001";
             const pId = localStorage.getItem('patient_id') || "102001";
-            const tacticalData = { ...payload, patient_id: pId, target_dr: drId, timestamp: new Date().toISOString() };
-
-            // 1. Relay Pusher (Instant)
+            
+            // 1. Relay Pusher: Enviamos solo los datos técnicos, no objetos circulares
             try {
                 fetch(`https://slingshot-relay.vercel.app/api/broadcast`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ channel: 'provider-' + drId, event: 'vital-update', data: tacticalData })
+                    body: JSON.stringify({ 
+                        channel: 'provider-' + drId, 
+                        event: 'vital-update', 
+                        data: { v: payload.v, t: payload.t, patient_id: pId } 
+                    })
                 });
             } catch (e) { console.error("Relay Error", e); }
 
-            // 2. Firebase Tube (Persistence)
+            // 2. Firebase
             if (window.transmitToFirebase) {
                 window.transmitToFirebase(payload.v, payload.t);
             }
@@ -252,7 +255,7 @@
             doc.text("Clinical Log (Last 25 Entries)", 15, 170);
             let y = 180;
             doc.setFontSize(8); doc.setFont("courier", "bold");
-            doc.text("TIMESTAMP           | VALUE | MODE       | STATUS", 15, y);
+            doc.text("TIMESTAMP            | VALUE | MODE       | STATUS", 15, y);
             doc.line(15, y+2, 195, y+2); y += 8;
             db.slice(-25).reverse().forEach(log => {
                 if(y > 280) { doc.addPage(); y = 20; }
