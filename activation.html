@@ -5,178 +5,116 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MontCode™ Activation</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; }
+        .scanner-box { width: 100%; height: 280px; background: #0a0a0a; border-radius: 40px; overflow: hidden; position: relative; border: 2px solid #1a1a1a; }
+        #interactive.viewport canvas, video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        .step-active { border-color: #ccff00; color: #ccff00; }
+        .enroll-btn { background: #111; border: 1px solid #222; padding: 15px; border-radius: 20px; text-align: center; transition: 0.3s; }
+        .enroll-btn.selected { border-color: #ccff00; background: #ccff001a; color: #ccff00; }
+    </style>
 </head>
-<body class="bg-black text-white min-h-screen flex flex-col items-center p-6 font-sans overflow-hidden">
+<body class="p-6">
 
-    <div class="mt-8 mb-8 text-center">
-        <div class="w-16 h-16 mx-auto mb-4 bg-zinc-900 rounded-full flex items-center justify-center border-2 border-zinc-800 overflow-hidden shadow-[0_0_20px_rgba(204,255,0,0.2)]">
-            <img src="logo.png.jpg" alt="Logo" class="w-full h-full object-cover">
+    <header class="flex justify-between items-center mb-8">
+        <button onclick="location.href='index.html'" class="text-zinc-500 font-black uppercase text-[10px]">← Dashboard</button>
+        <h1 class="text-xl font-black italic uppercase italic">Kit Activation</h1>
+    </header>
+
+    <div id="enrollment-ui">
+        <p class="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-4">Select Telemetry Period</p>
+        <div class="grid grid-cols-3 gap-3 mb-8">
+            <button onclick="setPeriod(7)" id="p7" class="enroll-btn text-xs font-bold uppercase">7 Days</button>
+            <button onclick="setPeriod(15)" id="p15" class="enroll-btn text-xs font-bold uppercase">15 Days</button>
+            <button onclick="setPeriod(365)" id="p365" class="enroll-btn text-xs font-bold uppercase">365 Days</button>
         </div>
-        <h1 id="main-title" class="text-[#ccff00] text-2xl font-black italic tracking-tighter uppercase">Activate Kit</h1>
-        <p id="main-sub" class="text-zinc-500 text-[9px] font-bold uppercase tracking-[0.2em] mt-1 italic">Created by Providers • Tested by Patients</p>
     </div>
 
-    <div id="scanner-container" class="w-full max-w-sm aspect-square bg-zinc-900 rounded-[45px] border-2 border-zinc-800 overflow-hidden relative shadow-[0_0_50px_rgba(204,255,0,0.1)]">
-        <div id="reader" class="w-full h-full"></div>
-        <div class="absolute inset-0 border-[30px] border-black/40 pointer-events-none"></div>
-        <div id="scan-frame" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-[#ccff00] rounded-3xl opacity-40 animate-pulse"></div>
-        <div class="absolute w-full h-[1px] bg-[#ccff00] top-0 animate-[scan_2s_linear_infinite] opacity-50"></div>
+    <div class="flex gap-2 mb-6">
+        <div id="step1-tag" class="flex-1 border-b-4 border-zinc-800 pb-2 text-[8px] font-black uppercase step-active">Step 1: Barcode</div>
+        <div id="step2-tag" class="flex-1 border-b-4 border-zinc-800 pb-2 text-[8px] font-black uppercase text-zinc-700">Step 2: Dr. Link</div>
     </div>
 
-    <div id="result-box" class="hidden mt-8 p-6 rounded-[35px] bg-zinc-900 border border-zinc-800 w-full max-w-xs text-center">
-        <p id="result-label" class="text-zinc-500 font-black text-[9px] uppercase mb-1 tracking-widest">Status</p>
-        <p id="result-value" class="text-[#ccff00] font-mono text-xl font-bold italic tracking-tighter">--</p>
-        <button id="next-btn" onclick="goToNextStep()" class="mt-6 w-full bg-[#ccff00] text-black py-4 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all">Continue</button>
+    <div class="scanner-box mb-8" id="scanner-wrapper">
+        <div id="interactive" class="viewport"></div> <div id="qr-reader" class="hidden"></div> <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <div id="scan-line" class="w-64 h-1 bg-[#ccff00] shadow-[0_0_15px_#ccff00] animate-pulse"></div>
+            <p id="scanner-label" class="text-[8px] font-black uppercase mt-4 text-white/40 tracking-[0.3em]">Ready for Kit Barcode</p>
+        </div>
     </div>
 
-    <button id="btn-manual" onclick="toggleManual()" class="mt-6 text-zinc-600 text-[8px] font-black uppercase tracking-widest">Input Serial Manually</button>
-    <div id="manual-box" class="hidden mt-4 flex gap-2 w-full max-w-xs">
-        <input type="text" id="manual-input" placeholder="Enter Code" class="flex-1 bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-center text-[#ccff00] font-mono text-sm outline-none uppercase">
-        <button onclick="handleManual()" class="bg-zinc-800 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#ccff00]">Link</button>
+    <div id="feedback" class="text-center">
+        <p class="text-xs font-bold text-zinc-500 uppercase italic">Place the camera over the Kit Serial</p>
     </div>
-
-    <footer class="mt-auto pb-4">
-        <p class="text-[7px] text-zinc-700 text-center uppercase font-bold tracking-tighter max-w-[250px]">
-            MontCode™ Secure Handshake. Data stays local.
-        </p>
-    </footer>
 
     <script>
-        const PUSHER_KEY = '284fc98940a4b6d4c359';
-        const PUSHER_CLUSTER = 'us2';
-        
-        let step = "KIT"; // Pasos: KIT -> DOCTOR
-        let html5QrCode;
+        let step = "BARCODE";
+        let selectedDays = 0;
 
-        async function startScanner() {
-            if (html5QrCode) {
-                try { await html5QrCode.stop(); } catch(e) {}
-            }
-            html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 20, qrbox: { width: 250, height: 250 } };
-
-            try {
-                await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
-            } catch (err) {
-                console.error("Camera error:", err);
-            }
+        function setPeriod(days) {
+            selectedDays = days;
+            document.querySelectorAll('.enroll-btn').forEach(b => b.classList.remove('selected'));
+            document.getElementById('p'+days).classList.add('selected');
+            startBarcodeScanner();
         }
 
-        function onScanSuccess(decodedText) {
-            processLogic(decodedText);
+        // --- LÓGICA DE BARCODE (QUAGGA2) ---
+        function startBarcodeScanner() {
+            Quagga.init({
+                inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#interactive'), constraints: { facingMode: "environment" } },
+                decoder: { readers: ["code_128_reader", "ean_reader", "upc_reader"] },
+                locate: true
+            }, (err) => { 
+                if (!err) {
+                    Quagga.start();
+                    document.getElementById('scanner-label').innerText = "Scanning Barcode...";
+                }
+            });
+
+            Quagga.onDetected((data) => {
+                const code = data.codeResult.code;
+                if (code.startsWith("102")) {
+                    Quagga.stop();
+                    handleKitSuccess(code);
+                }
+            });
         }
 
-        function processLogic(data) {
-            if (step === "KIT") {
-                handleKitActivation(data);
-            } else if (step === "DOCTOR") {
-                handleDoctorLink(data);
-            }
-        }
-
-        // PASO 1: ACTIVAR EL PRODUCTO FÍSICO
-        function handleKitActivation(serial) {
-            const expiry = new Date();
-            expiry.setDate(expiry.getDate() + 365); 
+        function handleKitSuccess(code) {
+            localStorage.setItem('patient_id', code);
+            localStorage.setItem('enrollment_days', selectedDays);
+            localStorage.setItem('activation_date', new Date().toISOString());
             
-            localStorage.setItem('montcode_activation_data', JSON.stringify({
-                serial: serial, 
-                expiry: expiry.toISOString(),
-                pid: "102001" // ID predeterminado para tu prueba actual, escalable luego
-            }));
+            // Efecto Visual
+            document.getElementById('step1-tag').classList.replace('step-active', 'text-green-500');
+            document.getElementById('step2-tag').classList.add('step-active');
             
-            // Guardar el ID del paciente para la transmisión
-            localStorage.setItem('patient_id', "102001");
-
-            vibrate();
-            if(html5QrCode) {
-                html5QrCode.stop().then(() => {
-                    showResult("Kit Validated", "365 DAYS ACTIVE", "#ccff00");
-                    speak("Kit activated. Ready for provider link.");
-                });
-            }
-        }
-
-        // PASO 2: VINCULAR CON EL DR (HANDSHAKE)
-        function handleDoctorLink(drID) {
-            // Guardamos el ID del Doctor escaneado (La "Dirección" de envío)
-            localStorage.setItem('assigned_dr_id', drID);
+            // Cambiar a QR
+            document.getElementById('interactive').classList.add('hidden');
+            document.getElementById('qr-reader').classList.remove('hidden');
+            document.getElementById('scan-line').style.background = "#3b82f6";
+            document.getElementById('scanner-label').innerText = "Now Scan Doctor QR";
             
-            vibrate();
-            if(html5QrCode) {
-                html5QrCode.stop().then(() => {
-                    showResult("Bridge Established", `Target Dr: ${drID}`, "#ccff00");
-                    document.getElementById('next-btn').innerText = "Finish & Start Hub";
-                    speak("Doctor bridge established. Connection secure.");
-                });
-            }
+            startQRScanner();
         }
 
-        function showResult(label, value, color) {
-            document.getElementById('scanner-container').classList.add('hidden');
-            document.getElementById('btn-manual').classList.add('hidden');
-            document.getElementById('manual-box').classList.add('hidden');
-            document.getElementById('result-box').classList.remove('hidden');
-            document.getElementById('result-label').innerText = label;
-            document.getElementById('result-value').innerText = value;
-            document.getElementById('result-value').style.color = color;
+        // --- LÓGICA DE QR (HTML5QRCODE) ---
+        function startQRScanner() {
+            const html5QrCode = new Html5Qrcode("qr-reader");
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: 250 },
+                (decodedText) => {
+                    html5QrCode.stop().then(() => {
+                        localStorage.setItem('dr_link', decodedText);
+                        location.href = "index.html"; // Regreso al Dashboard
+                    });
+                }
+            );
         }
-
-        function goToNextStep() {
-            if (step === "KIT") {
-                step = "DOCTOR";
-                document.getElementById('main-title').innerText = "Link Provider";
-                document.getElementById('main-sub').innerText = "Scan Doctor QR or Enter ID";
-                document.getElementById('result-box').classList.add('hidden');
-                document.getElementById('scanner-container').classList.remove('hidden');
-                document.getElementById('btn-manual').classList.remove('hidden');
-                startScanner();
-            } else {
-                // Finalizar y volver al Hub
-                window.location.href = "index.html"; 
-            }
-        }
-
-        function toggleManual() {
-            document.getElementById('manual-box').classList.toggle('hidden');
-        }
-
-        function handleManual() {
-            const val = document.getElementById('manual-input').value;
-            if (val) processLogic(val.toUpperCase());
-        }
-
-        function speak(text) {
-            const msg = new SpeechSynthesisUtterance(text);
-            msg.lang = 'en-US';
-            msg.rate = 0.9;
-            window.speechSynthesis.speak(msg);
-        }
-
-        function vibrate() { if(navigator.vibrate) navigator.vibrate([100, 50, 100]); }
-
-        window.onload = () => {
-            // Verificar si ya tiene el kit para saltar al paso del Dr
-            const check = JSON.parse(localStorage.getItem('montcode_activation_data'));
-            if (check) {
-                step = "DOCTOR";
-                document.getElementById('main-title').innerText = "Link Provider";
-                document.getElementById('main-sub').innerText = "Scan Doctor QR or Enter ID";
-            }
-            startScanner();
-        };
     </script>
-
-    <style>
-        @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
-        #reader video { 
-            object-fit: cover !important; 
-            width: 100% !important; 
-            height: 100% !important; 
-            border-radius: 45px; 
-        }
-    </style>
 </body>
 </html>
