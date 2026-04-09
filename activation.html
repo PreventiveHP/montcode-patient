@@ -4,9 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MontCode™ Activation</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MontCode">
+    <link rel="apple-touch-icon" href="logo_192.png">
+    <meta name="theme-color" content="#000000">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { background: #000; color: white; font-family: 'Inter', sans-serif; }
@@ -50,7 +60,13 @@
         let kitBarcode = "";
         let enrollmentDays = 0;
 
-        window.onload = () => startBarcodeScanner();
+        window.onload = () => {
+            startBarcodeScanner();
+            // Registro de Service Worker para ser "App Original"
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            }
+        };
 
         function startBarcodeScanner() {
             Quagga.init({
@@ -70,17 +86,14 @@
 
         function processBarcode(code) {
             kitBarcode = code;
-            // Detección automática de días basado en el código
             if (code.includes("365")) enrollmentDays = 365;
             else if (code.includes("15")) enrollmentDays = 15;
-            else enrollmentDays = 7; // Default
+            else enrollmentDays = 7;
 
-            // Generar MC-ID Único (Ej: MC-102-A7B2)
             const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
             const uniqueID = `MC-${code.substring(0,3)}-${randomSuffix}`;
             localStorage.setItem('temp_id', uniqueID);
 
-            // UI Feedback
             document.getElementById('step1-tag').classList.replace('step-active', 'text-green-500');
             document.getElementById('step2-tag').classList.add('step-active');
             document.getElementById('interactive').classList.add('hidden');
@@ -111,7 +124,6 @@
             const name = document.getElementById('p-name').value;
             const dob = document.getElementById('p-dob').value;
 
-            // Consolidar datos finales
             localStorage.setItem('patient_id', localStorage.getItem('temp_id'));
             localStorage.setItem('enrollment_days', enrollmentDays);
             localStorage.setItem('activation_date', new Date().toISOString());
