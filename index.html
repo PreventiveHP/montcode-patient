@@ -1,11 +1,10 @@
-  <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MontCode™ Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { background: #000; color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
@@ -23,13 +22,14 @@
             height: 240px;
         }
 
-        /* TUBO REPARADO: NEON LIVE TRANSMISSION */
+        /* TUBO REPARADO: NEON LIVE TRANSMISSION (FIREBASE) */
         .dr-bridge-container {
             border: 2px solid #ccff00;
             background: rgba(10, 10, 10, 0.9);
             box-shadow: 0 0 20px rgba(204, 255, 0, 0.2);
             position: relative;
             overflow: hidden;
+            min-height: 120px;
         }
         
         .live-indicator {
@@ -44,9 +44,8 @@
         }
 
         @keyframes blink {
-            0% { opacity: 1; }
+            0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
-            100% { opacity: 1; }
         }
 
         .scanline {
@@ -67,7 +66,7 @@
 <body class="pb-20">
 
     <div class="hero-gradient flex flex-col items-center justify-center px-6 text-center border-b border-zinc-900">
-        <img src="https://raw.githubusercontent.com/PreventiveHP/montcode-patient/main/Logo/logo.png.jpg" alt="MontCode Logo" class="h-12 mb-4 opacity-90">
+        <img src="logo.png.jpg" alt="MontCode Logo" class="h-12 mb-4 opacity-90">
         <h1 class="text-3xl font-[900] tracking-tighter italic uppercase mb-1">MONTCODE™</h1>
         <p class="text-[9px] font-black tracking-[0.2em] text-blue-400 uppercase">
             Clinical Wellness Intelligence • Tactical Health Management
@@ -81,8 +80,8 @@
                 <p id="display-id" class="text-xl font-black text-[#ccff00]">SCANNING...</p>
             </div>
             <div class="flex items-center gap-2">
-                <div id="status-dot" class="w-2 h-2 bg-red-600 rounded-full"></div>
-                <span id="status-text" class="text-[8px] font-bold text-zinc-400 uppercase">Disconnected</span>
+                <div id="status-dot" class="w-2 h-2 bg-zinc-700 rounded-full"></div>
+                <span id="status-text" class="text-[8px] font-bold text-zinc-500 uppercase">Offline</span>
             </div>
         </div>
 
@@ -95,8 +94,8 @@
                 </div>
                 <span id="msg-time" class="text-[7px] text-zinc-500 font-bold uppercase">Real-Time Sync</span>
             </div>
-            <p id="dr-display" class="text-[12px] font-bold text-zinc-200 leading-relaxed italic">
-                Sincronizando con el portal del proveedor... esperando instrucciones clínicas.
+            <p id="dr-display" class="text-[12px] font-bold text-zinc-400 leading-relaxed italic">
+                Awaiting instructions from provider portal...
             </p>
         </div>
 
@@ -105,91 +104,71 @@
                 <div class="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center text-2xl">❤️</div>
                 <span class="text-[9px] font-black uppercase tracking-widest text-zinc-400">BP Master</span>
             </a>
-
             <a href="glucose.html" class="glass-3d p-6 rounded-[35px] flex flex-col items-center gap-3">
                 <div class="w-12 h-12 bg-[#ccff00]/10 rounded-2xl flex items-center justify-center text-2xl">🩸</div>
                 <span class="text-[9px] font-black uppercase tracking-widest text-zinc-400">Glucose</span>
             </a>
-
             <a href="food.html" class="glass-3d p-6 rounded-[35px] flex flex-col items-center gap-3">
                 <div class="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-2xl">🥗</div>
                 <span class="text-[9px] font-black uppercase tracking-widest text-zinc-400">Food Log</span>
             </a>
-
             <a href="activation.html" class="glass-3d p-6 rounded-[35px] flex flex-col items-center gap-3 border-blue-900/30">
                 <div class="w-12 h-12 bg-blue-500/5 rounded-2xl flex items-center justify-center text-2xl">📲</div>
                 <span class="text-[9px] font-black uppercase tracking-widest text-blue-500 italic">Sync Kit</span>
             </a>
         </div>
 
-        <div class="mt-8 p-4 bg-zinc-950/50 border border-zinc-900 rounded-2xl">
-            <p class="text-[8px] text-zinc-600 font-bold uppercase text-center italic">
-                Local-First Intelligence • No Cloud Storage • HIPAA Compliant logic
+        <div class="mt-8 p-5 bg-zinc-950 border border-zinc-900 rounded-2xl">
+            <p class="text-[7px] text-zinc-600 font-bold uppercase mb-3 leading-relaxed tracking-tight text-center">
+                LEGAL NOTICE: ALL PATIENT INFORMATION IS NOT BASED ON OFFICIAL MEDICAL RECORDS.
             </p>
+            <div class="border-t border-zinc-900 pt-3">
+                <p class="text-[9px] text-red-700 font-black uppercase leading-tight italic text-center animate-pulse">
+                    ⚠️ CRITICAL: NOT FOR EMERGENCY USE. CALL 911 IMMEDIATELY.
+                </p>
+            </div>
         </div>
     </div>
 
-    <script>
-        const PUSHER_KEY = '284fc98940a4b6d4c359';
-        const PUSHER_CLUSTER = 'us2';
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        function initDashboard() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const idFromUrl = urlParams.get('id');
-            
-            // AUDITORÍA: Si hay ID en URL, limpiar el viejo y poner el nuevo
-            if (idFromUrl && idFromUrl.length > 2) {
-                console.log("Nuevo ID detectado:", idFromUrl);
-                localStorage.setItem('patient_id', idFromUrl);
-            }
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVIQ4S-w4Ag40uYuArW3o7Hw2XQwoQV7U",
+            databaseURL: "https://montcode-e02c7-default-rtdb.firebaseio.com",
+            projectId: "montcode-e02c7"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
 
-            const storedID = localStorage.getItem('patient_id');
-            const display = document.getElementById('display-id');
-            
-            if (storedID && storedID !== "102001") { // Evitar el ID de prueba si es necesario
-                display.innerText = storedID;
-                setupPusher(storedID);
-            } else if (storedID) {
-                display.innerText = storedID;
-                setupPusher(storedID);
-            } else {
-                display.innerText = "WAITING SCAN";
-                display.classList.add('text-zinc-600');
-            }
-        }
+        const pid = localStorage.getItem('patient_id');
+        const displayID = document.getElementById('display-id');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
 
-        function setupPusher(pid) {
-            const pusher = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER });
-            const channel = pusher.subscribe('patient-' + pid);
-            
-            const statusDot = document.getElementById('status-dot');
-            const statusText = document.getElementById('status-text');
+        if(pid) {
+            displayID.innerText = pid;
+            statusDot.className = "w-2 h-2 bg-[#ccff00] rounded-full animate-ping";
+            statusText.innerText = "Link Active";
+            statusText.classList.replace('text-zinc-500', 'text-[#ccff00]');
 
-            pusher.connection.bind('connected', () => {
-                statusDot.className = "w-2 h-2 bg-green-500 rounded-full animate-pulse";
-                statusText.innerText = "Link Active";
-                statusText.className = "text-[8px] font-bold text-green-400 uppercase";
-            });
-
-            channel.bind('dr-note', function(data) {
-                const display = document.getElementById('dr-display');
-                const timeLabel = document.getElementById('msg-time');
-                
-                // Actualización del Tubo con Sensation Live
-                display.innerText = data.text || data.mensaje;
-                display.className = "text-[12px] font-black text-[#ccff00] leading-relaxed italic transition-all duration-500";
-                timeLabel.innerText = "Message Received Now";
-                
-                // Alertar al paciente
-                if ('speechSynthesis' in window) {
-                    const msg = new SpeechSynthesisUtterance("Atención: Nuevo mensaje del doctor");
-                    msg.lang = 'es-ES';
-                    window.speechSynthesis.speak(msg);
+            // Escuchar el tubo de mensajes del Dr
+            onValue(ref(db, `mensaje_dr/${pid}`), (snapshot) => {
+                const data = snapshot.val();
+                if(data && data.texto) {
+                    const drDisplay = document.getElementById('dr-display');
+                    drDisplay.innerText = data.texto;
+                    drDisplay.className = "text-[14px] font-black text-[#ccff00] leading-relaxed italic animate-pulse";
+                    
+                    if ('speechSynthesis' in window) {
+                        const msg = new SpeechSynthesisUtterance(data.texto);
+                        msg.lang = 'en-US';
+                        window.speechSynthesis.speak(msg);
+                    }
                 }
             });
         }
-
-        window.onload = initDashboard;
     </script>
 </body>
 </html>
