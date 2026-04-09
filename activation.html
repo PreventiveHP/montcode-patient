@@ -46,7 +46,7 @@
         <div class="text-center mb-4">
             <span class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest">— OR ENTER MANUALLY —</span>
         </div>
-        <input type="text" id="manual-dr-id" placeholder="Enter Provider ID (e.g. DR-99)" class="input-field uppercase">
+        <input type="text" id="manual-dr-id" placeholder="Enter Provider ID (e.g. DR-99)" class="input-field uppercase text-center text-blue-400">
         <button onclick="validateDrLink()" class="w-full bg-zinc-800 text-white font-black py-4 rounded-2xl uppercase italic mt-2">Link Provider</button>
     </div>
 
@@ -56,13 +56,19 @@
             <div id="step2-tag" class="flex-1 border-b-4 border-zinc-800 pb-2 text-[8px] font-black uppercase text-zinc-800">2. Dr. Pair</div>
         </div>
 
-        <div class="scanner-box mb-8" id="barcode-wrapper">
+        <div class="scanner-box mb-6" id="barcode-wrapper">
             <div id="interactive" class="viewport"></div> 
             <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <div id="scan-line" class="w-64 h-0.5 bg-[#ccff00] shadow-[0_0_15px_#ccff00] animate-pulse"></div>
                 <p id="scanner-label" class="text-[8px] font-black uppercase mt-4 text-white/40 tracking-[0.3em]">Align MontCode Barcode</p>
             </div>
         </div>
+
+        <div class="text-center mb-4">
+            <span class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest">— MANUAL KIT ENTRY —</span>
+        </div>
+        <input type="text" id="manual-kit-id" placeholder="Code (e.g. 10215321)" class="input-field uppercase text-center text-[#ccff00]">
+        <button onclick="validateManualKit()" class="w-full bg-zinc-900 border border-zinc-700 text-zinc-400 font-black py-4 rounded-2xl uppercase italic mt-2">Activate Kit Code</button>
     </div>
 
     <script>
@@ -83,12 +89,21 @@
 
             Quagga.onDetected((data) => {
                 const code = data.codeResult.code;
-                // REGLA: Debe empezar por 102
                 if (code.startsWith("102")) {
                     Quagga.stop();
                     processBarcode(code);
                 }
             });
+        }
+
+        function validateManualKit() {
+            const val = document.getElementById('manual-kit-id').value.trim();
+            if(val.startsWith("102")) {
+                Quagga.stop();
+                processBarcode(val);
+            } else {
+                alert("Invalid Format. Kit codes must start with 102.");
+            }
         }
 
         function processBarcode(code) {
@@ -100,22 +115,20 @@
             else if (code.includes("30")) enrollmentDays = 30;
             else if (code.includes("14")) enrollmentDays = 14;
             else if (code.includes("07")) enrollmentDays = 7;
+            else if (code.includes("15")) enrollmentDays = 15; // Añadido 15 por tu ejemplo
             else {
-                alert("Invalid Kit Code. Please use an official MontCode Kit.");
-                startBarcodeScanner(); // Reiniciar si no es válido
+                alert("Invalid Kit Code. Missing validity period (07, 14, 15, 30, 90, 365).");
+                if(!document.getElementById('main-activation-ui').classList.contains('hidden')) startBarcodeScanner();
                 return;
             }
 
-            // Crear ID de Paciente basado en el Kit
             const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
             const uniqueID = `MC-${code.substring(0,3)}-${randomSuffix}`;
             localStorage.setItem('temp_id', uniqueID);
 
-            // Cambiar a Paso 2 (Provider Link)
             document.getElementById('main-activation-ui').classList.add('hidden');
             document.getElementById('dr-link-ui').classList.remove('hidden');
             
-            // Iniciar Escáner QR del Dr
             startQRScanner();
         }
 
@@ -149,7 +162,7 @@
             const name = document.getElementById('p-name').value;
             const dob = document.getElementById('p-dob').value;
 
-            if(!name) { alert("Patient name is required for local identification."); return; }
+            if(!name) { alert("Patient name is required."); return; }
 
             localStorage.setItem('patient_id', localStorage.getItem('temp_id'));
             localStorage.setItem('enrollment_days', enrollmentDays);
