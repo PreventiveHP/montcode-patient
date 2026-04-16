@@ -95,7 +95,6 @@
     </footer>
 
     <script type="module">
-        // --- INTEGRACIÓN MONTCODE-SENTINEL ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
         import { getDatabase, ref, set, push } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
@@ -121,7 +120,6 @@
             statusDot.className = "w-2 h-2 bg-yellow-500 animate-pulse";
 
             try {
-                // 1. Enviar a 'vitals/' para feed del Dr (Gráficas)
                 const vitalsRef = ref(db_fire, `vitals/${pId}`);
                 await push(vitalsRef, {
                     glucose: val,
@@ -130,10 +128,9 @@
                     type: "GLUCOSE"
                 });
 
-                // 2. Enviar a 'mensaje_dr/' para alerta visual inmediata
                 await set(ref(db_fire, `mensaje_dr/${pId}`), {
                     v: val,
-                    texto: `GLUCOSE ALERT: ${val} MG/DL (${mode.toUpperCase()})`,
+                    texto: `GLUCOSE REPORT: ${val} MG/DL (${mode.toUpperCase()})`,
                     timestamp: Date.now(),
                     provider: "PATIENT_GLU" 
                 });
@@ -142,10 +139,10 @@
                 statusDot.className = "w-2 h-2 bg-[#ccff00] shadow-[0_0_8px_#ccff00]";
                 setTimeout(() => {
                     statusText.innerText = "BRIDGE ACTIVE";
+                    statusDot.className = "w-2 h-2 bg-blue-500";
                 }, 3000);
 
             } catch (e) { 
-                console.error("Firebase Error", e);
                 statusText.innerText = "LINK ERROR";
                 statusDot.className = "w-2 h-2 bg-red-500";
             }
@@ -181,17 +178,10 @@
         function saveGlu() {
             if(!currentInput) return;
             const val = parseInt(currentInput);
-            const entry = { 
-                v: val, 
-                t: selectedTime, 
-                d: new Date().toISOString()
-            };
-            db.push(entry);
+            db.push({ v: val, t: selectedTime, d: new Date().toISOString() });
             localStorage.setItem('mc_glu_master_2026', JSON.stringify(db));
             
-            if (window.transmitToFirebase) {
-                window.transmitToFirebase(val, selectedTime);
-            }
+            if (window.transmitToFirebase) window.transmitToFirebase(val, selectedTime);
 
             speakValue(val);
             currentInput = ""; 
@@ -201,7 +191,6 @@
 
         function speakValue(val) {
             let msg = currentLang === 'es' ? `${val} miligramos.` : `${val} milligrams.`;
-            if(val < 70) msg += (currentLang === 'es' ? " Alerta: Glucosa baja." : " Alert: Low glucose.");
             const u = new SpeechSynthesisUtterance(msg);
             u.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
             window.speechSynthesis.speak(u);
@@ -213,16 +202,18 @@
             const avg = Math.round(vals.reduce((a,b)=>a+b)/vals.length);
             const a1c = ((46.7 + avg) / 28.7).toFixed(1);
             const total = vals.length;
-            const inRange = vals.filter(v => v >= 70 && v <= 180).length;
+            const low = vals.filter(v => v < 70).length;
+            const high = vals.filter(v => v > 180).length;
+            const inRange = total - (low + high);
             const tir = Math.round((inRange / total) * 100);
 
             document.getElementById('avg-val').innerText = avg;
             document.getElementById('a1c-val').innerText = a1c + "%";
             document.getElementById('tir-val').innerText = tir + "%";
             
-            document.getElementById('bar-low').style.width = (vals.filter(v => v < 70).length / total * 100) + "%";
+            document.getElementById('bar-low').style.width = (low / total * 100) + "%";
             document.getElementById('bar-target').style.width = (inRange / total * 100) + "%";
-            document.getElementById('bar-high').style.width = (vals.filter(v => v > 180).length / total * 100) + "%";
+            document.getElementById('bar-high').style.width = (high / total * 100) + "%";
             updateChart();
         }
 
@@ -231,29 +222,15 @@
             chart = new Chart(ctx, {
                 type: 'line',
                 data: { labels: [], datasets: [{ data: [], borderColor: '#ccff00', borderWidth: 3, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#ccff00', fill: true, backgroundColor: 'rgba(204, 255, 0, 0.05)' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#111' }, ticks: { color: '#444', font: { size: 9 } } }, x: { ticks: { color: '#444', font: { size: 8 } } } } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#111' }, ticks: { color: '#444' } }, x: { display: false } } }
             });
         }
 
         function updateChart() {
-            const last12 = db.slice(-12);
-            chart.data.labels = last12.map(d => new Date(d.d).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
-            chart.data.datasets[0].data = last12.map(d => d.v);
+            const last = db.slice(-12);
+            chart.data.labels = last.map(d => "");
+            chart.data.datasets[0].data = last.map(d => d.v);
             chart.update();
-        }
-
-        async function generatePDF() {
-            if (db.length === 0) return;
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const pid = localStorage.getItem('patient_id') || 'PX-DEBUG';
-            
-            doc.setFillColor(15, 15, 15); doc.rect(0, 0, 210, 45, 'F');
-            doc.setTextColor(204, 255, 0); doc.setFontSize(22); doc.text("MONTCODE™ GLUCOSE AUDIT", 15, 25);
-            doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.text(`PATIENT ID: ${pid} | DATE: ${new Date().toLocaleString()}`, 15, 35);
-            const canvas = document.getElementById('gluChart');
-            doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 95, 180, 60);
-            doc.save(`Glucose_Report_${pid}.pdf`);
         }
 
         function setLang(lang) {
@@ -265,16 +242,6 @@
             document.getElementById('time-post').innerText = t.post;
             document.getElementById('btn-en').style.opacity = lang === 'en' ? '1' : '0.4';
             document.getElementById('btn-es').style.opacity = lang === 'es' ? '1' : '0.4';
-        }
-
-        function startMic() {
-            const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
-            rec.onresult = (e) => {
-                const v = e.results[0][0].transcript.replace(/\D/g,'');
-                if(v) { currentInput = v.slice(0,3); document.getElementById('display').innerText = currentInput; }
-            };
-            rec.start();
         }
 
         function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_glu_master_2026'); location.reload(); } }
