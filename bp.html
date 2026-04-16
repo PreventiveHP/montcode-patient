@@ -92,14 +92,18 @@
     </footer>
 
 <script type="module">
-    // --- TUBO DE TRANSMISIÓN (INTACTO) ---
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    // --- NUEVO TUBO DE TRANSMISIÓN (MONTCODE-SENTINEL) ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
     const firebaseConfig = {
-        apiKey: "AIzaSyDVIQ4S-w4Ag40uYuArW3o7Hw2XQwoQV7U",
-        databaseURL: "https://montcode-e02c7-default-rtdb.firebaseio.com",
-        projectId: "montcode-e02c7"
+        apiKey: "AIzaSyCiIUVMfCt68zWs6Z5aRcyaMQoAUyAmMRI",
+        authDomain: "montcode-sentinel.firebaseapp.com",
+        databaseURL: "https://montcode-sentinel-default-rtdb.firebaseio.com",
+        projectId: "montcode-sentinel",
+        storageBucket: "montcode-sentinel.firebasestorage.app",
+        messagingSenderId: "726407164878",
+        appId: "1:726407164878:web:551351e1cd856dac78b19f"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -114,6 +118,7 @@
         statusDot.className = "w-2 h-2 bg-yellow-500 animate-pulse";
 
         try {
+            // Se envía a la rama de mensajes para alertar al Dr en tiempo real
             await set(ref(db_fire, `mensaje_dr/${pId}`), {
                 sys: sys,
                 dia: dia,
@@ -129,6 +134,7 @@
                 statusDot.className = "w-2 h-2 bg-blue-500";
             }, 3000);
         } catch (e) {
+            console.error("Link Error:", e);
             statusText.innerText = "LINK ERROR";
             statusDot.className = "w-2 h-2 bg-red-500";
         }
@@ -198,13 +204,11 @@
         else display.innerText = currentInput.slice(0, 3) + "/" + currentInput.slice(3).padEnd(2, '-');
     }
 
-    // --- ACCIÓN PRINCIPAL (LOCAL + TUBO) ---
     function saveBP() {
         if(currentInput.length < 5) return;
         const s = parseInt(currentInput.slice(0,3));
         const d = parseInt(currentInput.slice(3));
         
-        // 1. Guardar Local
         db.push({ 
             sys: s, 
             dia: d, 
@@ -213,7 +217,6 @@
         });
         localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
         
-        // 2. Transmitir via "Tubo" (Firebase)
         if (window.transmitToFirebase) {
             window.transmitToFirebase(s, d);
         }
@@ -277,7 +280,6 @@
         rec.start();
     }
 
-    // --- MOTOR PDF RECAPTURADO ---
     async function generatePDF() {
         if (db.length === 0) return alert("No history.");
         const { jsPDF } = window.jspdf;
