@@ -19,7 +19,6 @@
         body { background: #000; color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
         .scanner-box { width: 100%; height: 260px; background: #0a0a0a; border-radius: 40px; overflow: hidden; position: relative; border: 2px solid #1a1a1a; }
         #interactive.viewport canvas, video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-        .step-active { border-color: #ccff00; color: #ccff00; }
         .input-field { background: #111; border: 1px solid #222; padding: 15px; border-radius: 15px; width: 100%; color: white; font-weight: bold; margin-bottom: 10px; outline: none; text-transform: uppercase; }
         .input-field:focus { border-color: #ccff00; }
         .btn-primary { background: #ccff00; color: #000; font-weight: 900; padding: 16px; border-radius: 20px; text-transform: uppercase; font-style: italic; transition: all 0.2s; }
@@ -34,9 +33,10 @@
     </header>
 
     <div id="local-data-ui" class="hidden">
-        <p class="text-[9px] font-black text-[#ccff00] uppercase tracking-widest mb-4 italic">Step 3: Patient Profile</p>
+        <p class="text-[9px] font-black text-[#ccff00] uppercase tracking-widest mb-4 italic">Step 3: Patient Profile (Private)</p>
         <input type="text" id="p-name" placeholder="Full Name" class="input-field">
         <input type="text" id="p-dob" placeholder="DOB (MM/DD/YYYY)" class="input-field">
+        <p class="text-[7px] text-zinc-600 uppercase font-bold mb-4 px-2">This information is stored only on this device.</p>
         <button onclick="finalizeActivation()" class="w-full btn-primary mt-4 shadow-[0_0_20px_rgba(204,255,0,0.3)]">Authorize & Start</button>
     </div>
 
@@ -45,16 +45,13 @@
         <div class="scanner-box mb-4" id="qr-wrapper">
             <div id="qr-reader" style="width: 100%;"></div>
         </div>
-        <div class="text-center mb-4">
-            <span class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest">— OR ENTER MANUALLY —</span>
-        </div>
-        <input type="text" id="manual-dr-id" placeholder="Enter Provider ID (e.g. 102001)" class="input-field text-center text-blue-400">
+        <input type="text" id="manual-dr-id" placeholder="Provider ID (e.g. 102001)" class="input-field text-center text-blue-400">
         <button onclick="validateDrLink()" class="w-full bg-zinc-800 text-white font-black py-4 rounded-2xl uppercase italic mt-2">Link Provider</button>
     </div>
 
     <div id="main-activation-ui">
         <div class="flex gap-2 mb-6 text-center">
-            <div id="step1-tag" class="flex-1 border-b-4 border-ccff00 pb-2 text-[8px] font-black uppercase text-[#ccff00]">1. Kit Scan</div>
+            <div id="step1-tag" class="flex-1 border-b-4 border-[#ccff00] pb-2 text-[8px] font-black uppercase text-[#ccff00]">1. Kit Scan</div>
             <div id="step2-tag" class="flex-1 border-b-4 border-zinc-800 pb-2 text-[8px] font-black uppercase text-zinc-800">2. Dr. Pair</div>
         </div>
 
@@ -66,24 +63,18 @@
             </div>
         </div>
 
-        <div class="text-center mb-4">
-            <span class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest">— MANUAL KIT ENTRY —</span>
-        </div>
-        <input type="text" id="manual-kit-id" placeholder="Code (e.g. 10215321)" class="input-field text-center text-[#ccff00]">
-        <button onclick="validateManualKit()" class="w-full bg-zinc-900 border border-zinc-700 text-zinc-400 font-black py-4 rounded-2xl uppercase italic mt-2">Activate Kit Code</button>
+        <input type="text" id="manual-kit-id" placeholder="Kit Code (e.g. 10215321)" class="input-field text-center text-[#ccff00]">
+        <button onclick="validateManualKit()" class="w-full bg-zinc-900 border border-zinc-700 text-zinc-400 font-black py-4 rounded-2xl uppercase italic mt-2">Activate Kit</button>
     </div>
 
     <script>
-        let kitBarcode = "";
         let enrollmentDays = 0;
         let html5QrCode = null;
 
         window.onload = () => {
             startBarcodeScanner();
-            if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
         };
 
-        // --- LÓGICA PASO 1: BARCODE ---
         function startBarcodeScanner() {
             Quagga.init({
                 inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#interactive'), constraints: { facingMode: "environment" } },
@@ -106,70 +97,56 @@
                 Quagga.stop();
                 processBarcode(val);
             } else {
-                alert("Invalid Format. Kit codes must start with 102.");
+                alert("Invalid Kit Format (Must start with 102)");
             }
         }
 
         function processBarcode(code) {
-            kitBarcode = code;
-            
-            // Detección de Adherencia/Días
-            if (code.includes("365")) enrollmentDays = 365;
-            else if (code.includes("90")) enrollmentDays = 90;
-            else if (code.includes("30")) enrollmentDays = 30;
-            else if (code.includes("15")) enrollmentDays = 15;
-            else if (code.includes("14")) enrollmentDays = 14;
-            else if (code.includes("07")) enrollmentDays = 7;
-            else {
-                alert("Invalid Kit Code: No validity period detected.");
+            // Detectar vigencia del kit
+            const daysMap = {"365":365, "90":90, "30":30, "15":15, "14":14, "07":7};
+            enrollmentDays = 0;
+            for(let key in daysMap) {
+                if(code.includes(key)) { enrollmentDays = daysMap[key]; break; }
+            }
+
+            if(enrollmentDays === 0) {
+                alert("Validity period not detected in barcode.");
                 startBarcodeScanner();
                 return;
             }
 
-            // Generar ID Único de Paciente (MC-102-XXXX)
-            const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-            const uniqueID = `MC-${code.substring(0,3)}-${randomSuffix}`;
-            localStorage.setItem('temp_id', uniqueID);
+            // --- GENERACIÓN DE UUID PERSISTENTE ---
+            const uniqueID = 'PX-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+            localStorage.setItem('temp_uuid', uniqueID);
+            localStorage.setItem('enrollment_days', enrollmentDays);
 
             document.getElementById('main-activation-ui').classList.add('hidden');
             document.getElementById('dr-link-ui').classList.remove('hidden');
-            
             startQRScanner();
         }
 
-        // --- LÓGICA PASO 2: QR DOCTOR ---
         function startQRScanner() {
             html5QrCode = new Html5Qrcode("qr-reader");
-            const config = { fps: 10, qrbox: { width: 200, height: 200 } };
-
-            html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-                // El decodedText es el ID del Dr del QR estático (102XXX)
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 200 }, (decodedText) => {
                 completeDrLinking(decodedText);
-            }).catch(err => console.warn("Scanner ready..."));
+            }).catch(() => {});
         }
 
         function validateDrLink() {
             const manualID = document.getElementById('manual-dr-id').value.trim();
-            if(manualID.length < 3) return alert("Enter valid Provider ID");
+            if(manualID.length < 3) return alert("Invalid Provider ID");
             completeDrLinking(manualID);
         }
 
         function completeDrLinking(drId) {
+            localStorage.setItem('dr_link', drId);
             if(html5QrCode) {
-                html5QrCode.stop().then(() => {
-                    localStorage.setItem('dr_link', drId);
-                    showLocalDataStep();
-                }).catch(() => {
-                    localStorage.setItem('dr_link', drId);
-                    showLocalDataStep();
-                });
+                html5QrCode.stop().then(() => showLocalDataStep()).catch(() => showLocalDataStep());
             } else {
-                localStorage.setItem('dr_link', drId);
                 showLocalDataStep();
             }
         }
 
-        // --- LÓGICA PASO 3: FINALIZAR ---
         function showLocalDataStep() {
             document.getElementById('dr-link-ui').classList.add('hidden');
             document.getElementById('local-data-ui').classList.remove('hidden');
@@ -179,16 +156,14 @@
             const name = document.getElementById('p-name').value.trim();
             const dob = document.getElementById('p-dob').value.trim();
 
-            if(!name) return alert("Patient name is required.");
+            if(!name) return alert("Full Name required for local identification.");
 
-            // Persistencia Final Local
-            localStorage.setItem('patient_id', localStorage.getItem('temp_id'));
-            localStorage.setItem('enrollment_days', enrollmentDays);
-            localStorage.setItem('activation_date', new Date().toISOString());
+            // PERSISTENCIA FINAL
+            localStorage.setItem('mc_patient_uuid', localStorage.getItem('temp_uuid'));
             localStorage.setItem('patient_name', name);
             localStorage.setItem('patient_dob', dob || "00/00/0000");
+            localStorage.setItem('activation_date', new Date().toISOString());
 
-            // Redirección al Dashboard
             location.href = "index.html";
         }
     </script>
