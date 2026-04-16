@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MontCode™ Dashboard</title>
-
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,43 +11,19 @@
     <meta name="apple-mobile-web-app-title" content="MontCode">
     <link rel="apple-touch-icon" href="logo_192.png">
     <meta name="theme-color" content="#000000">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { background: #000; color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
-        
-        .glass-3d { 
-            background: linear-gradient(145deg, #0f0f0f, #050505);
-            border: 1px solid #1a1a1a;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            transition: all 0.3s ease;
-        }
+        .glass-3d { background: linear-gradient(145deg, #0f0f0f, #050505); border: 1px solid #1a1a1a; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: all 0.3s ease; }
         .glass-3d:active { transform: scale(0.95); border-color: #3b82f6; }
-
-        .hero-gradient {
-            background: linear-gradient(to bottom, #003366 0%, #000000 100%);
-            height: 220px;
-        }
-
-        .dr-bridge-container {
-            border: 2px solid #ccff00;
-            background: rgba(10, 10, 10, 0.9);
-            box-shadow: 0 0 20px rgba(204, 255, 0, 0.1);
-            position: relative;
-            overflow: hidden;
-            min-height: 100px;
-        }
-        
-        .live-indicator {
-            background: #ccff00; color: #000; font-size: 8px; font-weight: 900;
-            padding: 2px 6px; border-radius: 4px; animation: blink 1.5s infinite;
-        }
+        .hero-gradient { background: linear-gradient(to bottom, #003366 0%, #000000 100%); height: 220px; }
+        .dr-bridge-container { border: 2px solid #ccff00; background: rgba(10, 10, 10, 0.9); box-shadow: 0 0 20px rgba(204, 255, 0, 0.1); position: relative; overflow: hidden; min-height: 100px; }
+        .live-indicator { background: #ccff00; color: #000; font-size: 8px; font-weight: 900; padding: 2px 6px; border-radius: 4px; animation: blink 1.5s infinite; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
     </style>
 </head>
 <body class="pb-20">
-
     <div class="hero-gradient flex flex-col items-center justify-center px-6 text-center border-b border-zinc-900">
         <img src="logo.png.jpg" alt="MontCode Logo" class="h-10 mb-2 opacity-90">
         <p id="user-greeting" class="text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">SYSTEM READY</p>
@@ -61,7 +36,7 @@
             <div class="flex justify-between items-start mb-2">
                 <div>
                     <p class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest">Provider ID</p>
-                    <p id="display-id" class="text-lg font-black text-[#ccff00] tracking-tighter">---</p>
+                    <p id="display-id" class="text-lg font-black text-[#ccff00] tracking-tighter">NOT LINKED</p>
                 </div>
                 <div class="text-right">
                     <p class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest">Telemetry Plan</p>
@@ -102,12 +77,6 @@
                 <span class="text-[8px] font-black uppercase tracking-widest text-blue-500 italic">Sync Kit</span>
             </a>
         </div>
-
-        <div class="mt-8 px-4 opacity-40">
-            <p class="text-[6px] text-zinc-500 font-bold uppercase text-center leading-tight">
-                Wellness monitoring only. Not for clinical diagnosis. In case of emergency, contact 911 immediately.
-            </p>
-        </div>
     </div>
 
     <script type="module">
@@ -127,43 +96,26 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(() => {});
-            });
-        }
-
-        // LÓGICA DINÁMICA POR PACIENTE
         const pid = localStorage.getItem('patient_id');
         const pName = localStorage.getItem('patient_name');
-        const enrollDays = localStorage.getItem('enrollment_days');
-        const startDate = localStorage.getItem('activation_date');
+        const drLink = localStorage.getItem('dr_link'); // El ID del Dr escaneado
 
         if(pid) {
-            document.getElementById('display-id').innerText = pid;
+            // Mostrar ID del Dr vinculado si existe
+            if(drLink) document.getElementById('display-id').innerText = `DR-${drLink}`;
+            
             if(pName) document.getElementById('user-greeting').innerText = `GOOD DAY, ${pName.toUpperCase()}`;
             
             document.getElementById('status-dot').className = "w-1.5 h-1.5 bg-[#ccff00] rounded-full animate-pulse shadow-[0_0_5px_#ccff00]";
             document.getElementById('status-text').innerText = "Clinical Link Active";
             document.getElementById('status-text').className = "text-[8px] font-black text-[#ccff00] uppercase italic";
 
-            if(enrollDays && startDate) {
-                const end = new Date(startDate);
-                end.setDate(end.getDate() + parseInt(enrollDays));
-                const diff = end - new Date();
-                const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
-                
-                const countDisplay = document.getElementById('telemetry-count');
-                countDisplay.innerText = daysLeft > 0 ? `${daysLeft} DAYS LEFT` : "EXPIRED";
-            }
-
-            // ESCUCHA DINÁMICA: Este paciente solo escucha su ID único
+            // Escucha activa de mensajes para este paciente
             onValue(ref(db, `mensaje_dr/${pid}`), (snapshot) => {
                 const data = snapshot.val();
                 if(data && data.texto) {
-                    const drDisplay = document.getElementById('dr-display');
-                    drDisplay.innerText = data.texto;
-                    drDisplay.className = "text-[14px] font-black text-[#ccff00] leading-snug italic";
+                    document.getElementById('dr-display').innerText = data.texto;
+                    document.getElementById('dr-display').className = "text-[14px] font-black text-[#ccff00] leading-snug italic";
                     document.getElementById('msg-time').innerText = "LIVE MESSAGE";
                 }
             });
