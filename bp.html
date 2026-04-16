@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -94,7 +94,7 @@
 <script type="module">
     // --- NUEVO TUBO DE TRANSMISIÓN (MONTCODE-SENTINEL) ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getDatabase, ref, set, push } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCiIUVMfCt68zWs6Z5aRcyaMQoAUyAmMRI",
@@ -110,7 +110,7 @@
     const db_fire = getDatabase(app);
 
     window.transmitToFirebase = async (sys, dia) => {
-        const pId = localStorage.getItem('patient_id') || "102001";
+        const pId = localStorage.getItem('patient_id') || "MC-DEBUG-001";
         const statusText = document.getElementById('status-text');
         const statusDot = document.getElementById('status-dot');
 
@@ -118,7 +118,15 @@
         statusDot.className = "w-2 h-2 bg-yellow-500 animate-pulse";
 
         try {
-            // Se envía a la rama de mensajes para alertar al Dr en tiempo real
+            // 1. Enviar a 'vitals/' para que aparezca en el feed del Dr. (Tarjeta azul)
+            const vitalsRef = ref(db_fire, `vitals/${pId}`);
+            await push(vitalsRef, {
+                sys: sys,
+                dia: dia,
+                timestamp: Date.now()
+            });
+
+            // 2. Enviar a 'mensaje_dr/' para alerta visual en el Clinical Bridge
             await set(ref(db_fire, `mensaje_dr/${pId}`), {
                 sys: sys,
                 dia: dia,
@@ -128,7 +136,7 @@
             });
             
             statusText.innerText = "BRIDGE SYNCED ✅";
-            statusDot.className = "w-2 h-2 bg-green-500";
+            statusDot.className = "w-2 h-2 bg-green-500 shadow-[0_0_8px_#22c55e]";
             setTimeout(() => {
                 statusText.innerText = "BRIDGE ACTIVE";
                 statusDot.className = "w-2 h-2 bg-blue-500";
@@ -153,7 +161,6 @@
         setLang('en');
     };
 
-    // --- LÓGICA CLÍNICA AHA ---
     function getAHAClass(sys, dia) {
         if (sys >= 180 || dia >= 120) return { l: "CRISIS", c: "#ff0000" };
         if (sys >= 140 || dia >= 90) return { l: "STAGE 2", c: "#f97316" };
@@ -284,20 +291,15 @@
         if (db.length === 0) return alert("No history.");
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        
         doc.setFillColor(0, 51, 102); 
         doc.rect(0, 0, 210, 40, 'F');
         doc.setTextColor(255, 255, 255); 
         doc.setFontSize(22); 
         doc.text("MontCode™ Clinical BP Report", 15, 20);
-        
         doc.setTextColor(0); doc.setFontSize(12);
         doc.text(`Avg Pressure: ${document.getElementById('sys-val').innerText}/${document.getElementById('dia-val').innerText}`, 15, 60);
-        doc.text(`MAP: ${document.getElementById('map-val').innerText}`, 15, 70);
-        
         const canvas = document.getElementById('bpChart');
         doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 80, 180, 80);
-        
         doc.save(`BP_Report_${new Date().getTime()}.pdf`);
     }
 
