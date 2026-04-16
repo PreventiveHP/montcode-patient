@@ -111,18 +111,25 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        // Importación de librerías actualizadas
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
+        // CONFIGURACIÓN DE MONTCODE-SENTINEL (EL TUBO LIMPIO)
         const firebaseConfig = {
-            apiKey: "AIzaSyDVIQ4S-w4Ag40uYuArW3o7Hw2XQwoQV7U",
-            databaseURL: "https://montcode-e02c7-default-rtdb.firebaseio.com",
-            projectId: "montcode-e02c7"
+            apiKey: "AIzaSyCiIUVMfCt68zWs6Z5aRcyaMQoAUyAmMRI",
+            authDomain: "montcode-sentinel.firebaseapp.com",
+            databaseURL: "https://montcode-sentinel-default-rtdb.firebaseio.com",
+            projectId: "montcode-sentinel",
+            storageBucket: "montcode-sentinel.firebasestorage.app",
+            messagingSenderId: "726407164878",
+            appId: "1:726407164878:web:551351e1cd856dac78b19f"
         };
+
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Registro de Service Worker para instalación de App
+        // Registro de Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -143,7 +150,7 @@
             document.getElementById('status-text').innerText = "Clinical Link Active";
             document.getElementById('status-text').className = "text-[8px] font-black text-[#ccff00] uppercase italic";
 
-            // Telemetría
+            // Telemetría de Adherencia
             if(enrollDays && startDate) {
                 const end = new Date(startDate);
                 end.setDate(end.getDate() + parseInt(enrollDays));
@@ -155,7 +162,7 @@
                 if(daysLeft <= 0) countDisplay.className = "text-xs font-black text-red-600 uppercase italic";
             }
 
-            // El "Tubo"
+            // ESCUCHA DEL TUBO (Dr Feedback Receptor)
             onValue(ref(db, `mensaje_dr/${pid}`), (snapshot) => {
                 const data = snapshot.val();
                 if(data && data.texto) {
