@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -89,6 +89,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
+        // Configuración idéntica a la del Provider para asegurar el "match"
         const firebaseConfig = {
             apiKey: "AIzaSyCiIUVMfCt68zWs6Z5aRcyaMQoAUyAmMRI",
             authDomain: "montcode-sentinel.firebaseapp.com",
@@ -100,6 +101,7 @@
         const db = getDatabase(app);
 
         // --- GESTIÓN DE IDENTIDAD ---
+        // Este ID es el que el Dr debe registrar en su censo
         let pid = localStorage.getItem('mc_patient_uuid');
         if (!pid) {
             pid = 'MC-' + Math.random().toString(36).substr(2, 6).toUpperCase();
@@ -112,6 +114,7 @@
 
         // --- EL TUBO: ESCUCHA DE MENSAJES DEL DR ---
         if(pid) {
+            // Escucha específicamente la rama asignada a este ID de paciente
             onValue(ref(db, `mensaje_dr/${pid}`), (snapshot) => {
                 const data = snapshot.val();
                 const bridgeBox = document.getElementById('dr-bridge');
@@ -120,14 +123,24 @@
                 const time = document.getElementById('msg-time');
 
                 if(data && data.texto) {
+                    // Activación visual del puente
                     bridgeBox.classList.add('bridge-active');
                     bridgeBox.classList.remove('border-zinc-800');
+                    
+                    // Contenido del mensaje
                     display.innerText = data.texto;
                     display.className = "text-[16px] font-black text-[#ccff00] leading-tight uppercase italic";
+                    
+                    // Etiquetas de estado Live
                     tag.innerText = "LIVE INSTRUCTION";
                     tag.className = "live-indicator uppercase tracking-tighter";
-                    time.innerText = new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    
+                    // Timestamp formateado
+                    const msgDate = data.timestamp ? new Date(data.timestamp) : new Date();
+                    time.innerText = msgDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                     time.className = "text-[7px] text-[#ccff00] font-black uppercase italic animate-pulse";
+                    
+                    // Alerta táctica (Vibración)
                     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
                 }
             });
