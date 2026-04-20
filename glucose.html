@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -137,6 +137,12 @@
 
                 statusText.innerText = "BRIDGE SYNCED ✅";
                 statusDot.className = "w-2 h-2 bg-[#ccff00] shadow-[0_0_8px_#ccff00]";
+
+                // --- INICIO DEL TUBO DIRECTO AL RECEPTOR ---
+                const receptorUrl = `glucose_receptor.html?id=${pId}`;
+                window.open(receptorUrl, 'glucose_terminal'); 
+                // --- FIN DEL TUBO DIRECTO ---
+
                 setTimeout(() => {
                     statusText.innerText = "BRIDGE ACTIVE";
                     statusDot.className = "w-2 h-2 bg-blue-500";
@@ -245,6 +251,16 @@
         }
 
         function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_glu_master_2026'); location.reload(); } }
+
+        function startMic() {
+            const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
+            rec.onresult = (e) => {
+                const v = e.results[0][0].transcript.replace(/\D/g,'');
+                if(v) { currentInput = v.slice(0,3); document.getElementById('display').innerText = currentInput; }
+            };
+            rec.start();
+        }
     </script>
 </body>
 </html>
