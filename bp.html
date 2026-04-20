@@ -92,6 +92,7 @@
     </footer>
 
 <script type="module">
+    // --- NUEVO TUBO DE TRANSMISIÓN (MONTCODE-SENTINEL) ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, set, push } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
@@ -117,6 +118,7 @@
         statusDot.className = "w-2 h-2 bg-yellow-500 animate-pulse";
 
         try {
+            // 1. Enviar a 'vitals/' para que aparezca en el feed del Dr. (Tarjeta azul)
             const vitalsRef = ref(db_fire, `vitals/${pId}`);
             await push(vitalsRef, {
                 sys: sys,
@@ -124,6 +126,7 @@
                 timestamp: Date.now()
             });
 
+            // 2. Enviar a 'mensaje_dr/' para alerta visual en el Clinical Bridge
             await set(ref(db_fire, `mensaje_dr/${pId}`), {
                 sys: sys,
                 dia: dia,
@@ -134,10 +137,6 @@
             
             statusText.innerText = "BRIDGE SYNCED ✅";
             statusDot.className = "w-2 h-2 bg-green-500 shadow-[0_0_8px_#22c55e]";
-            
-            const receptorUrl = `bp_receptor.html?id=${pId}`;
-            window.open(receptorUrl, 'bp_terminal'); 
-
             setTimeout(() => {
                 statusText.innerText = "BRIDGE ACTIVE";
                 statusDot.className = "w-2 h-2 bg-blue-500";
@@ -308,3 +307,5 @@
 </script>
 </body>
 </html>
+
+
