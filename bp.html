@@ -110,7 +110,7 @@
 
     // Transmisión de un solo registro (Live Feed)
     window.transmitToFirebase = async (sys, dia) => {
-        const pId = localStorage.getItem('patient_id') || "MC-DEBUG-001";
+        const pId = localStorage.getItem('patient_id') || "PX-DEBUG-001";
         const statusText = document.getElementById('status-text');
         const statusDot = document.getElementById('status-dot');
         statusText.innerText = "TRANSMITTING...";
@@ -119,9 +119,6 @@
         try {
             const vitalsRef = ref(db_fire, `vitals/${pId}`);
             await push(vitalsRef, { sys, dia, timestamp: Date.now() });
-            await set(ref(db_fire, `mensaje_dr/${pId}`), {
-                sys, dia, texto: `BP: ${sys}/${dia} mmHg`, timestamp: Date.now(), provider: "PATIENT_BP"
-            });
             statusText.innerText = "BRIDGE SYNCED ✅";
             statusDot.className = "w-2 h-2 bg-green-500 shadow-[0_0_8px_#22c55e]";
             setTimeout(() => {
@@ -134,19 +131,17 @@
         }
     };
 
-    // NUEVO: Transmisión del Reporte Clínico Completo al Dr.
+    // TRANSMISIÓN DEL REPORTE AL DR (Alineado con el Dr App)
     window.transmitFullReport = async (historyData) => {
-        const pId = localStorage.getItem('patient_id') || "MC-DEBUG-001";
-        const pName = "MANUEL MONTALVAN"; 
+        const pId = localStorage.getItem('patient_id') || "PX-DEBUG-001";
         try {
-            await set(ref(db_fire, `reportes_clinicos/${pId}`), {
-                pxName: pName,
+            // El Dr espera los datos en reportes_clinicos/ID/bp
+            await set(ref(db_fire, `reportes_clinicos/${pId}/bp`), {
                 timestamp: Date.now(),
                 avgSys: document.getElementById('sys-val').innerText,
                 avgDia: document.getElementById('dia-val').innerText,
-                avgMap: document.getElementById('map-val').innerText,
-                status: document.getElementById('bp-status').innerText,
-                history: historyData
+                avgPulse: "N/A", 
+                history: historyData.map(h => ({ d: h.d, s: h.sys, di: h.dia, p: "N/A" }))
             });
         } catch (e) { console.error("Report Transmission Failed", e); }
     };
@@ -196,7 +191,7 @@
     function press(n) {
         if(n === 'C') currentInput = "";
         else if(n === '←') currentInput = currentInput.slice(0, -1);
-        else if(currentInput.length < 6) currentInput += n;
+        else if(currentInput.length < 5) currentInput += n;
         updateDisplay();
     }
 
@@ -259,7 +254,7 @@
         rec.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
         rec.onresult = (e) => {
             const v = e.results[0][0].transcript.replace(/\D/g,'');
-            if(v) { currentInput = v.slice(0,6); updateDisplay(); }
+            if(v) { currentInput = v.slice(0,5); updateDisplay(); }
         };
         rec.start();
     }
@@ -267,29 +262,29 @@
     async function generatePDF() {
         if (db.length === 0) return alert("No history.");
         
-        // ENVÍO AL DR (Tubo de Reportes)
-        const last10 = db.slice(-10);
-        if (window.transmitFullReport) window.transmitFullReport(last10);
+        // ENVÍO AL DR (Datos crudos para el PDF virtual)
+        const historyCopy = [...db].slice(-15);
+        if (window.transmitFullReport) await window.transmitFullReport(historyCopy);
 
-        // GENERACIÓN DE PDF
+        // GENERACIÓN DE PDF LOCAL
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         doc.setFillColor(0, 51, 102); doc.rect(0, 0, 210, 40, 'F');
         doc.setTextColor(255, 255, 255); doc.setFontSize(20);
         doc.text("MontCode™ Clinical BP Report", 15, 25);
         doc.setTextColor(0); doc.setFontSize(12);
-        doc.text(`Patient ID: ${localStorage.getItem('patient_id') || 'MC-001'}`, 15, 55);
+        doc.text(`Patient ID: ${localStorage.getItem('patient_id') || 'PX-DEBUG-001'}`, 15, 55);
         doc.text(`Avg BP: ${document.getElementById('sys-val').innerText}/${document.getElementById('dia-val').innerText}`, 15, 65);
         const canvas = document.getElementById('bpChart');
         doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 80, 180, 70);
         
         doc.text("Latest Readings:", 15, 165);
-        last10.forEach((item, i) => {
+        historyCopy.forEach((item, i) => {
             doc.text(`${new Date(item.d).toLocaleString()}: ${item.sys}/${item.dia} mmHg`, 15, 175 + (i * 7));
         });
 
         doc.save(`BP_Report_${Date.now()}.pdf`);
-        alert("Report transmitted to Provider & PDF Downloaded.");
+        alert("Report Sent to Provider & PDF Downloaded.");
     }
 
     function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_bp_master_2026'); location.reload(); } }
