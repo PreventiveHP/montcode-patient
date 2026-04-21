@@ -113,7 +113,7 @@
 
         // Transmisión Live Feed
         window.transmitToFirebase = async (val, mode) => {
-            const pId = localStorage.getItem('patient_id') || "MC-DEBUG-001";
+            const pId = localStorage.getItem('patient_id') || "PX-DEBUG-001";
             const statusText = document.getElementById('status-text');
             const statusDot = document.getElementById('status-dot');
             statusText.innerText = "TRANSMITTING...";
@@ -122,9 +122,6 @@
             try {
                 const vitalsRef = ref(db_fire, `vitals/${pId}`);
                 await push(vitalsRef, { glucose: val, mode, timestamp: Date.now(), type: "GLUCOSE" });
-                await set(ref(db_fire, `mensaje_dr/${pId}`), {
-                    v: val, texto: `GLU: ${val} (${mode.toUpperCase()})`, timestamp: Date.now(), provider: "PATIENT_GLU" 
-                });
                 statusText.innerText = "BRIDGE SYNCED ✅";
                 statusDot.className = "w-2 h-2 bg-[#ccff00] shadow-[0_0_8px_#ccff00]";
                 setTimeout(() => {
@@ -137,9 +134,9 @@
             }
         };
 
-        // Reporte Completo para el Dr.
+        // Reporte Completo para el Dr. (Sync con el Terminal)
         window.transmitFullReport = async (historyData) => {
-            const pId = localStorage.getItem('patient_id') || "MC-DEBUG-001";
+            const pId = localStorage.getItem('patient_id') || "PX-DEBUG-001";
             try {
                 await set(ref(db_fire, `reportes_clinicos/${pId}/glucose`), {
                     timestamp: Date.now(),
@@ -241,8 +238,10 @@
 
         async function generatePDF() {
             if (db.length === 0) return alert("No history.");
-            const last30 = db.slice(-30);
-            if (window.transmitFullReport) window.transmitFullReport(last30);
+            
+            // TRANSMISIÓN AUTOMÁTICA AL DR
+            const historyCopy = [...db].reverse().slice(0, 30);
+            if (window.transmitFullReport) await window.transmitFullReport(historyCopy);
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -251,20 +250,21 @@
             doc.text("MontCode™ Glucose Report", 15, 25);
             
             doc.setTextColor(0); doc.setFontSize(12);
-            doc.text(`Avg Glucose: ${document.getElementById('avg-val').innerText} mg/dL`, 15, 55);
-            doc.text(`Estimated A1C: ${document.getElementById('a1c-val').innerText}`, 15, 65);
-            doc.text(`Time In Range: ${document.getElementById('tir-val').innerText}`, 15, 75);
+            doc.text(`Patient ID: ${localStorage.getItem('patient_id') || 'PX-DEBUG-001'}`, 15, 50);
+            doc.text(`Avg Glucose: ${document.getElementById('avg-val').innerText} mg/dL`, 15, 60);
+            doc.text(`Estimated A1C: ${document.getElementById('a1c-val').innerText}`, 15, 70);
+            doc.text(`Time In Range: ${document.getElementById('tir-val').innerText}`, 15, 80);
             
             const canvas = document.getElementById('gluChart');
-            doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 85, 180, 60);
+            doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 90, 180, 60);
 
-            doc.text("Recent Logs:", 15, 160);
-            last30.reverse().slice(0,15).forEach((item, i) => {
-                doc.text(`${new Date(item.d).toLocaleString()} - ${item.v} mg/dL (${item.t})`, 15, 170 + (i * 7));
+            doc.text("Recent Logs:", 15, 165);
+            historyCopy.slice(0,15).forEach((item, i) => {
+                doc.text(`${new Date(item.d).toLocaleString()} - ${item.v} mg/dL (${item.t})`, 15, 175 + (i * 7));
             });
 
             doc.save(`Glucose_Report_${Date.now()}.pdf`);
-            alert("Sent to Provider & PDF Generated.");
+            alert("Report Sent to Provider & PDF Downloaded.");
         }
 
         function startMic() {
