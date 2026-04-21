@@ -92,7 +92,6 @@
     </footer>
 
 <script type="module">
-    // --- NUEVO TUBO DE TRANSMISIÓN (MONTCODE-SENTINEL) ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, set, push } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
@@ -109,32 +108,20 @@
     const app = initializeApp(firebaseConfig);
     const db_fire = getDatabase(app);
 
+    // Transmisión de un solo registro (Live Feed)
     window.transmitToFirebase = async (sys, dia) => {
         const pId = localStorage.getItem('patient_id') || "MC-DEBUG-001";
         const statusText = document.getElementById('status-text');
         const statusDot = document.getElementById('status-dot');
-
         statusText.innerText = "TRANSMITTING...";
         statusDot.className = "w-2 h-2 bg-yellow-500 animate-pulse";
 
         try {
-            // 1. Enviar a 'vitals/' para que aparezca en el feed del Dr. (Tarjeta azul)
             const vitalsRef = ref(db_fire, `vitals/${pId}`);
-            await push(vitalsRef, {
-                sys: sys,
-                dia: dia,
-                timestamp: Date.now()
-            });
-
-            // 2. Enviar a 'mensaje_dr/' para alerta visual en el Clinical Bridge
+            await push(vitalsRef, { sys, dia, timestamp: Date.now() });
             await set(ref(db_fire, `mensaje_dr/${pId}`), {
-                sys: sys,
-                dia: dia,
-                texto: `BP REPORT: ${sys}/${dia} mmHg`,
-                timestamp: Date.now(),
-                provider: "PATIENT_BP"
+                sys, dia, texto: `BP: ${sys}/${dia} mmHg`, timestamp: Date.now(), provider: "PATIENT_BP"
             });
-            
             statusText.innerText = "BRIDGE SYNCED ✅";
             statusDot.className = "w-2 h-2 bg-green-500 shadow-[0_0_8px_#22c55e]";
             setTimeout(() => {
@@ -142,10 +129,26 @@
                 statusDot.className = "w-2 h-2 bg-blue-500";
             }, 3000);
         } catch (e) {
-            console.error("Link Error:", e);
             statusText.innerText = "LINK ERROR";
             statusDot.className = "w-2 h-2 bg-red-500";
         }
+    };
+
+    // NUEVO: Transmisión del Reporte Clínico Completo al Dr.
+    window.transmitFullReport = async (historyData) => {
+        const pId = localStorage.getItem('patient_id') || "MC-DEBUG-001";
+        const pName = "MANUEL MONTALVAN"; 
+        try {
+            await set(ref(db_fire, `reportes_clinicos/${pId}`), {
+                pxName: pName,
+                timestamp: Date.now(),
+                avgSys: document.getElementById('sys-val').innerText,
+                avgDia: document.getElementById('dia-val').innerText,
+                avgMap: document.getElementById('map-val').innerText,
+                status: document.getElementById('bp-status').innerText,
+                history: historyData
+            });
+        } catch (e) { console.error("Report Transmission Failed", e); }
     };
 </script>
 
@@ -155,11 +158,7 @@
     let chart;
     let currentLang = 'en';
 
-    window.onload = () => {
-        initChart();
-        updateUI();
-        setLang('en');
-    };
+    window.onload = () => { initChart(); updateUI(); setLang('en'); };
 
     function getAHAClass(sys, dia) {
         if (sys >= 180 || dia >= 120) return { l: "CRISIS", c: "#ff0000" };
@@ -172,9 +171,7 @@
     function speakReading(sys, dia) {
         const cls = getAHAClass(sys, dia);
         const map = Math.round((sys + (2 * dia)) / 3);
-        const msg = currentLang === 'es' ? 
-            `Presión ${sys} sobre ${dia}. PAM de ${map}. Estado ${cls.l}.` : 
-            `Pressure ${sys} over ${dia}. MAP of ${map}. Status ${cls.l}.`;
+        const msg = currentLang === 'es' ? `Presión ${sys} sobre ${dia}. PAM de ${map}. Estado ${cls.l}.` : `Pressure ${sys} over ${dia}. MAP of ${map}. Status ${cls.l}.`;
         const utterance = new SpeechSynthesisUtterance(msg);
         utterance.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
         window.speechSynthesis.speak(utterance);
@@ -192,7 +189,6 @@
         document.querySelector('.lang-med').innerText = t.med;
         document.querySelector('.lang-save').innerText = t.save;
         document.querySelector('.lang-clear').innerText = t.clear;
-        
         document.getElementById('btn-en').style.opacity = lang === 'en' ? '1' : '0.4';
         document.getElementById('btn-es').style.opacity = lang === 'es' ? '1' : '0.4';
     }
@@ -215,23 +211,11 @@
         if(currentInput.length < 5) return;
         const s = parseInt(currentInput.slice(0,3));
         const d = parseInt(currentInput.slice(3));
-        
-        db.push({ 
-            sys: s, 
-            dia: d, 
-            med: document.getElementById('med-toggle').classList.contains('active'), 
-            d: new Date().toISOString() 
-        });
+        db.push({ sys: s, dia: d, med: document.getElementById('med-toggle').classList.contains('active'), d: new Date().toISOString() });
         localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
-        
-        if (window.transmitToFirebase) {
-            window.transmitToFirebase(s, d);
-        }
-        
+        if (window.transmitToFirebase) window.transmitToFirebase(s, d);
         speakReading(s, d);
-        currentInput = ""; 
-        updateDisplay(); 
-        updateUI();
+        currentInput = ""; updateDisplay(); updateUI();
         document.getElementById('med-toggle').classList.remove('active');
     }
 
@@ -239,16 +223,12 @@
         if (db.length === 0) return;
         const avgSys = Math.round(db.reduce((a,b)=>a+b.sys,0)/db.length);
         const avgDia = Math.round(db.reduce((a,b)=>a+b.dia,0)/db.length);
-        const pam = Math.round((avgSys + (2 * avgDia)) / 3);
-        
         document.getElementById('sys-val').innerText = avgSys;
         document.getElementById('dia-val').innerText = avgDia;
-        document.getElementById('map-val').innerText = pam;
-        
+        document.getElementById('map-val').innerText = Math.round((avgSys + (2 * avgDia)) / 3);
         const cls = getAHAClass(avgSys, avgDia);
         const statusEl = document.getElementById('bp-status');
-        statusEl.innerText = cls.l; 
-        statusEl.style.color = cls.c;
+        statusEl.innerText = cls.l; statusEl.style.color = cls.c;
         updateChart();
     }
 
@@ -260,10 +240,7 @@
                 { label: 'SYS', data: [], borderColor: '#fff', tension: 0.3, pointRadius: 0 },
                 { label: 'DIA', data: [], borderColor: '#3b82f6', tension: 0.3, pointRadius: 0 }
             ]},
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                plugins: { legend: { display: false } },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
                 scales: { x: { display: false }, y: { grid: { color: '#111' } } }
             }
         });
@@ -289,23 +266,33 @@
 
     async function generatePDF() {
         if (db.length === 0) return alert("No history.");
+        
+        // ENVÍO AL DR (Tubo de Reportes)
+        const last10 = db.slice(-10);
+        if (window.transmitFullReport) window.transmitFullReport(last10);
+
+        // GENERACIÓN DE PDF
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        doc.setFillColor(0, 51, 102); 
-        doc.rect(0, 0, 210, 40, 'F');
-        doc.setTextColor(255, 255, 255); 
-        doc.setFontSize(22); 
-        doc.text("MontCode™ Clinical BP Report", 15, 20);
+        doc.setFillColor(0, 51, 102); doc.rect(0, 0, 210, 40, 'F');
+        doc.setTextColor(255, 255, 255); doc.setFontSize(20);
+        doc.text("MontCode™ Clinical BP Report", 15, 25);
         doc.setTextColor(0); doc.setFontSize(12);
-        doc.text(`Avg Pressure: ${document.getElementById('sys-val').innerText}/${document.getElementById('dia-val').innerText}`, 15, 60);
+        doc.text(`Patient ID: ${localStorage.getItem('patient_id') || 'MC-001'}`, 15, 55);
+        doc.text(`Avg BP: ${document.getElementById('sys-val').innerText}/${document.getElementById('dia-val').innerText}`, 15, 65);
         const canvas = document.getElementById('bpChart');
-        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 80, 180, 80);
-        doc.save(`BP_Report_${new Date().getTime()}.pdf`);
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 80, 180, 70);
+        
+        doc.text("Latest Readings:", 15, 165);
+        last10.forEach((item, i) => {
+            doc.text(`${new Date(item.d).toLocaleString()}: ${item.sys}/${item.dia} mmHg`, 15, 175 + (i * 7));
+        });
+
+        doc.save(`BP_Report_${Date.now()}.pdf`);
+        alert("Report transmitted to Provider & PDF Downloaded.");
     }
 
     function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_bp_master_2026'); location.reload(); } }
 </script>
 </body>
 </html>
-
-
