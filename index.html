@@ -27,13 +27,10 @@
 <body class="pb-20">
     <div class="hero-gradient flex flex-col items-center justify-center px-6 text-center border-b border-zinc-900">
         <img src="logo.png.jpg" alt="MontCode Logo" class="h-12 mb-3 opacity-90 rounded-lg shadow-lg">
-        
         <p id="user-greeting" class="text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">SYSTEM READY</p>
-        
         <h1 class="text-3xl font-[900] tracking-tighter italic uppercase mb-1 leading-none text-white">
             MONTCODE<span class="text-blue-500">-PATIENT</span>
         </h1>
-        
         <p class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest opacity-60 italic">Tactical Health Management Unit</p>
     </div>
 
@@ -55,7 +52,7 @@
             </div>
         </div>
 
-        <div id="dr-bridge" class="dr-bridge-container rounded-2xl p-4 mb-6 border-zinc-800">
+        <div id="dr-bridge" class="dr-bridge-container rounded-2xl p-4 mb-4 border-zinc-800">
             <div class="flex justify-between items-center mb-3">
                 <span id="bridge-tag" class="text-[8px] font-black uppercase tracking-tighter text-zinc-600 border border-zinc-800 px-2 py-0.5 rounded">Clinical Bridge</span>
                 <span id="msg-time" class="text-[7px] text-zinc-500 font-bold uppercase italic">No Messages</span>
@@ -63,6 +60,18 @@
             <p id="dr-display" class="text-[12px] font-bold text-zinc-500 leading-snug italic">
                 Awaiting instructions from provider terminal...
             </p>
+        </div>
+
+        <div class="bg-zinc-900/40 border border-zinc-800/50 p-4 rounded-2xl mb-6">
+            <p class="text-[8px] font-black text-[#ccff00] uppercase tracking-[2px] mb-3 text-center">Tactical Report Feed</p>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="fastReport('GLU')" class="bg-zinc-900 border border-zinc-800 text-white font-black py-3 rounded-xl text-[9px] uppercase active:bg-[#ccff00] active:text-black transition-all">
+                    Report Glucose 🩸
+                </button>
+                <button onclick="fastReport('BP')" class="bg-zinc-900 border border-zinc-800 text-white font-black py-3 rounded-xl text-[9px] uppercase active:bg-blue-600 transition-all">
+                    Report BP 🫀
+                </button>
+            </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
@@ -87,9 +96,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+        import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
-        // Configuración idéntica a la del Provider para asegurar el "match"
         const firebaseConfig = {
             apiKey: "AIzaSyCiIUVMfCt68zWs6Z5aRcyaMQoAUyAmMRI",
             authDomain: "montcode-sentinel.firebaseapp.com",
@@ -98,10 +106,9 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+        const db_fire = getDatabase(app);
 
         // --- GESTIÓN DE IDENTIDAD ---
-        // Este ID es el que el Dr debe registrar en su censo
         let pid = localStorage.getItem('mc_patient_uuid');
         if (!pid) {
             pid = 'MC-' + Math.random().toString(36).substr(2, 6).toUpperCase();
@@ -112,10 +119,9 @@
         const pName = localStorage.getItem('patient_name');
         if(pName) document.getElementById('user-greeting').innerText = `GOOD DAY, ${pName.toUpperCase()}`;
 
-        // --- EL TUBO: ESCUCHA DE MENSAJES DEL DR ---
+        // --- ESCUCHA DE MENSAJES DEL DR ---
         if(pid) {
-            // Escucha específicamente la rama asignada a este ID de paciente
-            onValue(ref(db, `mensaje_dr/${pid}`), (snapshot) => {
+            onValue(ref(db_fire, `mensaje_dr/${pid}`), (snapshot) => {
                 const data = snapshot.val();
                 const bridgeBox = document.getElementById('dr-bridge');
                 const display = document.getElementById('dr-display');
@@ -123,29 +129,55 @@
                 const time = document.getElementById('msg-time');
 
                 if(data && data.texto) {
-                    // Activación visual del puente
                     bridgeBox.classList.add('bridge-active');
-                    bridgeBox.classList.remove('border-zinc-800');
-                    
-                    // Contenido del mensaje
                     display.innerText = data.texto;
                     display.className = "text-[16px] font-black text-[#ccff00] leading-tight uppercase italic";
-                    
-                    // Etiquetas de estado Live
                     tag.innerText = "LIVE INSTRUCTION";
                     tag.className = "live-indicator uppercase tracking-tighter";
-                    
-                    // Timestamp formateado
                     const msgDate = data.timestamp ? new Date(data.timestamp) : new Date();
                     time.innerText = msgDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                     time.className = "text-[7px] text-[#ccff00] font-black uppercase italic animate-pulse";
-                    
-                    // Alerta táctica (Vibración)
                     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
                 }
             });
         }
+
+        // --- ENVÍO INVERSO (PACIENTE AL DR) ---
+        window.fastReport = async (type) => {
+            let message = "";
+            const statusText = document.getElementById('status-text');
+
+            if (type === 'GLU') {
+                const data = JSON.parse(localStorage.getItem('mc_glu_master_2026')) || [];
+                if (data.length === 0) return alert("No Glucose Data Found.");
+                const last = data[data.length - 1];
+                message = `[REPORT_GLU] Value: ${last.v} mg/dL | Mode: ${last.t.toUpperCase()}`;
+            } else if (type === 'BP') {
+                const data = JSON.parse(localStorage.getItem('mc_bp_master_2026')) || [];
+                if (data.length === 0) return alert("No BP Data Found.");
+                const last = data[data.length - 1];
+                message = `[REPORT_BP] Reading: ${last.sys}/${last.dia} mmHg | Pulse: ${last.pulse}`;
+            }
+
+            try {
+                statusText.innerText = "TRANSMITTING REPORT...";
+                // Enviamos al nodo mensaje_dr del paciente pero como reporte
+                const reportRef = ref(db_fire, `chats/${pid}/messages`);
+                await push(reportRef, {
+                    text: message,
+                    sender: "patient",
+                    timestamp: Date.now(),
+                    delivered: true
+                });
+
+                statusText.innerText = "REPORT SYNCED ✅";
+                alert("Clinical data transmitted to Provider.");
+                setTimeout(() => statusText.innerText = "Sentinel Monitoring Active", 3000);
+            } catch (e) {
+                statusText.innerText = "SYNC ERROR";
+                alert("Connection failed.");
+            }
+        };
     </script>
 </body>
 </html>
-
