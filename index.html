@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -75,7 +75,7 @@
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-            <a href="bp.html" class="glass-3d p-5 rounded-[30px] flex flex-col items-center gap-2">
+            <a href="bp-tactical.html" class="glass-3d p-5 rounded-[30px] flex flex-col items-center gap-2">
                 <div class="text-xl">❤️</div>
                 <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400">BP Master</span>
             </a>
@@ -108,7 +108,7 @@
         const app = initializeApp(firebaseConfig);
         const db_fire = getDatabase(app);
 
-        // --- GESTIÓN DE IDENTIDAD ---
+        // --- GESTIÓN DE IDENTIDAD (INTACTA) ---
         let pid = localStorage.getItem('mc_patient_uuid');
         if (!pid) {
             pid = 'MC-' + Math.random().toString(36).substr(2, 6).toUpperCase();
@@ -119,7 +119,7 @@
         const pName = localStorage.getItem('patient_name');
         if(pName) document.getElementById('user-greeting').innerText = `GOOD DAY, ${pName.toUpperCase()}`;
 
-        // --- ESCUCHA DE MENSAJES DEL DR ---
+        // --- ESCUCHA DE MENSAJES (INTACTA) ---
         if(pid) {
             onValue(ref(db_fire, `mensaje_dr/${pid}`), (snapshot) => {
                 const data = snapshot.val();
@@ -142,7 +142,7 @@
             });
         }
 
-        // --- ENVÍO INVERSO (PACIENTE AL DR) ---
+        // --- ENVÍO DE REPORTES (SOLO AJUSTE DE FORMATO BP) ---
         window.fastReport = async (type) => {
             let message = "";
             const statusText = document.getElementById('status-text');
@@ -156,12 +156,12 @@
                 const data = JSON.parse(localStorage.getItem('mc_bp_master_2026')) || [];
                 if (data.length === 0) return alert("No BP Data Found.");
                 const last = data[data.length - 1];
-                message = `[REPORT_BP] Reading: ${last.sys}/${last.dia} mmHg | Pulse: ${last.pulse}`;
+                // Formato simplificado para que bp-tactical lo lea sin errores
+                message = `${last.sys}/${last.dia} Pulse:${last.pulse}`;
             }
 
             try {
                 statusText.innerText = "TRANSMITTING REPORT...";
-                // Enviamos al nodo mensaje_dr del paciente pero como reporte
                 const reportRef = ref(db_fire, `chats/${pid}/messages`);
                 await push(reportRef, {
                     text: message,
