@@ -75,7 +75,7 @@
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-            <a href="bp-tactical.html" class="glass-3d p-5 rounded-[30px] flex flex-col items-center gap-2">
+            <a href="bp.html" class="glass-3d p-5 rounded-[30px] flex flex-col items-center gap-2">
                 <div class="text-xl">❤️</div>
                 <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400">BP Master</span>
             </a>
@@ -140,7 +140,6 @@
             });
         }
 
-        // --- ENVÍO INVERSO CORREGIDO ---
         window.fastReport = async (type) => {
             let message = "";
             const statusText = document.getElementById('status-text');
@@ -154,13 +153,12 @@
                 const data = JSON.parse(localStorage.getItem('mc_bp_master_2026')) || [];
                 if (data.length === 0) return alert("No BP Data Found.");
                 const last = data[data.length - 1];
-                // Formato exacto para que el Mirror y el Provider lo succionen
-                message = `[REPORT_BP] Reading: ${last.sys}/${last.dia} mmHg | Pulse: ${last.pulse}`;
+                // Formato exacto con fallback para evitar Undefined
+                message = `[REPORT_BP] Reading: ${last.sys}/${last.dia} mmHg | Pulse: ${last.pulse || 'N/A'}`;
             }
 
             try {
                 statusText.innerText = "TRANSMITTING REPORT...";
-                // Ruta de chat estándar para que el Sentinel lo detecte
                 const reportRef = ref(db_fire, `chats/${pid}/messages`);
                 await push(reportRef, {
                     text: message,
