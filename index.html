@@ -108,7 +108,6 @@
         const app = initializeApp(firebaseConfig);
         const db_fire = getDatabase(app);
 
-        // --- GESTIÓN DE IDENTIDAD (INTACTA) ---
         let pid = localStorage.getItem('mc_patient_uuid');
         if (!pid) {
             pid = 'MC-' + Math.random().toString(36).substr(2, 6).toUpperCase();
@@ -119,7 +118,6 @@
         const pName = localStorage.getItem('patient_name');
         if(pName) document.getElementById('user-greeting').innerText = `GOOD DAY, ${pName.toUpperCase()}`;
 
-        // --- ESCUCHA DE MENSAJES (INTACTA) ---
         if(pid) {
             onValue(ref(db_fire, `mensaje_dr/${pid}`), (snapshot) => {
                 const data = snapshot.val();
@@ -142,7 +140,7 @@
             });
         }
 
-        // --- ENVÍO DE REPORTES (SOLO AJUSTE DE FORMATO BP) ---
+        // --- ENVÍO INVERSO CORREGIDO ---
         window.fastReport = async (type) => {
             let message = "";
             const statusText = document.getElementById('status-text');
@@ -156,12 +154,13 @@
                 const data = JSON.parse(localStorage.getItem('mc_bp_master_2026')) || [];
                 if (data.length === 0) return alert("No BP Data Found.");
                 const last = data[data.length - 1];
-                // Formato simplificado para que bp-tactical lo lea sin errores
-                message = `${last.sys}/${last.dia} Pulse:${last.pulse}`;
+                // Formato exacto para que el Mirror y el Provider lo succionen
+                message = `[REPORT_BP] Reading: ${last.sys}/${last.dia} mmHg | Pulse: ${last.pulse}`;
             }
 
             try {
                 statusText.innerText = "TRANSMITTING REPORT...";
+                // Ruta de chat estándar para que el Sentinel lo detecte
                 const reportRef = ref(db_fire, `chats/${pid}/messages`);
                 await push(reportRef, {
                     text: message,
@@ -171,11 +170,9 @@
                 });
 
                 statusText.innerText = "REPORT SYNCED ✅";
-                alert("Clinical data transmitted to Provider.");
                 setTimeout(() => statusText.innerText = "Sentinel Monitoring Active", 3000);
             } catch (e) {
                 statusText.innerText = "SYNC ERROR";
-                alert("Connection failed.");
             }
         };
     </script>
