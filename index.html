@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="MontCode">
-    <link rel="apple-touch-icon" href="logo_192.png">
+    <link rel="apple-touch-icon" href="logo.png.jpg">
     <meta name="theme-color" content="#000000">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -113,7 +113,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
         import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
-        // Lógica de traducción local para el Disclaimer
         window.toggleLang = (lang) => {
             const body = document.getElementById('disc-body');
             const title = document.getElementById('disc-title');
@@ -205,6 +204,16 @@
                 statusText.innerText = "SYNC ERROR";
             }
         };
+    </script>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('MontCode™ SW: Ready', reg.scope))
+            .catch(err => console.error('MontCode™ SW: Error', err));
+        });
+      }
     </script>
 </body>
 </html>
