@@ -108,7 +108,7 @@
     const app = initializeApp(firebaseConfig);
     const db_fire = getDatabase(app);
 
-    // Transmisión de un solo registro (Live Feed)
+    // Herencia de Glucosa: Transmisión de un solo registro (Live Feed)
     window.transmitToFirebase = async (sys, dia) => {
         const pId = localStorage.getItem('patient_id') || "PX-DEBUG-001";
         const statusText = document.getElementById('status-text');
@@ -117,8 +117,15 @@
         statusDot.className = "w-2 h-2 bg-yellow-500 animate-pulse";
 
         try {
-            const vitalsRef = ref(db_fire, `vitals/${pId}`);
-            await push(vitalsRef, { sys, dia, timestamp: Date.now() });
+            // Canal de Vitals para BP (Sincronizado con Glucosa)
+            const vitalsRef = ref(db_fire, `vitals/${pId}/bp`);
+            await push(vitalsRef, { 
+                sys, 
+                dia, 
+                med: document.getElementById('med-toggle').classList.contains('active'),
+                timestamp: Date.now() 
+            });
+            
             statusText.innerText = "BRIDGE SYNCED ✅";
             statusDot.className = "w-2 h-2 bg-green-500 shadow-[0_0_8px_#22c55e]";
             setTimeout(() => {
@@ -131,17 +138,16 @@
         }
     };
 
-    // TRANSMISIÓN DEL REPORTE AL DR (Alineado con el Dr App)
+    // Herencia de Glucosa: TRANSMISIÓN DEL REPORTE AL DR
     window.transmitFullReport = async (historyData) => {
         const pId = localStorage.getItem('patient_id') || "PX-DEBUG-001";
         try {
-            // El Dr espera los datos en reportes_clinicos/ID/bp
             await set(ref(db_fire, `reportes_clinicos/${pId}/bp`), {
                 timestamp: Date.now(),
                 avgSys: document.getElementById('sys-val').innerText,
                 avgDia: document.getElementById('dia-val').innerText,
                 avgPulse: "N/A", 
-                history: historyData.map(h => ({ d: h.d, s: h.sys, di: h.dia, p: "N/A" }))
+                history: historyData.map(h => ({ d: h.d, s: h.sys, di: h.dia, p: "N/A", m: h.med }))
             });
         } catch (e) { console.error("Report Transmission Failed", e); }
     };
@@ -206,11 +212,22 @@
         if(currentInput.length < 5) return;
         const s = parseInt(currentInput.slice(0,3));
         const d = parseInt(currentInput.slice(3));
-        db.push({ sys: s, dia: d, med: document.getElementById('med-toggle').classList.contains('active'), d: new Date().toISOString() });
+        const record = { 
+            sys: s, 
+            dia: d, 
+            med: document.getElementById('med-toggle').classList.contains('active'), 
+            d: new Date().toISOString() 
+        };
+        db.push(record);
         localStorage.setItem('mc_bp_master_2026', JSON.stringify(db));
+        
+        // Clonación de ruta: Disparar transmisión inmediata
         if (window.transmitToFirebase) window.transmitToFirebase(s, d);
+        
         speakReading(s, d);
-        currentInput = ""; updateDisplay(); updateUI();
+        currentInput = ""; 
+        updateDisplay(); 
+        updateUI();
         document.getElementById('med-toggle').classList.remove('active');
     }
 
@@ -232,11 +249,11 @@
         chart = new Chart(ctx, {
             type: 'line',
             data: { labels: [], datasets: [
-                { label: 'SYS', data: [], borderColor: '#fff', tension: 0.3, pointRadius: 0 },
-                { label: 'DIA', data: [], borderColor: '#3b82f6', tension: 0.3, pointRadius: 0 }
+                { label: 'SYS', data: [], borderColor: '#fff', tension: 0.3, pointRadius: 2, pointBackgroundColor: '#fff' },
+                { label: 'DIA', data: [], borderColor: '#3b82f6', tension: 0.3, pointRadius: 2, pointBackgroundColor: '#3b82f6' }
             ]},
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-                scales: { x: { display: false }, y: { grid: { color: '#111' } } }
+                scales: { x: { display: false }, y: { grid: { color: '#111' }, ticks: { color: '#444', font: { size: 8 } } } }
             }
         });
     }
@@ -262,29 +279,44 @@
     async function generatePDF() {
         if (db.length === 0) return alert("No history.");
         
-        // ENVÍO AL DR (Datos crudos para el PDF virtual)
         const historyCopy = [...db].slice(-15);
         if (window.transmitFullReport) await window.transmitFullReport(historyCopy);
 
-        // GENERACIÓN DE PDF LOCAL
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        doc.setFillColor(0, 51, 102); doc.rect(0, 0, 210, 40, 'F');
-        doc.setTextColor(255, 255, 255); doc.setFontSize(20);
-        doc.text("MontCode™ Clinical BP Report", 15, 25);
-        doc.setTextColor(0); doc.setFontSize(12);
-        doc.text(`Patient ID: ${localStorage.getItem('patient_id') || 'PX-DEBUG-001'}`, 15, 55);
-        doc.text(`Avg BP: ${document.getElementById('sys-val').innerText}/${document.getElementById('dia-val').innerText}`, 15, 65);
-        const canvas = document.getElementById('bpChart');
-        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 80, 180, 70);
         
-        doc.text("Latest Readings:", 15, 165);
-        historyCopy.forEach((item, i) => {
-            doc.text(`${new Date(item.d).toLocaleString()}: ${item.sys}/${item.dia} mmHg`, 15, 175 + (i * 7));
+        // Estética Clinical Pro
+        doc.setFillColor(10, 10, 10); doc.rect(0, 0, 210, 297, 'F');
+        doc.setTextColor(59, 130, 246); doc.setFontSize(22); doc.setFont("helvetica", "bold");
+        doc.text("MontCode™ Clinical BP Report", 15, 30);
+        
+        doc.setDrawColor(50); doc.line(15, 40, 195, 40);
+        
+        doc.setTextColor(200); doc.setFontSize(10);
+        doc.text(`Patient ID: ${localStorage.getItem('patient_id') || 'PX-DEBUG-001'}`, 15, 50);
+        doc.text(`Report Date: ${new Date().toLocaleString()}`, 15, 57);
+        
+        doc.setTextColor(255); doc.setFontSize(14);
+        doc.text(`Average: ${document.getElementById('sys-val').innerText}/${document.getElementById('dia-val').innerText} mmHg`, 15, 75);
+        
+        const canvas = document.getElementById('bpChart');
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 85, 180, 60);
+        
+        doc.setFontSize(10); doc.setTextColor(100);
+        doc.text("LATEST CLINICAL READINGS", 15, 160);
+        
+        doc.setTextColor(255);
+        historyCopy.reverse().forEach((item, i) => {
+            const y = 170 + (i * 7);
+            const medStatus = item.med ? "[MED TAKEN]" : "[NO MED]";
+            doc.text(`${new Date(item.d).toLocaleString()} → ${item.sys}/${item.dia} mmHg ${medStatus}`, 15, y);
         });
 
-        doc.save(`BP_Report_${Date.now()}.pdf`);
-        alert("Report Sent to Provider & PDF Downloaded.");
+        doc.setFontSize(7); doc.setTextColor(80);
+        doc.text("*Disclaimer: All information provided by the patient using the app is not based on official medical records.*", 15, 280);
+
+        doc.save(`BP_Report_MontCode_${Date.now()}.pdf`);
+        alert("Clinical Transmission Complete & PDF Downloaded.");
     }
 
     function clearAll() { if(confirm("Clear history?")) { db=[]; localStorage.removeItem('mc_bp_master_2026'); location.reload(); } }
