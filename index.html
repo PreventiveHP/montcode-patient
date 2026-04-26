@@ -64,21 +64,14 @@
 
         <div class="bg-zinc-900/40 border border-zinc-800/50 p-4 rounded-2xl mb-6">
             <p class="text-[8px] font-black text-[#ccff00] uppercase tracking-[2px] mb-3 text-center">Tactical Report Feed</p>
-            <div class="grid grid-cols-2 gap-2">
-                <button onclick="fastReport('GLU')" class="bg-zinc-900 border border-zinc-800 text-white font-black py-3 rounded-xl text-[9px] uppercase active:bg-[#ccff00] active:text-black transition-all">
-                    Report Glucose 🩸
-                </button>
-                <button onclick="fastReport('BP')" class="bg-zinc-900 border border-zinc-800 text-white font-black py-3 rounded-xl text-[9px] uppercase active:bg-blue-600 transition-all">
-                    Report BP 🫀
+            <div class="flex justify-center">
+                <button onclick="fastReport('GLU')" class="w-full bg-zinc-900 border border-zinc-800 text-white font-black py-4 rounded-xl text-[10px] uppercase active:bg-[#ccff00] active:text-black transition-all">
+                    Direct Report: Glucose 🩸
                 </button>
             </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-            <a href="bp.html" class="glass-3d p-5 rounded-[30px] flex flex-col items-center gap-2">
-                <div class="text-xl">❤️</div>
-                <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400">BP Master</span>
-            </a>
             <a href="glucose.html" class="glass-3d p-5 rounded-[30px] flex flex-col items-center gap-2">
                 <div class="text-xl text-[#ccff00]">🩸</div>
                 <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400">Glucose</span>
@@ -87,7 +80,7 @@
                 <div class="text-xl">🥗</div>
                 <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400">Food Log</span>
             </a>
-            <a href="activation.html" class="glass-3d p-5 rounded-[30px] flex flex-col items-center gap-2">
+            <a href="activation.html" class="glass-3d p-5 rounded-[30px] flex flex-col items-center gap-2 col-span-2">
                 <div class="text-xl">📲</div>
                 <span class="text-[8px] font-black uppercase tracking-widest text-blue-500 italic">Sync Kit</span>
             </a>
@@ -121,12 +114,12 @@
         if(pid) {
             onValue(ref(db_fire, `mensaje_dr/${pid}`), (snapshot) => {
                 const data = snapshot.val();
-                const bridgeBox = document.getElementById('dr-bridge');
-                const display = document.getElementById('dr-display');
-                const tag = document.getElementById('bridge-tag');
-                const time = document.getElementById('msg-time');
-
                 if(data && data.texto) {
+                    const bridgeBox = document.getElementById('dr-bridge');
+                    const display = document.getElementById('dr-display');
+                    const tag = document.getElementById('bridge-tag');
+                    const time = document.getElementById('msg-time');
+
                     bridgeBox.classList.add('bridge-active');
                     display.innerText = data.texto;
                     display.className = "text-[16px] font-black text-[#ccff00] leading-tight uppercase italic";
@@ -140,41 +133,31 @@
             });
         }
 
-        // ARREGLO DE TRIANGULACIÓN CRÍTICA
         window.fastReport = async (type) => {
-            let payload = {};
+            let message = "";
             const statusText = document.getElementById('status-text');
 
             if (type === 'GLU') {
-                const data = JSON.parse(localStorage.getItem('mc_glu_master_2026')) || [];
+                const raw = localStorage.getItem('mc_glu_master_2026');
+                const data = raw ? JSON.parse(raw) : [];
                 if (data.length === 0) return alert("No Glucose Data Found.");
                 const last = data[data.length - 1];
-                payload = { 
-                    value: parseInt(last.v), 
-                    type: last.t || "generic", 
-                    timestamp: Date.now(), 
-                    source: "FastReport_Dashboard" 
-                };
-            } else if (type === 'BP') {
-                const data = JSON.parse(localStorage.getItem('mc_bp_master_2026')) || [];
-                if (data.length === 0) return alert("No BP Data Found.");
-                const last = data[data.length - 1];
-                payload = { 
-                    sys: parseInt(last.sys), 
-                    dia: parseInt(last.dia), 
-                    med: last.med || false, 
-                    timestamp: Date.now(), 
-                    source: "FastReport_Dashboard" 
-                };
+                message = `[REPORT_GLU] Value: ${last.v} mg/dL | Mode: ${last.t.toUpperCase()}`;
             }
 
-            try {
-                statusText.innerText = "TRANSMITTING TO TACTICAL...";
-                // RUTA CORRECTA: vitals/{pid} para BP Tactical del Dr.
-                const vitalsPath = type === 'GLU' ? `glucose_vitals/${pid}` : `vitals/${pid}`;
-                await push(ref(db_fire, vitalsPath), payload);
+            if (!message) return;
 
-                statusText.innerText = "TACTICAL SYNCED ✅";
+            try {
+                statusText.innerText = "TRANSMITTING REPORT...";
+                const reportRef = ref(db_fire, `chats/${pid}/messages`);
+                await push(reportRef, {
+                    text: message,
+                    sender: "patient",
+                    timestamp: Date.now(),
+                    delivered: true
+                });
+
+                statusText.innerText = "REPORT SYNCED ✅";
                 setTimeout(() => statusText.innerText = "Sentinel Monitoring Active", 3000);
             } catch (e) {
                 statusText.innerText = "SYNC ERROR";
