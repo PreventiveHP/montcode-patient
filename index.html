@@ -140,34 +140,41 @@
             });
         }
 
+        // ARREGLO DE TRIANGULACIÓN CRÍTICA
         window.fastReport = async (type) => {
-            let message = "";
+            let payload = {};
             const statusText = document.getElementById('status-text');
 
             if (type === 'GLU') {
                 const data = JSON.parse(localStorage.getItem('mc_glu_master_2026')) || [];
                 if (data.length === 0) return alert("No Glucose Data Found.");
                 const last = data[data.length - 1];
-                message = `[REPORT_GLU] Value: ${last.v} mg/dL | Mode: ${last.t.toUpperCase()}`;
+                payload = { 
+                    value: parseInt(last.v), 
+                    type: last.t || "generic", 
+                    timestamp: Date.now(), 
+                    source: "FastReport_Dashboard" 
+                };
             } else if (type === 'BP') {
                 const data = JSON.parse(localStorage.getItem('mc_bp_master_2026')) || [];
                 if (data.length === 0) return alert("No BP Data Found.");
                 const last = data[data.length - 1];
-                // Formato exacto con fallback para evitar Undefined
-                message = `[REPORT_BP] Reading: ${last.sys}/${last.dia} mmHg | Pulse: ${last.pulse || 'N/A'}`;
+                payload = { 
+                    sys: parseInt(last.sys), 
+                    dia: parseInt(last.dia), 
+                    med: last.med || false, 
+                    timestamp: Date.now(), 
+                    source: "FastReport_Dashboard" 
+                };
             }
 
             try {
-                statusText.innerText = "TRANSMITTING REPORT...";
-                const reportRef = ref(db_fire, `chats/${pid}/messages`);
-                await push(reportRef, {
-                    text: message,
-                    sender: "patient",
-                    timestamp: Date.now(),
-                    delivered: true
-                });
+                statusText.innerText = "TRANSMITTING TO TACTICAL...";
+                // RUTA CORRECTA: vitals/{pid} para BP Tactical del Dr.
+                const vitalsPath = type === 'GLU' ? `glucose_vitals/${pid}` : `vitals/${pid}`;
+                await push(ref(db_fire, vitalsPath), payload);
 
-                statusText.innerText = "REPORT SYNCED ✅";
+                statusText.innerText = "TACTICAL SYNCED ✅";
                 setTimeout(() => statusText.innerText = "Sentinel Monitoring Active", 3000);
             } catch (e) {
                 statusText.innerText = "SYNC ERROR";
