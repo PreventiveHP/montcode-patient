@@ -1,214 +1,138 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MontCode™ | Glucose Console</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MontCode™ Dashboard</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MontCode">
+    <link rel="apple-touch-icon" href="logo_192.png">
+    <meta name="theme-color" content="#000000">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Orbitron:wght@700&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #050505; color: white; overflow-x: hidden; background-image: radial-gradient(circle at 50% -20%, #111 0%, #050505 100%); }
-        .glass-card { background: rgba(15, 15, 15, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); transition: all 0.3s ease; }
-        .selected-px { border: 1px solid #3b82f6 !important; background: rgba(59, 130, 246, 0.1); box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); }
-        .feed-container::-webkit-scrollbar { width: 3px; }
-        .feed-container::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-        @keyframes pulse-border { 0% { border-left-color: #3b82f6; } 50% { border-left-color: #fff; } 100% { border-left-color: #3b82f6; } }
-        .data-incoming { border-left: 4px solid #ccff00; animation: pulse-border 2s infinite; }
-        .lang-btn { opacity: 0.5; transition: all 0.3s; cursor: pointer; filter: grayscale(1); }
-        .lang-btn.active { opacity: 1; filter: grayscale(0); transform: scale(1.1); }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@800&display=swap');
+        body { background: #000; color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .glass-3d { background: linear-gradient(145deg, #0f0f0f, #050505); border: 1px solid #1a1a1a; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: all 0.3s ease; }
+        .glass-3d:active { transform: scale(0.95); border-color: #3b82f6; }
+        .hero-gradient { background: linear-gradient(to bottom, #003366 0%, #000000 100%); height: 240px; }
+        .dr-bridge-container { border: 2px solid #333; background: rgba(10, 10, 10, 0.9); transition: all 0.5s ease; min-height: 100px; }
+        .bridge-active { border-color: #ccff00; box-shadow: 0 0 20px rgba(204, 255, 0, 0.2); }
+        .live-indicator { background: #ccff00; color: #000; font-size: 8px; font-weight: 900; padding: 2px 6px; border-radius: 4px; animation: blink 1.5s infinite; }
+        .id-highlight { font-family: 'JetBrains Mono', monospace; letter-spacing: -1px; text-shadow: 0 0 10px rgba(204, 255, 0, 0.3); }
+        .lang-flag { cursor: pointer; opacity: 0.5; transition: 0.3s; font-size: 18px; }
+        .lang-flag.active { opacity: 1; transform: scale(1.2); }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
     </style>
 </head>
-<body class="p-4 lg:p-10" onload="initConsole()">
-
-    <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-zinc-900 pb-8 gap-6">
-        <div class="flex items-center gap-5">
-            <div class="w-16 h-16 flex items-center justify-center bg-zinc-900 rounded-2xl border border-zinc-800 text-2xl">
-                🩸
-            </div>
-            <div>
-                <h1 class="text-4xl font-black italic uppercase tracking-tighter">MontCode<span class="text-blue-500">™</span></h1>
-                <p data-t="sub_header" class="text-[#ccff00] text-[10px] uppercase font-black tracking-[0.25em] italic">Glucose & Provider Monitoring Unit</p>
-                <p class="text-zinc-600 text-[8px] uppercase font-bold tracking-[0.1em]">Tactical Health Terminal v7.6.1</p>
-            </div>
-        </div>
-        
-        <div class="flex gap-6 items-center">
-            <div class="flex gap-3 bg-zinc-900/50 p-2 rounded-xl border border-zinc-800">
-                <span onclick="setLang('en')" id="btn-en" class="lang-btn active text-xl">🇺🇸</span>
-                <span onclick="setLang('es')" id="btn-es" class="lang-btn text-xl">🇪🇸</span>
-            </div>
-
-            <div id="qrcode-container" class="bg-white p-1 rounded-lg hidden opacity-80 hover:opacity-100 transition-opacity"><div id="qrcode"></div></div>
-            <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl min-w-[150px]">
-                <p data-t="auth_provider" class="text-[8px] font-black text-blue-500 uppercase mb-1 italic">Authorized Provider</p>
-                <span id="displayID" class="text-xl font-black italic text-white uppercase tracking-tighter">---</span>
-            </div>
-            <button data-t="lock" onclick="logoutDr()" class="bg-red-950/20 text-red-500 border border-red-500/20 px-4 py-2 rounded-xl text-[10px] font-bold uppercase hover:bg-red-600 transition-all">Lock</button>
-        </div>
-    </header>
-
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-[1600px] mx-auto">
-        <div class="lg:col-span-3 space-y-6">
-            <button data-t="reg_kit" onclick="toggleModal('pxModal')" class="w-full bg-blue-600 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest">+ Register Patient Kit</button>
-            <div class="glass-card p-6 rounded-[32px]">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 data-t="active_census" class="text-[10px] font-black uppercase tracking-widest text-zinc-500 italic">Active Census</h3>
-                    <span id="census-count" class="text-[9px] font-bold bg-zinc-800 px-2 py-1 rounded text-zinc-400">0</span>
-                </div>
-                <input type="text" id="emrSearch" onkeyup="filterCensus()" placeholder="SEARCH..." class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-[10px] font-bold text-blue-400 outline-none mb-4">
-                <div id="censusList" class="space-y-2 max-h-[400px] overflow-y-auto feed-container pr-2"></div>
-            </div>
-
-            <div class="glass-card p-6 rounded-[32px]">
-                <h3 data-t="clinical_mirrors" class="text-[10px] font-black uppercase mb-4 tracking-widest text-[#ccff00] italic">Clinical Mirrors</h3>
-                <div class="grid grid-cols-1 gap-3">
-                    <button onclick="navigateMirror('Glucose-window.html')" class="flex flex-col items-center justify-center p-6 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-[#ccff00] transition-all group">
-                        <span data-t="open_glu" class="text-[10px] font-black uppercase group-hover:text-[#ccff00] tracking-tighter">Open Glucose Monitor 🩸</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div class="lg:col-span-6">
-            <div class="flex justify-between items-center mb-4 px-2">
-                <h2 data-t="live_feed" class="text-[10px] font-black uppercase tracking-widest text-zinc-400">Live Tactical Feed <span class="text-[#ccff00] animate-pulse">●</span></h2>
-                <button data-t="clear_cache" onclick="clearFeed()" class="text-[8px] font-bold text-zinc-600 uppercase hover:text-white">Clear Cache</button>
-            </div>
-            <div id="feed" class="space-y-4 max-h-[75vh] overflow-y-auto pr-4 feed-container"></div>
-        </div>
-
-        <div class="lg:col-span-3">
-            <div class="glass-card p-6 rounded-[32px] border-t-2 border-blue-600/40 sticky top-10">
-                <p data-t="order_inj" class="text-[8px] font-black text-blue-500 uppercase mb-4 italic">Order Injection</p>
-                <div id="targetDisplay" class="mb-4 hidden bg-blue-900/20 p-4 rounded-2xl border border-blue-500/30">
-                    <p data-t="targeting" class="text-[8px] text-blue-400 uppercase font-black mb-1">Targeting:</p>
-                    <p class="text-sm font-black text-white italic uppercase" id="targetPxName">--</p>
-                    <input type="hidden" id="targetPxID">
-                </div>
-                <textarea id="orderText" data-placeholder="clinical_order" placeholder="TYPE CLINICAL ORDER..." class="w-full bg-black border border-zinc-800 rounded-2xl p-4 text-xs font-bold text-[#ccff00] mb-4 h-40 uppercase outline-none focus:border-blue-500 transition-all"></textarea>
-                <button data-t="push_px" onclick="sendOrder()" class="w-full bg-blue-600 py-5 rounded-2xl font-black uppercase text-[11px] shadow-lg shadow-blue-900/40">Push to Patient</button>
-            </div>
-        </div>
+<body class="pb-10">
+    <div class="absolute top-4 right-4 flex gap-3 z-50">
+        <span onclick="toggleLang('en')" id="flag-en" class="lang-flag active">🇺🇸</span>
+        <span onclick="toggleLang('es')" id="flag-es" class="lang-flag">🇪🇸</span>
     </div>
 
-    <div id="pxModal" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center z-[60] p-6 backdrop-blur-sm">
-        <div class="glass-card w-full max-w-md p-10 rounded-[40px] border border-zinc-800">
-            <h2 data-t="enroll_title" class="text-xl font-black italic uppercase mb-6 text-white">Enroll Patient Kit</h2>
-            <div class="space-y-4">
-                <input type="text" id="pxID" data-placeholder="kit_id" placeholder="KIT ID (MC-XXXXXX)" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-xs font-bold uppercase text-white outline-none">
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="text" id="pxFirstName" data-placeholder="f_name" placeholder="FIRST NAME" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-xs font-bold uppercase text-white outline-none">
-                    <input type="text" id="pxLastName" data-placeholder="l_name" placeholder="LAST NAME" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-xs font-bold uppercase text-white outline-none">
-                </div>
-                <input type="date" id="pxDOB" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-white text-xs font-bold outline-none uppercase">
-            </div>
-            <div class="flex gap-4 mt-8">
-                <button data-t="cancel" onclick="toggleModal('pxModal')" class="flex-1 text-[10px] font-black uppercase text-zinc-500">Cancel</button>
-                <button data-t="link_kit" onclick="registerPx()" class="flex-1 bg-blue-600 text-white py-4 rounded-xl text-[10px] font-black uppercase italic">Link Kit</button>
-            </div>
-        </div>
+    <div class="hero-gradient flex flex-col items-center justify-center px-6 text-center border-b border-zinc-900">
+        <img src="logo.png.jpg" alt="MontCode Logo" class="h-12 mb-3 opacity-90 rounded-lg shadow-lg">
+        <p id="user-greeting" class="text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">SYSTEM READY</p>
+        <h1 class="text-3xl font-[900] tracking-tighter italic uppercase mb-1 leading-none text-white">
+            MONTCODE<span class="text-blue-500">-PATIENT</span>
+        </h1>
+        <p class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest opacity-60 italic">Tactical Health Management Unit</p>
     </div>
 
-    <div id="drRegModal" class="fixed inset-0 bg-black flex items-center justify-center z-[100] hidden p-6">
-        <div class="glass-card p-10 rounded-[40px] w-full max-w-sm text-center border border-blue-500/30">
-            <h2 data-t="provider_auth" class="text-2xl font-black italic uppercase mb-8">Provider <span class="text-blue-500">Auth</span></h2>
-            <div class="space-y-4">
-                <input type="text" id="newDrID" placeholder="6-DIGIT ID" maxlength="6" class="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center font-black text-xl text-blue-500 outline-none">
-                <input type="password" id="drPin" placeholder="4-DIGIT PIN" maxlength="4" class="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center font-black text-xl text-white outline-none">
+    <div class="px-6 -mt-10">
+        <div class="bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-2xl p-5 mb-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <p class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest">Link Status</p>
+                    <p id="display-id" class="text-lg font-black text-blue-500 tracking-tighter uppercase">Secured</p>
+                </div>
+                <div class="text-right bg-black/40 p-2 px-4 rounded-xl border border-zinc-800">
+                    <p class="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1">Your Kit ID</p>
+                    <p id="px-uuid-display" class="id-highlight text-xl font-black text-[#ccff00] uppercase italic">---</p>
+                </div>
             </div>
-            <button data-t="authorize" onclick="setupDr()" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-xs mt-8">Authorize</button>
+            <div class="flex items-center gap-2 border-t border-zinc-800/50 pt-3">
+                <div id="status-dot" class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                <span id="status-text" class="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">Sentinel Monitoring Active</span>
+            </div>
         </div>
+
+        <div id="dr-bridge" class="dr-bridge-container rounded-2xl p-4 mb-4 border-zinc-800">
+            <div class="flex justify-between items-center mb-3">
+                <span id="bridge-tag" class="text-[8px] font-black uppercase tracking-tighter text-zinc-600 border border-zinc-800 px-2 py-0.5 rounded">Clinical Bridge</span>
+                <span id="msg-time" class="text-[7px] text-zinc-500 font-bold uppercase italic">No Messages</span>
+            </div>
+            <p id="dr-display" class="text-[12px] font-bold text-zinc-500 leading-snug italic">
+                Awaiting instructions from provider terminal...
+            </p>
+        </div>
+
+        <div class="bg-zinc-900/40 border border-zinc-800/50 p-4 rounded-2xl mb-6">
+            <p class="text-[8px] font-black text-[#ccff00] uppercase tracking-[2px] mb-3 text-center">Tactical Report Feed</p>
+            <div class="flex justify-center">
+                <button onclick="fastReport('GLU')" class="w-full bg-zinc-900 border border-zinc-800 text-white font-black py-4 rounded-xl text-[10px] uppercase active:bg-[#ccff00] active:text-black transition-all">
+                    Direct Report: Glucose 🩸
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-10">
+            <a href="glucose.html" class="glass-3d p-5 rounded-[30px] flex flex-col items-center gap-2">
+                <div class="text-xl text-[#ccff00]">🩸</div>
+                <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400">Glucose</span>
+            </a>
+            <a href="food.html" class="glass-3d p-5 rounded-[30px] flex flex-col items-center gap-2">
+                <div class="text-xl">🥗</div>
+                <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400">Food Log</span>
+            </a>
+            <a href="activation.html" class="glass-3d p-5 rounded-[30px] flex flex-col items-center gap-2 col-span-2">
+                <div class="text-xl">📲</div>
+                <span class="text-[8px] font-black uppercase tracking-widest text-blue-500 italic">Sync Kit</span>
+            </a>
+        </div>
+
+        <footer class="mt-8 mb-10 px-2">
+            <div class="border border-red-900/30 bg-red-950/5 rounded-2xl p-6 text-center">
+                <p id="disc-title" class="text-[10px] font-black text-red-500 uppercase tracking-widest mb-3">⚠️ Professional Disclaimer</p>
+                <p id="disc-body" class="text-[9px] text-zinc-500 leading-relaxed uppercase font-bold">
+                    MontCode™ is a <span class="text-white">Wellness</span> tool designed for personal parameter monitoring. 
+                    <span class="text-zinc-400">It is not a diagnostic method</span> and is based solely on general clinical guidelines. 
+                    This system and its communication bridge <span class="text-white">are not for medical emergency use</span>.
+                </p>
+                <div class="mt-4 pt-4 border-t border-zinc-900">
+                    <p id="disc-911" class="text-[11px] font-black text-white italic">IN CASE OF EMERGENCY CALL 911 IMMEDIATELY</p>
+                </div>
+            </div>
+        </footer>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+        import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
-        // --- Multi-Language Logic ---
-        const translations = {
-            en: {
-                sub_header: "Glucose & Provider Monitoring Unit",
-                auth_provider: "Authorized Provider",
-                lock: "Lock",
-                reg_kit: "+ Register Patient Kit",
-                active_census: "Active Census",
-                clinical_mirrors: "Clinical Mirrors",
-                open_glu: "Open Glucose Monitor 🩸",
-                live_feed: "Live Tactical Feed",
-                clear_cache: "Clear Cache",
-                order_inj: "Order Injection",
-                targeting: "Targeting:",
-                push_px: "Push to Patient",
-                enroll_title: "Enroll Patient Kit",
-                cancel: "Cancel",
-                link_kit: "Link Kit",
-                provider_auth: "Provider Auth",
-                authorize: "Authorize",
-                // Placeholders
-                clinical_order: "TYPE CLINICAL ORDER...",
-                kit_id: "KIT ID (MC-XXXXXX)",
-                f_name: "FIRST NAME",
-                l_name: "LAST NAME",
-                search: "SEARCH...",
-                alert_fields: "ALL FIELDS REQUIRED",
-                alert_target: "SELECT PATIENT FIRST",
-                alert_pushed: "ORDER PUSHED"
-            },
-            es: {
-                sub_header: "Unidad de Monitoreo de Glucosa y Proveedor",
-                auth_provider: "Proveedor Autorizado",
-                lock: "Bloquear",
-                reg_kit: "+ Registrar Kit de Paciente",
-                active_census: "Censo Activo",
-                clinical_mirrors: "Espejos Clínicos",
-                open_glu: "Abrir Monitor de Glucosa 🩸",
-                live_feed: "Transmisión Táctica en Vivo",
-                clear_cache: "Limpiar Caché",
-                order_inj: "Orden de Inyección",
-                targeting: "Objetivo:",
-                push_px: "Enviar al Paciente",
-                enroll_title: "Inscribir Kit de Paciente",
-                cancel: "Cancelar",
-                link_kit: "Vincular Kit",
-                provider_auth: "Autorización Pro",
-                authorize: "Autorizar",
-                // Placeholders
-                clinical_order: "ESCRIBA ORDEN CLÍNICA...",
-                kit_id: "ID DEL KIT (MC-XXXXXX)",
-                f_name: "NOMBRE",
-                l_name: "APELLIDO",
-                search: "BUSCAR...",
-                alert_fields: "TODOS LOS CAMPOS REQUERIDOS",
-                alert_target: "SELECCIONE UN PACIENTE PRIMERO",
-                alert_pushed: "ORDEN ENVIADA"
+        // Lógica de traducción local para el Disclaimer
+        window.toggleLang = (lang) => {
+            const body = document.getElementById('disc-body');
+            const title = document.getElementById('disc-title');
+            const emg = document.getElementById('disc-911');
+            
+            document.getElementById('flag-en').classList.toggle('active', lang === 'en');
+            document.getElementById('flag-es').classList.toggle('active', lang === 'es');
+
+            if(lang === 'es') {
+                title.innerText = "⚠️ Aviso Legal Profesional";
+                body.innerHTML = `MontCode™ es una herramienta de <span class="text-white">Bienestar</span> diseñada para el monitoreo personal. <span class="text-zinc-400">No es un método diagnóstico</span> y se basa exclusivamente en guías clínicas generales. Este sistema <span class="text-white">no es para uso en emergencias médicas</span>.`;
+                emg.innerText = "EN CASO DE EMERGENCIA LLAME AL 911 INMEDIATAMENTE";
+            } else {
+                title.innerText = "⚠️ Professional Disclaimer";
+                body.innerHTML = `MontCode™ is a <span class="text-white">Wellness</span> tool designed for personal parameter monitoring. <span class="text-zinc-400">It is not a diagnostic method</span> and is based solely on general clinical guidelines. This system <span class="text-white">are not for medical emergency use</span>.`;
+                emg.innerText = "IN CASE OF EMERGENCY CALL 911 IMMEDIATELY";
             }
         };
 
-        window.currentLang = 'en';
-
-        window.setLang = (lang) => {
-            window.currentLang = lang;
-            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`btn-${lang}`).classList.add('active');
-
-            // Translate text content
-            document.querySelectorAll('[data-t]').forEach(el => {
-                const key = el.getAttribute('data-t');
-                if (translations[lang][key]) el.innerText = translations[lang][key];
-            });
-
-            // Translate placeholders
-            document.querySelectorAll('[data-placeholder]').forEach(el => {
-                const key = el.getAttribute('data-placeholder');
-                if (translations[lang][key]) el.placeholder = translations[lang][key];
-            });
-            
-            // Search placeholder update
-            document.getElementById('emrSearch').placeholder = translations[lang].search;
-        };
-
-        // --- Firebase & Console Logic ---
         const firebaseConfig = {
             apiKey: "AIzaSyCiIUVMfCt68zWs6Z5aRcyaMQoAUyAmMRI",
             authDomain: "montcode-sentinel.firebaseapp.com",
@@ -217,157 +141,70 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        let activeListeners = {}; 
+        const db_fire = getDatabase(app);
 
-        window.initConsole = () => {
-            const savedID = localStorage.getItem('montcode_dr_id');
-            if(!savedID) { document.getElementById('drRegModal').classList.remove('hidden'); } 
-            else { 
-                document.getElementById('displayID').innerText = savedID; 
-                document.getElementById('qrcode-container').classList.remove('hidden'); 
-                new QRCode(document.getElementById("qrcode"), { text: savedID, width: 45, height: 45 }); 
-                renderCensus(); 
-                loadPersistedFeed(); 
-            }
-        };
+        let pid = localStorage.getItem('mc_patient_uuid');
+        if (!pid) {
+            pid = 'MC-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+            localStorage.setItem('mc_patient_uuid', pid);
+        }
+        document.getElementById('px-uuid-display').innerText = pid;
 
-        window.registerPx = () => {
-            const id = document.getElementById('pxID').value.trim().toUpperCase();
-            const fName = document.getElementById('pxFirstName').value.trim().toUpperCase();
-            const lName = document.getElementById('pxLastName').value.trim().toUpperCase();
-            const dob = document.getElementById('pxDOB').value;
-            if(!id || !fName || !lName || !dob) return alert(translations[window.currentLang].alert_fields);
-            let census = JSON.parse(localStorage.getItem('montcode_census') || '{}');
-            census[id] = { name: fName, lastName: lName, dob: dob, fullName: `${lName}, ${fName} (${dob})` };
-            localStorage.setItem('montcode_census', JSON.stringify(census));
-            window.toggleModal('pxModal');
-            renderCensus();
-        };
+        const pName = localStorage.getItem('patient_name');
+        if(pName) document.getElementById('user-greeting').innerText = `GOOD DAY, ${pName.toUpperCase()}`;
 
-        window.renderCensus = () => {
-            const list = document.getElementById('censusList');
-            let census = JSON.parse(localStorage.getItem('montcode_census') || '{}');
-            const keys = Object.keys(census);
-            document.getElementById('census-count').innerText = keys.length;
-            list.innerHTML = '';
-            keys.forEach(id => {
-                const px = census[id];
-                const div = document.createElement('div');
-                div.className = "px-item p-4 bg-zinc-900 border border-zinc-800 rounded-2xl mb-2 cursor-pointer hover:bg-zinc-800 transition-colors";
-                div.onclick = () => window.selectTarget(div, id, px.fullName || px.name);
-                div.innerHTML = `<p class="text-[10px] font-black uppercase text-white">${px.fullName || px.name}</p><p class="text-[7px] text-zinc-600 font-bold tracking-widest">${id}</p>`;
-                list.appendChild(div);
-                window.listenForPatientChat(id, px.fullName || px.name);
-            });
-        };
-
-        window.listenForPatientChat = (pid, name) => {
-            if (activeListeners[pid]) return; 
-            const chatRef = ref(db, `chats/${pid}/messages`);
-            onValue(chatRef, (snapshot) => {
+        if(pid) {
+            onValue(ref(db_fire, `mensaje_dr/${pid}`), (snapshot) => {
                 const data = snapshot.val();
-                if (!data) return;
-                const last = Object.values(data).pop();
-                if (last.sender === "patient") {
-                    const isGlu = last.text.includes("[REPORT_GLU]");
-                    if(isGlu) processIncomingReport(pid, name, last, false);
+                if(data && data.texto) {
+                    const bridgeBox = document.getElementById('dr-bridge');
+                    const display = document.getElementById('dr-display');
+                    const tag = document.getElementById('bridge-tag');
+                    const time = document.getElementById('msg-time');
+
+                    bridgeBox.classList.add('bridge-active');
+                    display.innerText = data.texto;
+                    display.className = "text-[16px] font-black text-[#ccff00] leading-tight uppercase italic";
+                    tag.innerText = "LIVE INSTRUCTION";
+                    tag.className = "live-indicator uppercase tracking-tighter";
+                    const msgDate = data.timestamp ? new Date(data.timestamp) : new Date();
+                    time.innerText = msgDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    time.className = "text-[7px] text-[#ccff00] font-black uppercase italic animate-pulse";
+                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
                 }
             });
-            activeListeners[pid] = true;
-        };
-
-        function processIncomingReport(pid, name, msg, isBP) {
-            const cleanVal = msg.text.split('] ')[1] || msg.text;
-            const themeColor = "#ccff00"; 
-            const mirrorKey = `history_${pid}_glucose_history`;
-            let history = JSON.parse(localStorage.getItem(mirrorKey) || '[]');
-            
-            if (!history.find(h => h.timestamp === msg.timestamp)) {
-                history.unshift({ timestamp: msg.timestamp, val: cleanVal, date: new Date(msg.timestamp).toISOString() });
-                localStorage.setItem(mirrorKey, JSON.stringify(history.slice(0, 100)));
-            }
-
-            const reportData = {
-                pxId: pid, pxName: name, type: "GLUCOSE",
-                val: cleanVal, color: themeColor,
-                time: new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-            };
-
-            let globalFeed = JSON.parse(localStorage.getItem('vitals_history') || '[]');
-            if (!globalFeed.find(h => h.time === reportData.time && h.val === reportData.val)) {
-                globalFeed.unshift(reportData);
-                localStorage.setItem('vitals_history', JSON.stringify(globalFeed.slice(0, 50)));
-                renderCard(reportData);
-            }
         }
 
-        function renderCard(data) {
-            const feed = document.getElementById('feed');
-            const card = `
-                <div class="bg-zinc-900/60 glass-card p-5 rounded-[24px] mb-3 data-incoming" style="border-left-color: ${data.color}">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-[8px] font-black uppercase text-zinc-500 mb-1 tracking-widest">TACTICAL REPORT: ${data.type}</p>
-                            <h4 class="text-[10px] font-black text-white italic uppercase">${data.pxName}</h4>
-                        </div>
-                        <p class="text-[8px] text-zinc-600 font-bold font-mono">${data.time}</p>
-                    </div>
-                    <div class="mt-2">
-                        <h3 class="text-xl font-black italic" style="font-family: 'Orbitron', sans-serif; color: ${data.color}">${data.val}</h3>
-                    </div>
-                </div>`;
-            feed.insertAdjacentHTML('afterbegin', card);
-        }
+        window.fastReport = async (type) => {
+            let message = "";
+            const statusText = document.getElementById('status-text');
 
-        window.selectTarget = (element, id, name) => {
-            document.querySelectorAll('.px-item').forEach(el => el.classList.remove('selected-px'));
-            element.classList.add('selected-px');
-            document.getElementById('targetPxID').value = id;
-            document.getElementById('targetPxName').innerText = name.toUpperCase();
-            document.getElementById('targetDisplay').classList.remove('hidden');
-        };
+            if (type === 'GLU') {
+                const raw = localStorage.getItem('mc_glu_master_2026');
+                const data = raw ? JSON.parse(raw) : [];
+                if (data.length === 0) return alert("No Glucose Data Found.");
+                const last = data[data.length - 1];
+                message = `[REPORT_GLU] Value: ${last.v} mg/dL | Mode: ${last.t.toUpperCase()}`;
+            }
 
-        window.sendOrder = async () => {
-            const id = document.getElementById('targetPxID').value;
-            const msg = document.getElementById('orderText').value.trim();
-            if(!id || !msg) return alert(translations[window.currentLang].alert_target);
-            await set(ref(db, `mensaje_dr/${id}`), { texto: msg.toUpperCase(), timestamp: Date.now() });
-            alert(translations[window.currentLang].alert_pushed);
-            document.getElementById('orderText').value = "";
-        };
+            if (!message) return;
 
-        window.navigateMirror = (page) => {
-            const selectedID = document.getElementById('targetPxID').value;
-            if(!selectedID) return alert(translations[window.currentLang].alert_target);
-            localStorage.setItem('target_px_id', selectedID);
-            window.location.href = page;
-        };
+            try {
+                statusText.innerText = "TRANSMITTING REPORT...";
+                const reportRef = ref(db_fire, `chats/${pid}/messages`);
+                await push(reportRef, {
+                    text: message,
+                    sender: "patient",
+                    timestamp: Date.now(),
+                    delivered: true
+                });
 
-        window.setupDr = () => {
-            const id = document.getElementById('newDrID').value.trim();
-            const pin = document.getElementById('drPin').value.trim();
-            if(id.length === 6 && pin.length === 4) {
-                localStorage.setItem('montcode_dr_id', id);
-                localStorage.setItem('montcode_dr_pin', pin);
-                location.reload();
+                statusText.innerText = "REPORT SYNCED ✅";
+                setTimeout(() => statusText.innerText = "Sentinel Monitoring Active", 3000);
+            } catch (e) {
+                statusText.innerText = "SYNC ERROR";
             }
         };
-
-        function loadPersistedFeed() {
-            const history = JSON.parse(localStorage.getItem('vitals_history') || '[]');
-            document.getElementById('feed').innerHTML = '';
-            history.forEach(data => renderCard(data));
-        }
-
-        window.filterCensus = () => {
-            const q = document.getElementById('emrSearch').value.toUpperCase();
-            document.querySelectorAll('.px-item').forEach(i => i.style.display = i.innerText.toUpperCase().includes(q) ? 'block' : 'none');
-        };
-
-        window.logoutDr = () => { localStorage.clear(); location.reload(); };
-        window.clearFeed = () => { localStorage.removeItem('vitals_history'); location.reload(); };
-        window.toggleModal = (id) => document.getElementById(id).classList.toggle('hidden');
     </script>
 </body>
 </html>
