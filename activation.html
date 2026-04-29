@@ -109,11 +109,17 @@
                 if(code.includes(key)) { enrollmentDays = daysMap[key]; break; }
             }
 
-            if(enrollmentDays === 0) {
-                alert("Validity period not detected in barcode.");
-                startBarcodeScanner();
-                return;
-            }
+           // --- COPIAR DESDE AQUÍ ---
+// 1. Determinar días finales (si no detecta nada en el barcode, usa 7 por seguridad)
+const finalDays = enrollmentDays || 7; 
+
+// 2. Calcular fecha de expiración (Hoy + milisegundos de los días)
+const expirationDate = Date.now() + (finalDays * 24 * 60 * 60 * 1000);
+
+// 3. Guardar en memoria local (No afecta a Firebase)
+localStorage.setItem('mc_cycle_expiration', expirationDate);
+localStorage.setItem('mc_cycle_days', finalDays);
+// --- HASTA AQUÍ ---
 
             // --- GENERACIÓN DE UUID PERSISTENTE ---
             const uniqueID = 'PX-' + Math.random().toString(36).substr(2, 6).toUpperCase();
