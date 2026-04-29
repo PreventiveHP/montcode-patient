@@ -125,20 +125,35 @@
         import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
         // Lógica de activación milimétrica
-        window.checkActivation = () => {
-            const hasName = localStorage.getItem('patient_name');
-            const hasID = localStorage.getItem('mc_patient_uuid');
-            
-            if(hasName) {
-                // Desbloqueo de interfaz
-                document.getElementById('dr-bridge').classList.remove('tool-locked');
-                document.getElementById('report-feed').classList.remove('tool-locked');
-                document.getElementById('tool-glu').classList.remove('tool-locked');
-                document.getElementById('tool-food').classList.remove('tool-locked');
-                document.getElementById('dr-display').innerText = "Awaiting instructions from provider terminal...";
-                document.getElementById('user-greeting').innerText = `GOOD DAY, ${hasName.toUpperCase()}`;
-            }
-        };
+       window.checkActivation = () => {
+    const hasName = localStorage.getItem('patient_name');
+    const expiration = localStorage.getItem('mc_cycle_expiration');
+    const now = Date.now();
+
+    // BLOQUEO POR EXPIRACIÓN: Si hay fecha y ya pasó el tiempo
+    if (expiration && now > parseInt(expiration)) {
+        alert("MONITORING CYCLE COMPLETED. TERMINAL LOCKED.");
+        // Limpiamos acceso pero NO borramos los datos de glucosa para que no se pierdan
+        localStorage.removeItem('patient_name');
+        window.location.href = 'activation.html';
+        return;
+    }
+
+    if(hasName) {
+        // Desbloqueo de interfaz (Tu lógica original que ya funciona)
+        document.getElementById('dr-bridge').classList.remove('tool-locked');
+        document.getElementById('report-feed').classList.remove('tool-locked');
+        document.getElementById('tool-glu').classList.remove('tool-locked');
+        document.getElementById('tool-food').classList.remove('tool-locked');
+        
+        // Feedback visual de días restantes
+        const remainingMs = parseInt(expiration) - now;
+        const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+        
+        document.getElementById('dr-display').innerText = `Cycle Active: ${remainingDays} days remaining.`;
+        document.getElementById('user-greeting').innerText = `GOOD DAY, ${hasName.toUpperCase()}`;
+    }
+};
 
         const firebaseConfig = {
             apiKey: "AIzaSyCiIUVMfCt68zWs6Z5aRcyaMQoAUyAmMRI",
